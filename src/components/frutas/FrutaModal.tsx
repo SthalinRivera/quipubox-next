@@ -85,11 +85,11 @@ export function FrutaModal({ open, onOpenChange, editingFruta, onSaved }: FrutaM
                     </div>
                     <div>
                         <Label htmlFor="descripcion">Descripción</Label>
-                        <TextArea
+                        <Input
                             id="descripcion"
                             value={form.descripcion}
-                            onChange={(val) => setForm({ ...form, descripcion: val })}
-                            rows={3}
+                            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+
                         />
                     </div>
                     <div className="flex items-center gap-2">
