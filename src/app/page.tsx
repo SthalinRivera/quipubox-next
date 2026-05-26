@@ -1,19 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import React from 'react'
 
 export default function Page() {
-
-    const router = useRouter()
-
-    const data = null
-
-    useEffect(() => {
-        if (!data) {
-            router.push('/dashboard')
-        }
-    }, [data])
-
-    return <div>Contenido</div>
+    return <div>Contenido de la página principal</div>
 }

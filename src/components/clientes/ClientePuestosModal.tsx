@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useClientes } from '@/hooks/useClientes';
-import { useSedes } from '@/hooks/useSedes'; // necesitas crear este hook
+import { useSedes } from '@/hooks/useSedes';
 import { useToast } from '@/hooks/useToast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-// import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
+import Button from '@/components/ui/button/Button';
+import Select from '@/components/form/Select';
+import Input from '@/components/form/input/InputField';
+import Label from '@/components/form/Label';
 import type { Cliente, ClienteSede } from '@/types/cliente';
 
 interface ClienteSedesModalProps {
@@ -27,8 +28,12 @@ export function ClienteSedesModal({ open, onOpenChange, cliente }: ClienteSedesM
 
     const loadSedes = async () => {
         if (cliente) {
-            const data = await getSedes(cliente.id_cliente);
-            setSedesAsociadas(data);
+            try {
+                const data = await getSedes(cliente.id_cliente);
+                setSedesAsociadas(data || []);
+            } catch (err) {
+                console.error('Error loading associated sedes:', err);
+            }
         }
     };
 
@@ -49,7 +54,7 @@ export function ClienteSedesModal({ open, onOpenChange, cliente }: ClienteSedesM
             setNewSedeId('');
             setTipoRelacion('');
         } catch (error: any) {
-            toast.error(error.message);
+            toast.error(error.message || 'Error al asociar sede');
         } finally {
             setAdding(false);
         }
@@ -57,50 +62,72 @@ export function ClienteSedesModal({ open, onOpenChange, cliente }: ClienteSedesM
 
     const sedesDisponibles = sedes.filter(s => !sedesAsociadas.some(sa => sa.id_sede === s.id_sede));
 
+    const selectOptions = sedesDisponibles.map(s => ({
+        value: s.id_sede.toString(),
+        label: s.nombre,
+    }));
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Sedes del cliente</DialogTitle>
-                    <DialogDescription>{cliente?.nombres}</DialogDescription>
-                </DialogHeader>
+        <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[450px] p-5 lg:p-8">
+            <div className="space-y-4">
+                <div>
+                    <h4 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                        Sedes del cliente
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {cliente?.nombres}
+                    </p>
+                </div>
+
                 <div className="space-y-4">
-                    <ul className="space-y-2">
+                    <ul className="space-y-2 max-h-40 overflow-y-auto">
                         {sedesAsociadas.map(sa => (
-                            <li key={sa.id_cliente_sede} className="flex justify-between items-center border-b pb-1">
+                            <li key={sa.id_cliente_sede} className="flex justify-between items-center border-b pb-2 dark:border-gray-800">
                                 <div>
-                                    <p className="font-medium">{sa.sedes?.nombre}</p>
-                                    <p className="text-xs text-muted-foreground">Relación: {sa.tipo_relacion}</p>
+                                    <p className="font-medium text-sm text-gray-800 dark:text-white">{sa.sedes?.nombre}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Relación: {sa.tipo_relacion}</p>
                                 </div>
-                                {/* Botón de eliminar: puedes implementar después */}
                             </li>
                         ))}
-                        {sedesAsociadas.length === 0 && <p className="text-muted-foreground">No hay sedes asociadas</p>}
+                        {sedesAsociadas.length === 0 && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No hay sedes asociadas</p>
+                        )}
                     </ul>
-                    <div className="border-t pt-4 space-y-3">
-                        <Select value={newSedeId} onValueChange={setNewSedeId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar sede" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {sedesDisponibles.map(s => (
-                                    <SelectItem key={s.id_sede} value={s.id_sede.toString()}>
-                                        {s.nombre}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Input
-                            placeholder="Tipo de relación (ej. envío)"
-                            value={tipoRelacion}
-                            onChange={(e) => setTipoRelacion(e.target.value)}
-                        />
-                        <Button onClick={handleAdd} disabled={adding || !newSedeId || !tipoRelacion}>
-                            {adding ? 'Agregando...' : 'Agregar sede'}
-                        </Button>
+
+                    <div className="border-t pt-4 space-y-3 dark:border-gray-800">
+                        <div>
+                            <Label>Seleccionar Sede</Label>
+                            <Select
+                                options={selectOptions}
+                                placeholder="Seleccionar sede"
+                                defaultValue={newSedeId}
+                                onChange={setNewSedeId}
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="tipoRelacion">Tipo de relación</Label>
+                            <Input
+                                id="tipoRelacion"
+                                placeholder="Ej. envío, facturación"
+                                value={tipoRelacion}
+                                onChange={(e) => setTipoRelacion(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="pt-2">
+                            <Button
+                                onClick={handleAdd}
+                                disabled={adding || !newSedeId || !tipoRelacion}
+                                size="sm"
+                                className="w-full"
+                            >
+                                {adding ? 'Agregando...' : 'Agregar sede'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </DialogContent>
-        </Dialog>
+            </div>
+        </Modal>
     );
 }

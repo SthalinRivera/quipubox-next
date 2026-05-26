@@ -4,38 +4,90 @@ import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon } from "@/icons";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import Image from "next/image";
 
 export default function SignInForm() {
   const { loginWithGoogle, loading } = useAuth();
 
   return (
-    <div className="flex flex-col flex-1 lg:w-1/2 w-full">
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon />
-          Back to dashboard
-        </Link>
-      </div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+      <div className="flex w-full max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
 
-      <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-        <div>
-          <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Sign In
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Accede con tu cuenta de Google
-            </p>
+        {/* Columna izquierda - Branding */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 to-brand-800 dark:from-brand-700 dark:to-brand-900 p-8 flex-col justify-between relative overflow-hidden">
+          {/* Patrón de fondo decorativo */}
+          <div className="absolute inset-0 opacity-10">
+            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+              <circle cx="400" cy="400" r="300" fill="white" fillOpacity="0.2" />
+              <circle cx="600" cy="200" r="150" fill="white" fillOpacity="0.1" />
+              <circle cx="200" cy="600" r="200" fill="white" fillOpacity="0.15" />
+            </svg>
           </div>
 
-          <div>
+          <div className="relative z-10">
+            {/* Logo QuipoBox */}
+            <div className="flex items-center gap-3 mb-12">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                {/* Reemplaza esta imagen con tu logo real */}
+                {/* <Image
+                  src="/images/logo/quipobox-icon.svg" // Ajusta la ruta
+                  alt="QuipoBox"
+                  width={32}
+                  height={32}
+                  className="brightness-0 invert"
+                /> */} <span className="text-2xl font-bold text-white tracking-tight">
+                  Q
+                </span>
+              </div>
+              <span className="text-2xl font-bold text-white tracking-tight">
+                QuipoBox
+              </span>
+            </div>
+
+            {/* Mensaje de bienvenida */}
+            <div className="space-y-4">
+              <h2 className="text-3xl font-bold text-white leading-tight">
+                Gestión inteligente<br />de tu negocio
+              </h2>
+              <p className="text-white/80 text-lg">
+                Controla clientes, frutas, operaciones y más en un solo lugar.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-auto pt-12">
+            <p className="text-white/60 text-sm">
+              © 2026 QuipoBox. Todos los derechos reservados.
+            </p>
+          </div>
+        </div>
+
+        {/* Columna derecha - Formulario */}
+        <div className="w-full lg:w-1/2 p-6 sm:p-10 flex flex-col">
+          <div className="mb-6">
+            <Link
+              href="/"
+              className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <ChevronLeftIcon className="w-4 h-4 mr-1" />
+              Volver al inicio
+            </Link>
+          </div>
+
+          <div className="flex flex-col justify-center flex-1">
+            <div className="mb-8 text-center lg:text-left">
+              <h1 className="mb-2 text-2xl font-bold text-gray-800 dark:text-white/90 sm:text-3xl">
+                Bienvenido
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                Inicia sesión con tu cuenta de Google para continuar
+              </p>
+            </div>
+
             <button
               onClick={loginWithGoogle}
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10"
+              className="group relative w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <svg
                 width="20"
@@ -61,19 +113,20 @@ export default function SignInForm() {
                   fill="#EB4335"
                 />
               </svg>
-              {loading ? "Cargando..." : "Iniciar sesión con Google"}
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                {loading ? "Cargando..." : "Continuar con Google"}
+              </span>
             </button>
 
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400">
-                ¿No tienes cuenta?{" "}
-                <Link
-                  href="/signup"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
-                  Regístrate
-                </Link>
-              </p>
+            <div className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
+              Al iniciar sesión, aceptas nuestros{" "}
+              <Link href="/terms" className="underline hover:text-brand-500">
+                Términos
+              </Link>{" "}
+              y{" "}
+              <Link href="/privacy" className="underline hover:text-brand-500">
+                Política de privacidad
+              </Link>
             </div>
           </div>
         </div>

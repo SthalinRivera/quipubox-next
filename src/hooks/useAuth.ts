@@ -1,14 +1,15 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react'
 import { fetchWithAuth } from '@/lib/api-client'
 
 export const useAuth = () => {
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
-    const router = useRouter()
+    const router = useRouter();
+    const pathname = usePathname();
     const supabase = typeof window !== 'undefined' ? createClient() : null
 
     const fetchUser = async (token: string) => {
@@ -112,14 +113,17 @@ export const useAuth = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 if (event === 'SIGNED_IN' && session) {
-                    await fetchUser(session.access_token)
-                    router.push('/dashboard')
+                    await fetchUser(session.access_token);
+                    // Only redirect to dashboard if we are on the sign‑in or root page
+                    if (['/', '/signin', '/auth/callback'].includes(pathname)) {
+                        router.push('/dashboard');
+                    }
                 }
                 if (event === 'SIGNED_OUT') {
-                    setUser(null)
+                    setUser(null);
                 }
                 if (event === 'TOKEN_REFRESHED' && session) {
-                    await fetchUser(session.access_token)
+                    await fetchUser(session.access_token);
                 }
             }
         )

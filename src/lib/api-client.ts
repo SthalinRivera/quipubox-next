@@ -1,7 +1,8 @@
 // src/lib/api-client.ts
-import { createClient } from './supabase/client';
+// En lugar de llamar directamente al backend externo (que causa CORS en el navegador),
+// llamamos a nuestro proxy de Next.js en /api/proxy/...
+// El proxy corre en el servidor y hace la petición al backend sin restricciones CORS.
 
-// Definición propia para las opciones de fetch, permitiendo body de cualquier tipo (luego lo serializamos a JSON)
 interface FetchWithAuthOptions {
     method?: string;
     headers?: HeadersInit;
@@ -18,65 +19,66 @@ export const fetchWithAuth = async <T>(
         throw new Error('fetchWithAuth solo puede usarse en el cliente');
     }
 
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-        throw new Error('No hay sesión activa');
+    // Limpiamos el path para construir la URL del proxy interno
+    const cleanPath = url.replace(/^\/+/, '');
+    const proxyUrl = `/api/proxy/${cleanPath}`;
+
+    const headers: Record<string, string> = {};
+
+    // Solo agregar Content-Type si no es FormData
+    const isFormData = options?.body instanceof FormData;
+    if (!isFormData && options?.body && typeof options.body === 'object') {
+        headers['Content-Type'] = 'application/json';
     }
 
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const fullUrl = `${base.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
-
-    const makeRequest = async (token: string): Promise<T> => {
-        const isFormData = options?.body instanceof FormData;
-        const headers: HeadersInit = {
-            Authorization: `Bearer ${token}`,
-            ...(options?.headers ?? {}),
-        };
-        if (!isFormData && options?.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
-            headers['Content-Type'] = 'application/json';
+    // Mezclar headers adicionales si los hay
+    if (options?.headers) {
+        const extra = options.headers;
+        if (typeof extra === 'object' && !Array.isArray(extra)) {
+            Object.assign(headers, extra as Record<string, string>);
         }
+    }
 
-        const fetchOptions: RequestInit = {
-            method: options?.method,
-            headers,
-            signal: options?.signal,
-            cache: options?.cache,
-            credentials: options?.credentials,
-            mode: options?.mode,
-            // ... otras propiedades que quieras pasar
-        };
-
-        if (!isFormData && options?.body !== undefined) {
-            // Si es un objeto (y no FormData), serializamos a JSON
-            if (typeof options.body === 'object' && !(options.body instanceof FormData)) {
-                fetchOptions.body = JSON.stringify(options.body);
-            } else {
-                // Si ya es string, FormData, Blob, etc., lo pasamos directamente
-                fetchOptions.body = options.body as BodyInit;
-            }
-        }
-
-        const response = await fetch(fullUrl, fetchOptions);
-        if (!response.ok) {
-            const error = new Error(`HTTP error! status: ${response.status}`);
-            (error as any).response = response;
-            throw error;
-        }
-        const data = await response.json();
-        return data as T;
+    const fetchOptions: RequestInit = {
+        method: options?.method || 'GET',
+        headers,
+        signal: options?.signal,
     };
 
-    try {
-        return await makeRequest(session.access_token);
-    } catch (error: any) {
-        if (error.response?.status === 401) {
-            const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError || !refreshed.session) {
-                throw new Error('No se pudo renovar la sesión');
+    // Agregar body si corresponde
+    if (!['GET', 'HEAD'].includes(fetchOptions.method as string) && options?.body !== undefined) {
+        if (!isFormData) {
+            if (typeof options.body === 'object') {
+                fetchOptions.body = JSON.stringify(options.body);
+            } else {
+                fetchOptions.body = options.body as BodyInit;
             }
-            return await makeRequest(refreshed.session.access_token);
+        } else {
+            fetchOptions.body = options.body;
         }
+    }
+
+    let response;
+    try {
+        response = await fetch(proxyUrl, fetchOptions);
+    } catch (err: any) {
+        console.error('Fetch error al llamar al proxy interno:', err);
+        throw new Error(`Error de conexión: No se pudo alcanzar el servidor. Asegúrese de que Next.js esté corriendo.`);
+    }
+
+    if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+            const errData = await response.json();
+            errorMessage = errData?.message || errData?.error || errorMessage;
+        } catch {
+            // no se pudo parsear el error como JSON
+        }
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
         throw error;
     }
+
+    const data = await response.json();
+    return data as T;
 };

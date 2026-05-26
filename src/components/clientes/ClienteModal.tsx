@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useClientes } from '@/hooks/useClientes';
-import { useToast } from '@/hooks/useToast'; // Implementa un toast simple o usa sonner
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-// import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/useToast';
+import { Modal } from '@/components/ui/modal';
+import Button from '@/components/ui/button/Button';
+import Input from '@/components/form/input/InputField';
+import Label from '@/components/form/Label';
+import TextArea from '@/components/form/input/TextArea';
 import type { Cliente } from '@/types/cliente';
 
 interface ClienteModalProps {
@@ -33,7 +33,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
     useEffect(() => {
         if (editingCliente) {
             setForm({
-                nombres: editingCliente.nombres,
+                nombres: editingCliente.nombres || '',
                 apellidos: editingCliente.apellidos || '',
                 apodo: editingCliente.apodo || '',
                 telefono: editingCliente.telefono || '',
@@ -76,18 +76,19 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{editingCliente ? 'Editar cliente' : 'Nuevo cliente'}</DialogTitle>
-                    <DialogDescription>
-                        {editingCliente
-                            ? 'Modifica los datos del cliente'
-                            : 'Completa la información para crear un nuevo cliente'}
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
+        <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[584px] p-5 lg:p-10">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
+                    {editingCliente ? 'Editar cliente' : 'Nuevo cliente'}
+                </h4>
+                <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+                    {editingCliente
+                        ? 'Modifica los datos del cliente'
+                        : 'Completa la información para crear un nuevo cliente'}
+                </p>
+
+                <div className="space-y-4">
+                    <div>
                         <Label htmlFor="nombres">Nombres *</Label>
                         <Input
                             id="nombres"
@@ -96,7 +97,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
                             required
                         />
                     </div>
-                    <div className="space-y-2">
+                    <div>
                         <Label htmlFor="apellidos">Apellidos</Label>
                         <Input
                             id="apellidos"
@@ -104,7 +105,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
                             onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
                         />
                     </div>
-                    <div className="space-y-2">
+                    <div>
                         <Label htmlFor="apodo">Apodo</Label>
                         <Input
                             id="apodo"
@@ -112,7 +113,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
                             onChange={(e) => setForm({ ...form, apodo: e.target.value })}
                         />
                     </div>
-                    <div className="space-y-2">
+                    <div>
                         <Label htmlFor="telefono">Teléfono</Label>
                         <Input
                             id="telefono"
@@ -120,24 +121,24 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
                             onChange={(e) => setForm({ ...form, telefono: e.target.value })}
                         />
                     </div>
-                    <div className="space-y-2">
+                    <div>
                         <Label htmlFor="observaciones">Observaciones</Label>
-                        <Textarea
-                            id="observaciones"
+                        <TextArea
                             value={form.observaciones}
-                            onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+                            onChange={(val) => setForm({ ...form, observaciones: val })}
                         />
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={submitting}>
-                            {submitting ? 'Guardando...' : editingCliente ? 'Actualizar' : 'Crear'}
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                    <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" size="sm" disabled={submitting}>
+                        {submitting ? 'Guardando...' : editingCliente ? 'Actualizar' : 'Crear'}
+                    </Button>
+                </div>
+            </form>
+        </Modal>
     );
 }
