@@ -1,13 +1,35 @@
-"use client";
+'use client';
 
-import Button from "@/components/ui/button/Button";
-import { ChevronLeftIcon } from "@/icons";
-import Link from "next/link";
-import { useAuth } from "@/hooks/useAuth";
-import Image from "next/image";
-
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
+import { createClient } from '@/lib/supabase/client';
+import { ChevronLeftIcon } from '@/icons';
+import Link from 'next/link';
 export default function SignInForm() {
   const { loginWithGoogle, loading } = useAuth();
+  const searchParams = useSearchParams();
+  const toast = useToast();
+  const processedErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error && processedErrorRef.current !== error) {
+      processedErrorRef.current = error;
+      toast.error(decodeURIComponent(error));
+
+      // Limpiar la sesión de Supabase en el cliente (localStorage)
+      const supabase = createClient();
+      if (supabase) {  // ✅ verifica que no sea null
+        supabase.auth.signOut().catch(console.error);
+      }
+
+      // Eliminar el parámetro de la URL para futuras recargas
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, toast]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">

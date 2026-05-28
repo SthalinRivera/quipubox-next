@@ -19,7 +19,7 @@ interface ClienteSedesModalProps {
 
 export function ClienteSedesModal({ open, onOpenChange, cliente }: ClienteSedesModalProps) {
     const { getSedes, associateSede } = useClientes();
-    const { sedes, fetchSedes } = useSedes();
+    const { sedes, fetchAll: fetchSedes } = useSedes(); // ✅ usar fetchAll alias fetchSedes
     const toast = useToast();
     const [sedesAsociadas, setSedesAsociadas] = useState<ClienteSede[]>([]);
     const [adding, setAdding] = useState(false);
@@ -39,10 +39,10 @@ export function ClienteSedesModal({ open, onOpenChange, cliente }: ClienteSedesM
 
     useEffect(() => {
         if (open && cliente) {
-            fetchSedes();
+            fetchSedes(); // ✅ ahora existe
             loadSedes();
         }
-    }, [open, cliente]);
+    }, [open, cliente, fetchSedes]);
 
     const handleAdd = async () => {
         if (!cliente || !newSedeId || !tipoRelacion) return;

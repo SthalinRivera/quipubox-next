@@ -47,7 +47,7 @@ async function proxyRequest(
     // Get the auth session from Supabase server-side
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
-
+    console.log('Access Token:', session?.access_token);
     if (!session?.access_token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
