@@ -1,11 +1,19 @@
+import { connection } from 'next/server';
 import SignInForm from "@/components/auth/SignInForm";
-import { Metadata } from "next";
+import { Suspense } from 'react';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: "Login - Quipubox",
     description: "Login to your Quipubox account",
 };
 
-export default function SignIn() {
-    return <SignInForm />;
+export default async function SignIn() {
+    await connection();
+    return (
+        <Suspense fallback={null}>
+            {/* SignInForm ya tiene la lógica del error dentro */}
+            <SignInForm />
+        </Suspense>
+    );
 }
