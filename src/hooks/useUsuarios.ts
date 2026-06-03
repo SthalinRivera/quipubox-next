@@ -80,7 +80,7 @@ export const useUsuarios = () => {
     const assignRole = async (usuarioId: number, rolId: number) => {
         setLoading(true);
         try {
-            await fetchWithAuth(`usuarios/${usuarioId}/roles`, { method: 'POST', body: { id_rol: rolId } });
+            await fetchWithAuth(`usuarios/${usuarioId}/roles`, { method: 'POST', body: { id_rol_usuario: rolId } });
             const updatedUser = await fetchWithAuth<Usuario>(`usuarios/${usuarioId}`);
             updateUsuario(usuarioId, updatedUser);
             return updatedUser;

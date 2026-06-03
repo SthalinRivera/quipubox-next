@@ -40,7 +40,7 @@ export function UsuarioModal({
         apellidos: '',
         email: '',
         telefono: '',
-        id_rol: '',
+        id_rol_usuario: '',
         estado_acceso: 'activo' as 'activo' | 'bloqueado',
         id_empresa: '',
         id_sede: '',
@@ -61,7 +61,7 @@ export function UsuarioModal({
                 apellidos: editingUser.apellidos || '',
                 email: editingUser.email,
                 telefono: editingUser.telefono || '',
-                id_rol: editingUser.usuarios_roles?.[0]?.id_rol_usuario?.toString() || '',
+                id_rol_usuario: editingUser.usuarios_roles?.[0]?.id_rol_usuario?.toString() || '',
                 estado_acceso: editingUser.estado_acceso,
                 id_empresa: editingUser.id_empresa?.toString() || '',
                 id_sede: editingUser.id_sede?.toString() || '',
@@ -73,7 +73,7 @@ export function UsuarioModal({
                 apellidos: '',
                 email: '',
                 telefono: '',
-                id_rol: '',
+                id_rol_usuario: '',
                 estado_acceso: 'activo',
                 id_empresa: '',
                 id_sede: '',
@@ -136,7 +136,7 @@ export function UsuarioModal({
             let savedUser: Usuario;
             if (editingUser) {
                 savedUser = await update(editingUser.id_usuario, userPayload);
-                const newRolId = form.id_rol ? Number(form.id_rol) : null;
+                const newRolId = form.id_rol_usuario ? Number(form.id_rol_usuario) : null;
                 const currentRolId = editingUser.usuarios_roles?.[0]?.id_rol_usuario || null;
                 if (newRolId !== currentRolId) {
                     if (currentRolId) await removeRole(editingUser.id_usuario, currentRolId);
@@ -145,8 +145,8 @@ export function UsuarioModal({
                 toast.success('Usuario actualizado');
             } else {
                 savedUser = await create(userPayload);
-                if (form.id_rol) {
-                    await assignRole(savedUser.id_usuario, Number(form.id_rol));
+                if (form.id_rol_usuario) {
+                    await assignRole(savedUser.id_usuario, Number(form.id_rol_usuario));
                 }
                 toast.success('Usuario creado');
             }
@@ -268,8 +268,8 @@ export function UsuarioModal({
                                     <Select
                                         options={rolesOptions}
                                         placeholder="Seleccionar rol"
-                                        value={form.id_rol}
-                                        onChange={(value) => setForm({ ...form, id_rol: value })}
+                                        value={form.id_rol_usuario}
+                                        onChange={(value) => setForm({ ...form, id_rol_usuario: value })}
                                     />
                                 </div>
                             </div>
