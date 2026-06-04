@@ -4,6 +4,8 @@ import { formatDate } from "@/utils/date";
 import { useEffect, useState } from "react";
 import { useOperacionesCarga } from "@/hooks/useOperacionesCarga";
 import { useToast } from "@/hooks/useToast";
+import { Eye } from "lucide-react";
+import Link from "next/link"; // para navegación
 import {
     Table,
     TableBody,
@@ -159,6 +161,14 @@ export default function OperacionesCargaTable() {
                                             </TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
+                                                    <Link href={`/dashboard/operaciones-carga/${op.id_operacion}`}>
+                                                        <button
+                                                            className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                            title="Ver detalles"
+                                                        >
+                                                            <Eye className="h-5 w-5" />
+                                                        </button>
+                                                    </Link>
                                                     <button
                                                         onClick={() => handleEdit(op)}
                                                         className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"

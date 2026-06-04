@@ -53,7 +53,6 @@ const fase2: NavItem = {
   subItems: [
     { name: "Mercados", path: "/dashboard/mercados" },
     { name: "Puestos", path: "/dashboard/puestos" },
-    { name: "Secciones", path: "/dashboard/secciones" },
     { name: "Cliente-sede", path: "/dashboard/cliente-sede" },
   ],
 };
@@ -63,7 +62,6 @@ const fase3: NavItem = {
   icon: <TableIcon />,
   subItems: [
     { name: "Operaciones de carga", path: "/dashboard/operaciones-carga" },
-    { name: "Detalle de carga", path: "/dashboard/detalle-carga" },
     { name: "Detalle por calidades", path: "/dashboard/detalle-calidades" },
   ],
 };
@@ -74,7 +72,7 @@ const fase4: NavItem = {
   subItems: [
     { name: "Items de reparto", path: "/dashboard/items-reparto" },
     { name: "Guías operativas", path: "/dashboard/guias-operativas" },
-    { name: "Detalle de guías", path: "/dashboard/detalle-guias" },
+    // { name: "Detalle de guías", path: "/dashboard/detalle-guias" },
     { name: "Entregas", path: "/dashboard/entregas" },
   ],
 };
