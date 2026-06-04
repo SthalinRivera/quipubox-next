@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMercados } from "@/hooks/useMercados";
+import { useLugarOperativo } from "@/hooks/useLugarOperativo";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useSedes } from "@/hooks/useSedes";
 import { useToast } from "@/hooks/useToast";
@@ -10,17 +10,18 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
-import type { Mercado } from "@/types/mercado";
+import type { LugarOperativo } from "@/types/lugarOperativo";
+import { TipoLugar, TIPOS_LUGAR } from "@/types/enums";
 
-interface MercadoModalProps {
+interface LugarOperativoModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    editingMercado?: Mercado | null;
+    editingMercado?: LugarOperativo | null;
     onSaved: () => void;
 }
 
-export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: MercadoModalProps) {
-    const { create, update } = useMercados();
+export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSaved }: LugarOperativoModalProps) {
+    const { create, update } = useLugarOperativo();
     const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const { sedes, fetchAll: fetchSedes } = useSedes();
     const toast = useToast();
@@ -34,20 +35,19 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
         direccion_referencia: "",
         observaciones: "",
         estado: true,
+        tipo_lugar: TipoLugar.MERCADO,
     });
 
     useEffect(() => {
         fetchEmpresas();
-    }, []);
+    }, [fetchEmpresas]);
 
-    // Cargar sedes cuando cambia la empresa seleccionada
     useEffect(() => {
         if (form.id_empresa) {
             fetchSedes();
         }
     }, [form.id_empresa, fetchSedes]);
 
-    // Filtrar sedes por empresa seleccionada
     const sedesFiltradas = sedes.filter(s => s.id_empresa === Number(form.id_empresa));
 
     useEffect(() => {
@@ -59,6 +59,7 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
                 direccion_referencia: editingMercado.direccion_referencia || "",
                 observaciones: editingMercado.observaciones || "",
                 estado: editingMercado.estado,
+                tipo_lugar: (editingMercado.tipo_lugar as TipoLugar) || TipoLugar.MERCADO, // ✅
             });
             setSelectedEmpresaId(editingMercado.id_empresa.toString());
         } else {
@@ -69,6 +70,7 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
                 direccion_referencia: "",
                 observaciones: "",
                 estado: true,
+                tipo_lugar: TipoLugar.MERCADO,
             });
             setSelectedEmpresaId("");
         }
@@ -84,8 +86,17 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
         label: s.nombre,
     }));
 
+    const tipoLugarOptions = TIPOS_LUGAR.map(valor => ({
+        value: valor,
+        label: valor.charAt(0).toUpperCase() + valor.slice(1),
+    }));
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!form.id_empresa || !form.id_sede || !form.nombre) {
+            toast.error("Complete los campos obligatorios");
+            return;
+        }
         setSubmitting(true);
         try {
             const payload: any = {
@@ -95,13 +106,14 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
                 direccion_referencia: form.direccion_referencia || undefined,
                 observaciones: form.observaciones || undefined,
                 estado: form.estado,
+                tipo_lugar: form.tipo_lugar, // ✅ SE ENVÍA AL BACKEND
             };
             if (editingMercado) {
                 await update(editingMercado.id_lugar, payload);
-                toast.success("Mercado actualizado");
+                toast.success("Lugar operativo actualizado");
             } else {
                 await create(payload);
-                toast.success("Mercado creado");
+                toast.success("Lugar operativo creado");
             }
             onSaved();
             onOpenChange(false);
@@ -116,19 +128,18 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
         <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-md">
             <div className="p-6">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                    {editingMercado ? "Editar mercado" : "Nuevo mercado"}
+                    {editingMercado ? "Editar lugar operativo" : "Nuevo lugar operativo"}
                 </h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     {editingMercado
-                        ? "Modifica los datos del mercado"
-                        : "Completa la información para crear un nuevo mercado"}
+                        ? "Modifica los datos del lugar operativo"
+                        : "Completa la información para crear un nuevo lugar operativo"}
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="id_empresa">Empresa *</Label>
                         <Select
-                            key={`empresa-select-${form.id_empresa || "empty"}`}
                             options={empresasOptions}
                             placeholder="Seleccionar empresa"
                             defaultValue={form.id_empresa}
@@ -141,7 +152,6 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
                     <div className="space-y-2">
                         <Label htmlFor="id_sede">Sede *</Label>
                         <Select
-                            key={`sede-select-${form.id_sede || "empty"}`}
                             options={sedesOptions}
                             placeholder="Seleccionar sede"
                             defaultValue={form.id_sede}
@@ -156,6 +166,15 @@ export function MercadoModal({ open, onOpenChange, editingMercado, onSaved }: Me
                             value={form.nombre}
                             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                             required
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="tipo_lugar">Tipo de lugar *</Label>
+                        <Select
+                            options={tipoLugarOptions}
+                            placeholder="Seleccionar tipo"
+                            defaultValue={form.tipo_lugar}
+                            onChange={(value) => setForm({ ...form, tipo_lugar: value as TipoLugar })}
                         />
                     </div>
                     <div className="space-y-2">

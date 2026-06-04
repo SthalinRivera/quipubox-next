@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/useToast';
 import { PencilIcon, TrashBinIcon, PlusIcon } from '@/icons';
 import type { Variedad } from '@/types/variedad';
 
-// Cache simple en memoria (fuera del componente)
+// Cache simple
 let cachedVariedades: Variedad[] | null = null;
 let activePromise: Promise<Variedad[]> | null = null;
 
@@ -27,7 +27,6 @@ export default function VariedadesTable() {
     const [error, setError] = useState<string | null>(null);
     const abortRef = useRef<AbortController | null>(null);
 
-    // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedVariedad, setSelectedVariedad] = useState<Variedad | null>(null);
 
@@ -35,31 +34,22 @@ export default function VariedadesTable() {
     const toast = useToast();
 
     const cargarVariedades = useCallback(async (forceRefresh = false) => {
-        if (forceRefresh) {
-            cachedVariedades = null;
-        }
-
-        if (cachedVariedades) {
+        if (forceRefresh) cachedVariedades = null;
+        if (cachedVariedades && !forceRefresh) {
             setVariedades(cachedVariedades);
             setLoading(false);
             return;
         }
-
         if (activePromise) {
             try {
                 const data = await activePromise;
                 if (!cachedVariedades) cachedVariedades = data;
                 setVariedades(data);
                 setLoading(false);
-            } catch (err) {
-                // Error ya manejado
-            }
+            } catch { }
             return;
         }
-
-        if (abortRef.current) {
-            abortRef.current.abort();
-        }
+        if (abortRef.current) abortRef.current.abort();
         const controller = new AbortController();
         abortRef.current = controller;
         setLoading(true);
@@ -70,32 +60,24 @@ export default function VariedadesTable() {
                 const data = await fetchWithAuth<Variedad[]>('variedades', { signal: controller.signal });
                 cachedVariedades = data;
                 setVariedades(data);
-                setLoading(false);
                 return data;
             } catch (err: any) {
-                if (err.name === 'AbortError') {
-                    return cachedVariedades || [];
-                }
+                if (err.name === 'AbortError') return cachedVariedades || [];
                 setError(err.message || 'Error al cargar variedades');
-                setLoading(false);
                 throw err;
             } finally {
+                setLoading(false);
                 activePromise = null;
                 abortRef.current = null;
             }
         })();
-
         activePromise = promise;
         return promise;
     }, []);
 
     useEffect(() => {
         cargarVariedades();
-        return () => {
-            if (abortRef.current) {
-                abortRef.current.abort();
-            }
-        };
+        return () => abortRef.current?.abort();
     }, [cargarVariedades]);
 
     const handleCreate = () => {
@@ -120,14 +102,12 @@ export default function VariedadesTable() {
         }
     };
 
-    const handleSaved = () => {
-        cargarVariedades(true);
-    };
+    const handleSaved = () => cargarVariedades(true);
 
     if (loading) {
         return (
             <div className="p-4 text-center">
-                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900"></div>
                 <span className="ml-2">Cargando variedades...</span>
             </div>
         );
@@ -136,7 +116,7 @@ export default function VariedadesTable() {
     if (error) {
         return (
             <div className="p-4 text-center">
-                <p className="text-red-500 mb-4">Error: {error}</p>
+                <p className="mb-4 text-red-500">Error: {error}</p>
                 <Button size="sm" onClick={() => cargarVariedades(true)}>
                     Reintentar
                 </Button>
@@ -146,12 +126,11 @@ export default function VariedadesTable() {
 
     return (
         <div className="space-y-4">
-            {/* Botón de acción superior */}
             <div className="flex justify-end">
                 <Button
                     size="sm"
                     onClick={handleCreate}
-                    startIcon={<PlusIcon className="w-4 h-4 fill-current" />}
+                    startIcon={<PlusIcon className="h-4 w-4 fill-current" />}
                 >
                     Nueva Variedad
                 </Button>
@@ -159,23 +138,23 @@ export default function VariedadesTable() {
 
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
                 <div className="max-w-full overflow-x-auto">
-                    <div className="min-w-[600px]">
+                    <div className="min-w-[800px]">
                         <Table>
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start">
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         ID
                                     </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start">
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         Nombre
                                     </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start">
-                                        Fruta ID
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
+                                        Fruta
                                     </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start">
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         Estado
                                     </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start">
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         Acciones
                                     </TableCell>
                                 </TableRow>
@@ -183,7 +162,7 @@ export default function VariedadesTable() {
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                                 {variedades.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8">
+                                        <TableCell colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                             No hay variedades registradas.
                                         </TableCell>
                                     </TableRow>
@@ -197,7 +176,7 @@ export default function VariedadesTable() {
                                                 {variedad.nombre}
                                             </TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                                                {variedad.fruta_id}
+                                                {variedad.frutas?.nombre || '—'}
                                             </TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <Badge size="sm" color={variedad.estado ? 'success' : 'error'}>
@@ -208,17 +187,17 @@ export default function VariedadesTable() {
                                                 <div className="flex items-center gap-3">
                                                     <button
                                                         onClick={() => handleEdit(variedad)}
-                                                        className="text-gray-500 hover:text-brand-500 transition-colors"
+                                                        className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
                                                         title="Editar"
                                                     >
-                                                        <PencilIcon className="w-5 h-5" />
+                                                        <PencilIcon className="h-5 w-5" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleEliminar(variedad.id_variedad)}
-                                                        className="text-gray-500 hover:text-error-500 transition-colors"
+                                                        className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400"
                                                         title="Eliminar"
                                                     >
-                                                        <TrashBinIcon className="w-5 h-5" />
+                                                        <TrashBinIcon className="h-5 w-5" />
                                                     </button>
                                                 </div>
                                             </TableCell>
@@ -231,7 +210,6 @@ export default function VariedadesTable() {
                 </div>
             </div>
 
-            {/* Modal */}
             <VariedadModal
                 open={isModalOpen}
                 onOpenChange={setIsModalOpen}

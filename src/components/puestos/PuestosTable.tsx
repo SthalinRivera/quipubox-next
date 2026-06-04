@@ -13,11 +13,12 @@ import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
 import { PuestoModal } from './PuestoModal';
 import { usePuestos } from '@/hooks/usePuestos';
-import { useMercados } from '@/hooks/useMercados';
+import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { useClientes } from '@/hooks/useClientes';
 import { useToast } from '@/hooks/useToast';
 import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
 import type { Puesto } from '@/types/puesto';
+import type { Cliente } from '@/types/cliente';
 
 // Cache simple en memoria
 let cachedPuestos: Puesto[] | null = null;
@@ -36,7 +37,7 @@ export default function PuestosTable() {
   const [selectedPuesto, setSelectedPuesto] = useState<Puesto | null>(null);
 
   const { remove, fetchAll, fetchByMercado, fetchByCliente } = usePuestos();
-  const { mercados, fetchAll: fetchMercados } = useMercados();
+  const { lugarOpertivo, fetchAll: fetchMercados } = useLugarOperativo();
   const { clientes, fetchAll: fetchClientes } = useClientes();
   const toast = useToast();
 
@@ -44,7 +45,17 @@ export default function PuestosTable() {
   useEffect(() => {
     fetchMercados();
     fetchClientes();
-  }, []);
+  }, [fetchMercados, fetchClientes]);
+
+  // ✅ clientes ya es un array (Cliente[])
+  const clientesList = Array.isArray(clientes) ? clientes : [];
+  const clientesOptions = [
+    { value: '', label: 'Todos los clientes' },
+    ...clientesList.map((c: Cliente) => ({
+      value: c.id_cliente.toString(),
+      label: `${c.nombres} ${c.apellidos || ''}`.trim(),
+    })),
+  ];
 
   const cargarPuestos = useCallback(
     async (forceRefresh = false) => {
@@ -73,7 +84,7 @@ export default function PuestosTable() {
             cachedPuestos = data;
           setPuestos(data);
           setLoading(false);
-        } catch {}
+        } catch { }
         return;
       }
 
@@ -103,13 +114,7 @@ export default function PuestosTable() {
       activePromise = promise;
       return promise;
     },
-    [
-      filterMercadoId,
-      filterClienteId,
-      fetchAll,
-      fetchByMercado,
-      fetchByCliente,
-    ],
+    [filterMercadoId, filterClienteId, fetchAll, fetchByMercado, fetchByCliente],
   );
 
   useEffect(() => {
@@ -147,16 +152,9 @@ export default function PuestosTable() {
 
   const mercadosOptions = [
     { value: '', label: 'Todos los mercados' },
-    ...mercados.map((m) => ({
+    ...lugarOpertivo.map((m) => ({
       value: m.id_lugar.toString(),
       label: m.nombre,
-    })),
-  ];
-  const clientesOptions = [
-    { value: '', label: 'Todos los clientes' },
-    ...clientes.map((c) => ({
-      value: c.id_cliente.toString(),
-      label: `${c.nombres} ${c.apellidos || ''}`,
     })),
   ];
 

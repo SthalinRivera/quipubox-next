@@ -3,5 +3,5 @@ export interface Variedad {
     nombre: string;
     fruta_id: number;
     estado: boolean;
-    // otros campos según tu backend
+    frutas?: { id_fruta: number; nombre: string };  // 👈 añade esta línea
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePuestos } from "@/hooks/usePuestos";
 import { useEmpresas } from "@/hooks/useEmpresas";
-import { useMercados } from "@/hooks/useMercados";
+import { useLugarOperativo } from "@/hooks/useLugarOperativo";
 import { useToast } from "@/hooks/useToast";
 import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
@@ -22,7 +22,7 @@ interface PuestoModalProps {
 export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: PuestoModalProps) {
     const { create, update } = usePuestos();
     const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
-    const { mercados, fetchAll: fetchMercados } = useMercados();
+    const { lugarOpertivo, fetchAll: fetchMercados } = useLugarOperativo();
     const toast = useToast();
     const [submitting, setSubmitting] = useState(false);
 
@@ -65,7 +65,7 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
     }));
 
     // Filtrar mercados por empresa seleccionada
-    const mercadosFiltrados = mercados.filter(m => m.id_empresa === Number(form.id_empresa));
+    const mercadosFiltrados = lugarOpertivo.filter(m => m.id_empresa === Number(form.id_empresa));
     const mercadosOptions = mercadosFiltrados.map(m => ({
         value: m.id_lugar.toString(),
         label: m.nombre,

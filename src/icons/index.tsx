@@ -52,6 +52,7 @@ import ChatIcon from "./chat.svg";
 import MoreDotIcon from "./more-dot.svg";
 import BellIcon from "./bell.svg";
 import SearchIcon from "./search.svg";
+import StoreIcon from "./store.svg";
 export {
   DownloadIcon,
   BellIcon,
@@ -79,6 +80,7 @@ export {
   TrashBinIcon,
   AngleUpIcon,
   AngleDownIcon,
+  StoreIcon,
   PencilIcon,
   CheckLineIcon,
   CloseLineIcon,

@@ -11,27 +11,27 @@ import {
 } from '@/components/ui/table';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
-import { MercadoModal } from './MercadoModal';
-import { useMercados } from '@/hooks/useMercados';
+import { LugarOperativoModal } from './LugarOperativoModal';
+import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { useToast } from '@/hooks/useToast';
 import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
-import type { Mercado } from '@/types/mercado';
+import type { LugarOperativo } from '@/types/lugarOperativo';
 
 // Cache simple en memoria
-let cachedMercados: Mercado[] | null = null;
-let activePromise: Promise<Mercado[]> | null = null;
+let cachedMercados: LugarOperativo[] | null = null;
+let activePromise: Promise<LugarOperativo[]> | null = null;
 
-export default function MercadosTable() {
-    const [mercados, setMercados] = useState<Mercado[]>(() => cachedMercados || []);
+export default function LugarOperativoTable() {
+    const [mercados, setMercados] = useState<LugarOperativo[]>(() => cachedMercados || []);
     const [loading, setLoading] = useState(!cachedMercados);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const abortRef = useRef<AbortController | null>(null);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedMercado, setSelectedMercado] = useState<Mercado | null>(null);
+    const [selectedMercado, setSelectedMercado] = useState<LugarOperativo | null>(null);
 
-    const { remove } = useMercados();
+    const { remove } = useLugarOperativo();
     const toast = useToast();
 
     const cargarMercados = useCallback(async (forceRefresh = false) => {
@@ -58,7 +58,7 @@ export default function MercadosTable() {
 
         const promise = (async () => {
             try {
-                const data = await fetchWithAuth<Mercado[]>('mercados', { signal: controller.signal });
+                const data = await fetchWithAuth<LugarOperativo[]>('lugares-operativos', { signal: controller.signal });
                 cachedMercados = data;
                 setMercados(data);
                 return data;
@@ -90,16 +90,16 @@ export default function MercadosTable() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (mercado: Mercado) => {
+    const handleEdit = (mercado: LugarOperativo) => {
         setSelectedMercado(mercado);
         setIsModalOpen(true);
     };
 
     const handleDelete = async (id: number, nombre: string) => {
-        if (window.confirm(`¿Desactivar el mercado "${nombre}"?`)) {
+        if (window.confirm(`¿Desactivar el Lugar Operativo "${nombre}"?`)) {
             try {
                 await remove(id);
-                toast.success('Mercado desactivado');
+                toast.success('Lugar Operativo desactivado');
                 cargarMercados(true);
             } catch (err: any) {
                 toast.error(err.message || 'Error al eliminar');
@@ -113,7 +113,7 @@ export default function MercadosTable() {
         return (
             <div className="p-4 text-center">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"></div>
-                <span className="ml-2 text-gray-700 dark:text-gray-300">Cargando mercados...</span>
+                <span className="ml-2 text-gray-700 dark:text-gray-300">Cargando lugares operativos...</span>
             </div>
         );
     }
@@ -147,7 +147,7 @@ export default function MercadosTable() {
                     onClick={handleCreate}
                     startIcon={<PlusIcon className="h-4 w-4 fill-current" />}
                 >
-                    Nuevo Mercado
+                    Nuevo Lugar Operativo
                 </Button>
             </div>
 
@@ -180,6 +180,12 @@ export default function MercadosTable() {
                                         className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
                                     >
                                         Nombre
+                                    </TableCell>
+                                    <TableCell
+                                        isHeader
+                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
+                                    >
+                                        Tipo Lugar
                                     </TableCell>
                                     <TableCell
                                         isHeader
@@ -226,6 +232,9 @@ export default function MercadosTable() {
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                                                 {mercado.nombre}
                                             </TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
+                                                {mercado.tipo_lugar ? mercado.tipo_lugar.charAt(0).toUpperCase() + mercado.tipo_lugar.slice(1) : '—'}
+                                            </TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
                                                 {mercado.direccion_referencia || '—'}
                                             </TableCell>
@@ -261,7 +270,7 @@ export default function MercadosTable() {
                 </div>
             </div>
 
-            <MercadoModal
+            <LugarOperativoModal
                 open={isModalOpen}
                 onOpenChange={setIsModalOpen}
                 editingMercado={selectedMercado}

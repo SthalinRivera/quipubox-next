@@ -1,8 +1,7 @@
-'use client';
-
+// hooks/useClientes.ts
 import { useState, useCallback, useRef } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
-import type { Cliente, ClienteSede, Puesto } from '@/types/cliente';
+import type { Cliente, ClienteSede, PuestoAsignado } from '@/types/cliente';
 
 interface ErrorState {
     message: string;
@@ -111,35 +110,47 @@ export const useClientes = () => {
         }
     };
 
+    // ✅ Devuelve PuestoAsignado[] (incluye la relación completa)
     const getPuestos = async (clienteId: number) => {
         try {
-            return await fetchWithAuth<Puesto[]>(`clientes/${clienteId}/puestos`);
+            return await fetchWithAuth<PuestoAsignado[]>(`clientes/${clienteId}/puestos`);
         } catch (err) {
             console.error('Error fetching puestos:', err);
             throw err;
         }
     };
 
-    const assignPuesto = async (clienteId: number, puestoId: number) => {
+    const assignPuesto = async (clienteId: number, puestoId: number, seccion?: string | null) => {
+        setLoading(true);
+        setError(null);
         try {
-            return await fetchWithAuth(`clientes/${clienteId}/puestos`, {
+            const result = await fetchWithAuth(`clientes/${clienteId}/puestos`, {
                 method: 'POST',
-                body: { id_puesto: puestoId },
+                body: { id_puesto: puestoId, seccion: seccion || null },
             });
-        } catch (err) {
-            console.error('Error assigning puesto:', err);
+            return result;
+        } catch (err: any) {
+            const errState = handleFetchError(err);
+            setError(errState);
             throw err;
+        } finally {
+            setLoading(false);
         }
     };
 
     const removePuesto = async (clienteId: number, puestoId: number) => {
+        setLoading(true);
+        setError(null);
         try {
             return await fetchWithAuth(`clientes/${clienteId}/puestos/${puestoId}`, {
                 method: 'DELETE',
             });
-        } catch (err) {
-            console.error('Error removing puesto:', err);
+        } catch (err: any) {
+            const errState = handleFetchError(err);
+            setError(errState);
             throw err;
+        } finally {
+            setLoading(false);
         }
     };
 

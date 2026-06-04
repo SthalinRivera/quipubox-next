@@ -2,16 +2,16 @@
 
 import { useState, useCallback } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
-import type { Mercado } from '@/types/mercado';
+import type { LugarOperativo } from '@/types/lugarOperativo';
 
-export const useMercados = () => {
-    const [mercados, setMercados] = useState<Mercado[]>([]);
+export const useLugarOperativo = () => {
+    const [lugarOpertivo, setMercados] = useState<LugarOperativo[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Mercado[]>('mercados');
+            const data = await fetchWithAuth<LugarOperativo[]>('lugares-operativos');
             setMercados(data);
         } catch (error) {
             console.error('Error fetching mercados:', error);
@@ -20,8 +20,8 @@ export const useMercados = () => {
         }
     }, []);
 
-    const create = async (mercado: Partial<Mercado>) => {
-        const newMercado = await fetchWithAuth<Mercado>('mercados', {
+    const create = async (mercado: Partial<LugarOperativo>) => {
+        const newMercado = await fetchWithAuth<LugarOperativo>('lugares-operativos', {
             method: 'POST',
             body: mercado,
         });
@@ -29,8 +29,8 @@ export const useMercados = () => {
         return newMercado;
     };
 
-    const update = async (id: number, mercado: Partial<Mercado>) => {
-        const updated = await fetchWithAuth<Mercado>(`mercados/${id}`, {
+    const update = async (id: number, mercado: Partial<LugarOperativo>) => {
+        const updated = await fetchWithAuth<LugarOperativo>(`lugares-operativos/${id}`, {
             method: 'PUT',
             body: mercado,
         });
@@ -39,9 +39,9 @@ export const useMercados = () => {
     };
 
     const remove = async (id: number) => {
-        await fetchWithAuth(`mercados/${id}`, { method: 'DELETE' });
+        await fetchWithAuth(`lugares-operativos/${id}`, { method: 'DELETE' });
         await fetchAll();
     };
 
-    return { mercados, loading, fetchAll, create, update, remove };
+    return { lugarOpertivo, loading, fetchAll, create, update, remove };
 };

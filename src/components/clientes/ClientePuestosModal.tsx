@@ -2,132 +2,178 @@
 
 import { useState, useEffect } from 'react';
 import { useClientes } from '@/hooks/useClientes';
-import { useSedes } from '@/hooks/useSedes';
+import { usePuestos } from '@/hooks/usePuestos';
 import { useToast } from '@/hooks/useToast';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Select from '@/components/form/Select';
-import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
-import type { Cliente, ClienteSede } from '@/types/cliente';
+import { TrashBinIcon } from '@/icons';
+import type { Cliente, PuestoAsignado } from '@/types/cliente';
+import type { Puesto } from '@/types/puesto';
 
-interface ClienteSedesModalProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    cliente: Cliente | null;
+interface ClientePuestosModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  cliente: Cliente | null;
+  onSaved?: () => void;
 }
 
-export function ClienteSedesModal({ open, onOpenChange, cliente }: ClienteSedesModalProps) {
-    const { getSedes, associateSede } = useClientes();
-    const { sedes, fetchAll: fetchSedes } = useSedes(); // ✅ usar fetchAll alias fetchSedes
-    const toast = useToast();
-    const [sedesAsociadas, setSedesAsociadas] = useState<ClienteSede[]>([]);
-    const [adding, setAdding] = useState(false);
-    const [newSedeId, setNewSedeId] = useState<string>('');
-    const [tipoRelacion, setTipoRelacion] = useState('');
+export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: ClientePuestosModalProps) {
+  const { getPuestos, assignPuesto, removePuesto } = useClientes();
+  const { puestos, fetchAll: fetchPuestos } = usePuestos();
+  const toast = useToast();
 
-    const loadSedes = async () => {
-        if (cliente) {
-            try {
-                const data = await getSedes(cliente.id_cliente);
-                setSedesAsociadas(data || []);
-            } catch (err) {
-                console.error('Error loading associated sedes:', err);
-            }
-        }
-    };
+  const [puestosAsignados, setPuestosAsignados] = useState<PuestoAsignado[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [newPuestoId, setNewPuestoId] = useState<string>('');
+  const [seccion, setSeccion] = useState<string>('');
 
-    useEffect(() => {
-        if (open && cliente) {
-            fetchSedes(); // ✅ ahora existe
-            loadSedes();
-        }
-    }, [open, cliente, fetchSedes]);
+  const loadPuestos = async () => {
+    if (cliente) {
+      try {
+        const data = await getPuestos(cliente.id_cliente);
+        setPuestosAsignados(data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
-    const handleAdd = async () => {
-        if (!cliente || !newSedeId || !tipoRelacion) return;
-        setAdding(true);
-        try {
-            await associateSede(cliente.id_cliente, Number(newSedeId), tipoRelacion);
-            toast.success('Sede asociada');
-            await loadSedes();
-            setNewSedeId('');
-            setTipoRelacion('');
-        } catch (error: any) {
-            toast.error(error.message || 'Error al asociar sede');
-        } finally {
-            setAdding(false);
-        }
-    };
+  useEffect(() => {
+    if (open && cliente) {
+      fetchPuestos();
+      loadPuestos();
+      setNewPuestoId('');
+      setSeccion('');
+    }
+  }, [open, cliente, fetchPuestos]);
 
-    const sedesDisponibles = sedes.filter(s => !sedesAsociadas.some(sa => sa.id_sede === s.id_sede));
+  const handleAdd = async () => {
+    if (!cliente || !newPuestoId) return;
+    setAdding(true);
+    try {
+      await assignPuesto(cliente.id_cliente, Number(newPuestoId), seccion || null);
+      toast.success('✅ Puesto asignado correctamente');
+      await loadPuestos();
+      setNewPuestoId('');
+      setSeccion('');
+      onSaved?.();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al asignar puesto');
+    } finally {
+      setAdding(false);
+    }
+  };
 
-    const selectOptions = sedesDisponibles.map(s => ({
-        value: s.id_sede.toString(),
-        label: s.nombre,
-    }));
+  const handleRemove = async (puestoId: number, numeroPuesto: string) => {
+    if (!cliente) return;
+    const confirmar = window.confirm(`¿Desvincular el puesto "${numeroPuesto}" de este cliente?`);
+    if (!confirmar) return;
+    try {
+      await removePuesto(cliente.id_cliente, puestoId);
+      toast.success(`🗑️ Puesto "${numeroPuesto}" desvinculado`);
+      await loadPuestos();
+      onSaved?.();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al desvincular puesto');
+    }
+  };
 
-    return (
-        <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[450px] p-5 lg:p-8">
-            <div className="space-y-4">
-                <div>
-                    <h4 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                        Sedes del cliente
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {cliente?.nombres}
+  // Puestos disponibles: todos los puestos (con sus relaciones) menos los ya asignados
+  const puestosDisponibles = puestos.filter(
+    (p: Puesto) => !puestosAsignados.some((pa) => pa.id_puesto === p.id_puesto)
+  );
+
+  const selectOptions = puestosDisponibles.map((p: Puesto) => ({
+    value: p.id_puesto.toString(),
+    label: `${p.numero_puesto} - ${p.lugares_operativos?.nombre || 'Mercado?'} (Sede: ${p.lugares_operativos?.sedes?.nombre || '?'})`,
+  }));
+
+  const seccionOptions = [
+    { value: '', label: '— Sin sección —' },
+    { value: 'A', label: 'Sección A' },
+    { value: 'B', label: 'Sección B' },
+    { value: 'C', label: 'Sección C' },
+  ];
+
+  return (
+    <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[500px] p-5 lg:p-8">
+      <div className="space-y-5">
+        <div>
+          <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            🏬 Puestos del cliente
+          </h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {cliente?.nombres} — Gestiona los puestos donde opera.
+          </p>
+        </div>
+
+        {/* Lista de puestos asignados */}
+        <div>
+          <Label className="text-sm font-medium">📍 Puestos asignados</Label>
+          <ul className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50 dark:bg-gray-800/40">
+            {puestosAsignados.length === 0 ? (
+              <li className="text-sm text-gray-500 italic text-center py-2">
+                Sin puestos asignados. Agrega uno más abajo.
+              </li>
+            ) : (
+              puestosAsignados.map((pa) => (
+                <li key={pa.id_cliente_puesto} className="flex justify-between items-center border-b pb-2 last:border-0 dark:border-gray-700">
+                  <div>
+                    <p className="font-medium text-gray-800 dark:text-white">
+                      {pa.puestos?.numero_puesto || pa.id_puesto}
                     </p>
-                </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {pa.puestos?.lugares_operativos?.nombre || 'Mercado no disponible'} -
+                      Sede: {pa.puestos?.lugares_operativos?.sedes?.nombre || 'No especificada'}
+                    </p>
+                    {pa.seccion && <p className="text-xs text-gray-500">Sección: {pa.seccion}</p>}
+                  </div>
+                  <button
+                    onClick={() => handleRemove(pa.id_puesto, pa.puestos?.numero_puesto || String(pa.id_puesto))}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                    title="Desvincular"
+                  >
+                    <TrashBinIcon className="w-4 h-4" />
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
 
-                <div className="space-y-4">
-                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                        {sedesAsociadas.map(sa => (
-                            <li key={sa.id_cliente_sede} className="flex justify-between items-center border-b pb-2 dark:border-gray-800">
-                                <div>
-                                    <p className="font-medium text-sm text-gray-800 dark:text-white">{sa.sedes?.nombre}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Relación: {sa.tipo_relacion}</p>
-                                </div>
-                            </li>
-                        ))}
-                        {sedesAsociadas.length === 0 && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">No hay sedes asociadas</p>
-                        )}
-                    </ul>
-
-                    <div className="border-t pt-4 space-y-3 dark:border-gray-800">
-                        <div>
-                            <Label>Seleccionar Sede</Label>
-                            <Select
-                                options={selectOptions}
-                                placeholder="Seleccionar sede"
-                                defaultValue={newSedeId}
-                                onChange={setNewSedeId}
-                            />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="tipoRelacion">Tipo de relación</Label>
-                            <Input
-                                id="tipoRelacion"
-                                placeholder="Ej. envío, facturación"
-                                value={tipoRelacion}
-                                onChange={(e) => setTipoRelacion(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="pt-2">
-                            <Button
-                                onClick={handleAdd}
-                                disabled={adding || !newSedeId || !tipoRelacion}
-                                size="sm"
-                                className="w-full"
-                            >
-                                {adding ? 'Agregando...' : 'Agregar sede'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Modal>
-    );
+        {/* Formulario para agregar nuevo puesto */}
+        <div className="border-t pt-4 space-y-4 dark:border-gray-700">
+          <p className="text-sm text-gray-600 dark:text-gray-300">➕ Agregar nuevo puesto</p>
+          <div>
+            <Label htmlFor="puestoSelect">Seleccionar puesto</Label>
+            <Select
+              options={selectOptions}
+              placeholder="— Elige un puesto —"
+              defaultValue={newPuestoId}
+              onChange={setNewPuestoId}
+            />
+          </div>
+          <div>
+            <Label htmlFor="seccionSelect">Sección (opcional)</Label>
+            <Select
+              options={seccionOptions}
+              placeholder="Seleccionar sección"
+              defaultValue={seccion}
+              onChange={(val) => setSeccion(val)}
+            />
+          </div>
+          <Button
+            onClick={handleAdd}
+            disabled={adding || !newPuestoId}
+            size="sm"
+            className="w-full"
+          >
+            {adding ? 'Agregando...' : '➕ Asignar puesto'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }

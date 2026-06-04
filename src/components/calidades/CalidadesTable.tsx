@@ -14,7 +14,7 @@ import Button from '@/components/ui/button/Button';
 import { CalidadModal } from '@/components/calidades/CalidadModal';
 import { useCalidades } from '@/hooks/useCalidades';
 import { useToast } from '@/hooks/useToast';
-import { PencilIcon, TrashBinIcon, PlusIcon } from '@/icons';
+import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
 import type { Calidad } from '@/types/calidad';
 
 // Cache simple en memoria (fuera del componente)
@@ -157,15 +157,16 @@ export default function CalidadesTable() {
         <div className="space-y-4">
             {/* Barra de herramientas */}
             <div className="flex flex-wrap items-center justify-between gap-2">
+
                 <div className="relative">
                     <input
                         type="text"
-                        placeholder="Buscar por nombre..."
+                        placeholder="Buscar por placa..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-9 pr-3 py-2 border rounded-lg text-sm w-64 dark:bg-gray-800 dark:border-gray-700 dark:text-white/90"
                     />
-                    Searh
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                 </div>
                 <Button
                     size="sm"

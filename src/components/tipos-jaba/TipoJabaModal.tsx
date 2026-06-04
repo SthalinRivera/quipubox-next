@@ -34,7 +34,7 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
 
     useEffect(() => {
         fetchEmpresas();
-    }, []);
+    }, [fetchEmpresas]);
 
     useEffect(() => {
         if (editingTipo) {
@@ -107,7 +107,9 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="id_empresa">Empresa *</Label>
+                        <Label htmlFor="id_empresa" className="text-gray-700 dark:text-gray-300">
+                            Empresa *
+                        </Label>
                         <Select
                             options={empresasOptions}
                             placeholder="Seleccionar empresa"
@@ -116,16 +118,21 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="nombre">Nombre *</Label>
+                        <Label htmlFor="nombre" className="text-gray-700 dark:text-gray-300">
+                            Nombre *
+                        </Label>
                         <Input
                             id="nombre"
                             value={form.nombre}
                             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                             required
+                            className="border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="tipo_material">Tipo de material</Label>
+                        <Label htmlFor="tipo_material" className="text-gray-700 dark:text-gray-300">
+                            Tipo de material
+                        </Label>
                         <Select
                             options={materialOptions}
                             placeholder="Seleccionar material"
@@ -134,20 +141,25 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="descripcion">Descripción</Label>
+                        <Label htmlFor="descripcion" className="text-gray-700 dark:text-gray-300">
+                            Descripción
+                        </Label>
                         <Input
                             id="descripcion"
                             value={form.descripcion}
                             onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                            className="border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="estado">Estado</Label>
+                        <Label htmlFor="estado" className="text-gray-700 dark:text-gray-300">
+                            Estado
+                        </Label>
                         <select
                             id="estado"
                             value={form.estado ? "activo" : "inactivo"}
                             onChange={(e) => setForm({ ...form, estado: e.target.value === "activo" })}
-                            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-brand-800"
                         >
                             <option value="activo">Activo</option>
                             <option value="inactivo">Inactivo</option>
@@ -155,7 +167,12 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={submitting}>

@@ -1,6 +1,6 @@
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import ComponentCard from '@/components/common/ComponentCard';
-import MercadosTable from '@/components/mercados/MercadosTable';
+import LugarOperativoTable from '@/components/lugares-operativos/LugarOperativoTable';
 
 export default function MercadosPage() {
     return (
@@ -8,7 +8,7 @@ export default function MercadosPage() {
             <PageBreadcrumb pageTitle="Mercados" />
             <div className="space-y-6">
                 <ComponentCard title="Listado de mercados">
-                    <MercadosTable />
+                    <LugarOperativoTable />
                 </ComponentCard>
             </div>
         </div>

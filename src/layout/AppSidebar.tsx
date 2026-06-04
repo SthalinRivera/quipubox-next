@@ -51,9 +51,9 @@ const fase2: NavItem = {
   name: "Ubicaciones",
   icon: <ListIcon />,
   subItems: [
-    { name: "Mercados", path: "/dashboard/mercados" },
+    { name: "Lugar Operativo", path: "/dashboard/lugares-operativos" },
     { name: "Puestos", path: "/dashboard/puestos" },
-    { name: "Cliente-sede", path: "/dashboard/cliente-sede" },
+    { name: "Clientes-Puestos", path: "/dashboard/clientes-puestos" },
   ],
 };
 

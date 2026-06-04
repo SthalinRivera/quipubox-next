@@ -1,13 +1,13 @@
-export interface Mercado {
+export interface LugarOperativo {
     id_lugar: number;
     id_empresa: number;
     id_sede: number;
     nombre: string;
-    direccion_referencia?: string | null;
-    observaciones?: string | null;
-    tipo_lugar: string; // 'mercado'
+    direccion_referencia?: string;
+    observaciones?: string;
     estado: boolean;
-    created_at?: string;
+    tipo_lugar: string; // o TipoLugar
+    created_at: string;
     empresas?: { id_empresa: number; razon_social: string };
     sedes?: { id_sede: number; nombre: string };
 }

@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useClientes } from '@/hooks/useClientes';
 import { useToast } from '@/hooks/useToast';
 import { Modal } from '@/components/ui/modal';
@@ -9,6 +12,25 @@ import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import TextArea from '@/components/form/input/TextArea';
 import type { Cliente } from '@/types/cliente';
+
+// Esquema de validación con Zod
+const clienteSchema = z.object({
+    nombres: z.string()
+        .min(1, 'El nombre es obligatorio')
+        .min(2, 'El nombre debe tener al menos 2 caracteres'),
+    apellidos: z.string()
+        .min(1, 'Los apellidos son obligatorios')
+        .min(2, 'Los apellidos deben tener al menos 2 caracteres'),
+    apodo: z.string()
+        .min(1, 'El apodo es obligatorio')
+        .min(2, 'El apodo debe tener al menos 2 caracteres'),
+    telefono: z.string()
+        .min(1, 'El teléfono es obligatorio')
+        .regex(/^[0-9]{9,15}$/, 'Teléfono inválido (9 dígitos min)'),
+    observaciones: z.string().optional(),
+});
+
+type ClienteFormData = z.infer<typeof clienteSchema>;
 
 interface ClienteModalProps {
     open: boolean;
@@ -20,43 +42,52 @@ interface ClienteModalProps {
 export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: ClienteModalProps) {
     const { create, update } = useClientes();
     const toast = useToast();
-    const [submitting, setSubmitting] = useState(false);
 
-    const [form, setForm] = useState({
-        nombres: '',
-        apellidos: '',
-        apodo: '',
-        telefono: '',
-        observaciones: '',
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting, isValid },
+    } = useForm<ClienteFormData>({
+        resolver: zodResolver(clienteSchema),
+        defaultValues: {
+            nombres: '',
+            apellidos: '',
+            apodo: '',
+            telefono: '',
+            observaciones: '',
+        },
+        mode: 'onChange',
     });
 
+    // Resetear formulario cuando el modal se abre o cambia el cliente a editar
     useEffect(() => {
-        if (editingCliente) {
-            setForm({
-                nombres: editingCliente.nombres || '',
-                apellidos: editingCliente.apellidos || '',
-                apodo: editingCliente.apodo || '',
-                telefono: editingCliente.telefono || '',
-                observaciones: editingCliente.observaciones || '',
-            });
-        } else {
-            setForm({
-                nombres: '',
-                apellidos: '',
-                apodo: '',
-                telefono: '',
-                observaciones: '',
-            });
+        if (open) {
+            if (editingCliente) {
+                reset({
+                    nombres: editingCliente.nombres ?? '',
+                    apellidos: editingCliente.apellidos ?? '',
+                    apodo: editingCliente.apodo ?? '',
+                    telefono: editingCliente.telefono ?? '',
+                    observaciones: editingCliente.observaciones ?? '',
+                });
+            } else {
+                reset({
+                    nombres: '',
+                    apellidos: '',
+                    apodo: '',
+                    telefono: '',
+                    observaciones: '',
+                });
+            }
         }
-    }, [editingCliente, open]);
+    }, [open, editingCliente, reset]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSubmitting(true);
+    const onSubmit = async (data: ClienteFormData) => {
         try {
             const payload = {
-                ...form,
-                id_empresa: 1, // reemplazar con la empresa del usuario
+                ...data,
+                id_empresa: 1,
                 estado: true,
             };
             if (editingCliente) {
@@ -70,14 +101,12 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
             onOpenChange(false);
         } catch (error: any) {
             toast.error(error.message || 'Error al guardar');
-        } finally {
-            setSubmitting(false);
         }
     };
 
     return (
         <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[584px] p-5 lg:p-10">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
                     {editingCliente ? 'Editar cliente' : 'Nuevo cliente'}
                 </h4>
@@ -88,44 +117,104 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
                 </p>
 
                 <div className="space-y-4">
+                    {/* Nombres */}
                     <div>
-                        <Label htmlFor="nombres">Nombres *</Label>
-                        <Input
-                            id="nombres"
-                            value={form.nombres}
-                            onChange={(e) => setForm({ ...form, nombres: e.target.value })}
-                            required
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Nombres <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="nombres"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.nombres}
+                                />
+                            )}
                         />
+                        {errors.nombres && <p className="mt-1 text-xs text-error-500">{errors.nombres.message}</p>}
                     </div>
+
+                    {/* Apellidos */}
                     <div>
-                        <Label htmlFor="apellidos">Apellidos</Label>
-                        <Input
-                            id="apellidos"
-                            value={form.apellidos}
-                            onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Apellidos <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="apellidos"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.apellidos}
+                                />
+                            )}
                         />
+                        {errors.apellidos && <p className="mt-1 text-xs text-error-500">{errors.apellidos.message}</p>}
                     </div>
+
+                    {/* Apodo */}
                     <div>
-                        <Label htmlFor="apodo">Apodo</Label>
-                        <Input
-                            id="apodo"
-                            value={form.apodo}
-                            onChange={(e) => setForm({ ...form, apodo: e.target.value })}
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Apodo <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="apodo"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.apodo}
+                                />
+                            )}
                         />
+                        {errors.apodo && <p className="mt-1 text-xs text-error-500">{errors.apodo.message}</p>}
                     </div>
+
+                    {/* Teléfono */}
                     <div>
-                        <Label htmlFor="telefono">Teléfono</Label>
-                        <Input
-                            id="telefono"
-                            value={form.telefono}
-                            onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Teléfono <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="telefono"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="tel"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.telefono}
+                                />
+                            )}
                         />
+                        {errors.telefono && <p className="mt-1 text-xs text-error-500">{errors.telefono.message}</p>}
                     </div>
+
+                    {/* Observaciones */}
                     <div>
-                        <Label htmlFor="observaciones">Observaciones</Label>
-                        <TextArea
-                            value={form.observaciones}
-                            onChange={(val) => setForm({ ...form, observaciones: val })}
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Observaciones (opcional)
+                        </Label>
+                        <Controller
+                            name="observaciones"
+                            control={control}
+                            render={({ field }) => (
+                                <TextArea
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={field.onChange}
+                                    placeholder="Escribe aquí observaciones adicionales"
+                                    rows={2}
+                                />
+                            )}
                         />
                     </div>
                 </div>
@@ -134,8 +223,8 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Cl
                     <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                         Cancelar
                     </Button>
-                    <Button type="submit" size="sm" disabled={submitting}>
-                        {submitting ? 'Guardando...' : editingCliente ? 'Actualizar' : 'Crear'}
+                    <Button type="submit" size="sm" disabled={isSubmitting || !isValid}>
+                        {isSubmitting ? 'Guardando...' : editingCliente ? 'Actualizar' : 'Crear'}
                     </Button>
                 </div>
             </form>
