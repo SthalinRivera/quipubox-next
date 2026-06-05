@@ -2,6 +2,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import DetallesCargaTable from "@/components/detalle-carga/DetallesCargaTable";
 
+
 interface Props {
     params: Promise<{ id: string }>; // 👈 En Next.js 15 es Promise
 }
@@ -17,6 +18,8 @@ export default async function OperacionDetallePage({ params }: Props) {
     return (
         <div>
             <PageBreadcrumb pageTitle={`Operación #${operacionId}`} />
+
+
             <div className="space-y-6">
                 <ComponentCard title="Detalles de carga">
                     <DetallesCargaTable operacionId={operacionId} />

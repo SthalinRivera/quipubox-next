@@ -294,8 +294,8 @@ export default function ClientesTable() {
                       <TableCell className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleEdit(cliente)} className="text-gray-500 hover:text-brand-500" title="Editar cliente"><PencilIcon className="h-5 w-5" /></button>
-                          <button onClick={() => handleSedes(cliente)} className="text-gray-500 hover:text-brand-500" title="Gestionar sedes"><ListIcon className="h-5 w-5" /></button>
-                          <button onClick={() => handlePuestos(cliente)} className="text-gray-500 hover:text-brand-500" title="Gestionar puestos"><StoreIcon className="h-5 w-5" /></button>
+                          <button onClick={() => handleSedes(cliente)} className="text-gray-500 hover:text-brand-500" title="Gestionar sedes"><ListIcon className="h-5 w-5" />Gesionar sedes</button>
+                          <button onClick={() => handlePuestos(cliente)} className="text-gray-500 hover:text-brand-500" title="Gestionar puestos"><StoreIcon className="h-5 w-5" />gestionar puestos </button>
                           <button onClick={() => handleDelete(cliente)} className="text-gray-500 hover:text-error-500" title="Eliminar cliente"><TrashBinIcon className="h-5 w-5" /></button>
                         </div>
                       </TableCell>

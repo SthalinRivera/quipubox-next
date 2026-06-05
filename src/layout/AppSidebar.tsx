@@ -62,7 +62,7 @@ const fase3: NavItem = {
   icon: <TableIcon />,
   subItems: [
     { name: "Operaciones de carga", path: "/dashboard/operaciones-carga" },
-    { name: "Detalle por calidades", path: "/dashboard/detalle-calidades" },
+    // { name: "Detalle por calidades", path: "/dashboard/detalle-calidades" },
   ],
 };
 
@@ -70,7 +70,7 @@ const fase4: NavItem = {
   name: "Reparto y entrega",
   icon: <BoxCubeIcon />,
   subItems: [
-    { name: "Items de reparto", path: "/dashboard/items-reparto" },
+    // { name: "Items de reparto", path: "/dashboard/items-reparto" },
     { name: "Guías operativas", path: "/dashboard/guias-operativas" },
     // { name: "Detalle de guías", path: "/dashboard/detalle-guias" },
     { name: "Entregas", path: "/dashboard/entregas" },

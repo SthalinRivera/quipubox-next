@@ -93,9 +93,10 @@ export default function OperacionesCargaTable() {
                         >
                             <option value="">Todos</option>
                             <option value="pendiente">Pendiente</option>
-                            <option value="en_proceso">En proceso</option>
-                            <option value="completada">Completada</option>
-                            <option value="cancelada">Cancelada</option>
+                            <option value="en_curso">En curso</option>
+                            <option value="repartiendo">Repartiendo</option>
+                            <option value="completado">Completado</option>
+                            <option value="cancelado">Cancelado</option>
                         </select>
                     </div>
                     {/* Filtro fecha con DatePicker */}

@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
-import { Pencil, Trash2, Plus, CheckCircle } from "lucide-react";
+import { Pencil, Trash2, Plus, CheckCircle, Eye } from "lucide-react";
 import { GuiaOperativaModal } from "./GuiaOperativaModal";
 import type { GuiaOperativa } from "@/types/guiaOperativa";
 import Label from "@/components/form/Label";
 import DatePicker from "@/components/form/date-picker";
+import Link from "next/link";
 
 const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
     emitida: "warning",
@@ -99,7 +100,6 @@ export default function GuiasOperativasTable() {
                     </div>
                     <div className="w-48">
                         <Label className="text-gray-700 dark:text-gray-300">Fecha Emisión</Label>
-
                         <DatePicker
                             id="fecha-filtro"
                             placeholder="dd/mm/aaaa"
@@ -168,6 +168,15 @@ export default function GuiasOperativasTable() {
                                             </TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
+                                                    {/* Botón Ver */}
+                                                    <Link href={`/dashboard/guias-operativas/${guia.id_guia}`}>
+                                                        <button
+                                                            className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                            title="Ver detalles"
+                                                        >
+                                                            <Eye className="h-5 w-5" />
+                                                        </button>
+                                                    </Link>
                                                     <button
                                                         onClick={() => handleEdit(guia)}
                                                         className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
