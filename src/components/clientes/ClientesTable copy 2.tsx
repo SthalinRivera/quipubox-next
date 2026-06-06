@@ -17,11 +17,12 @@ import Input from '@/components/form/input/InputField';
 import { ClienteModal } from '@/components/clientes/ClienteModal';
 import { ClienteSedesModal } from '@/components/clientes/ClienteSedesModal';
 import { ClientePuestosModal } from '@/components/clientes/ClientePuestosModal';
-import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
+import { PencilIcon, TrashBinIcon, PlusIcon, ListIcon, StoreIcon, SearchIcon } from '@/icons';
 import Pagination from './Pagination';
 import Switch from '@/components/form/switch/Switch';
 import type { Cliente, ClienteSede, PuestoAsignado } from '@/types/cliente';
 
+// Definición local del tipo BadgeColor (si no está exportada por Badge)
 type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark';
 
 export default function ClientesTable() {
@@ -37,7 +38,7 @@ export default function ClientesTable() {
     updateCliente,
     refetch,
   } = useClientesData();
-  const { estado, setEstado, resetFilters, tipo_relacion, setTipoRelacion } = useClientesUIStore();
+  const { estado, setEstado, resetFilters } = useClientesUIStore();
   const toast = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,8 +46,8 @@ export default function ClientesTable() {
   const [sedesOpen, setSedesOpen] = useState(false);
   const [puestosOpen, setPuestosOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [filtroTipoRelacion, setFiltroTipoRelacion] = useState('todos');
 
+  // Filtro local
   const filteredClientes = clientes.filter((cliente: Cliente) => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
@@ -58,6 +59,7 @@ export default function ClientesTable() {
     );
   });
 
+  // Handlers
   const handleCreate = () => {
     setSelectedCliente(null);
     setModalOpen(true);
@@ -106,78 +108,58 @@ export default function ClientesTable() {
     refetch();
   };
 
-  const renderSedes = (sedes: ClienteSede[], cliente: Cliente) => {
+  // Renderizado de sedes
+  const renderSedes = (sedes: ClienteSede[]) => {
+    if (!sedes || sedes.length === 0) return '—';
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1">
-          {sedes && sedes.length > 0 ? (
-            sedes.map((rel) => {
-              let badgeColor: BadgeColor = 'light';
-              switch (rel.tipo_relacion) {
-                case 'emisor': badgeColor = 'info'; break;
-                case 'receptor': badgeColor = 'success'; break;
-                case 'ambos': badgeColor = 'warning'; break;
-              }
-              return (
-                <div key={rel.id_cliente_sede} className="relative group" title={`${rel.sedes?.nombre} - ${rel.tipo_relacion}`}>
-                  <Badge size="sm" color={badgeColor}>
-                    {rel.sedes?.nombre} ({rel.tipo_relacion === 'emisor' ? 'E' : rel.tipo_relacion === 'receptor' ? 'R' : 'E/R'})
-                  </Badge>
-                </div>
-              );
-            })
-          ) : (
-            <span className="text-gray-400 text-sm">—</span>
-          )}
-        </div>
-        <button
-          onClick={() => handleSedes(cliente)}
-          className="text-blue-500 hover:text-blue-600 transition-colors"
-          title="Agregar sede"
-        >
-          <PlusIcon className="h-4 w-4" />
-        </button>
+      <div className="flex flex-wrap gap-1">
+        {sedes.map((rel) => {
+          let badgeColor: BadgeColor = 'light';
+          switch (rel.tipo_relacion) {
+            case 'emisor': badgeColor = 'info'; break;
+            case 'receptor': badgeColor = 'success'; break;
+            case 'ambos': badgeColor = 'warning'; break;
+          }
+          return (
+            <div key={rel.id_cliente_sede} className="relative group" title={`${rel.sedes?.nombre} - ${rel.tipo_relacion}`}>
+              <Badge size="sm" color={badgeColor}>
+                {rel.sedes?.nombre} ({rel.tipo_relacion === 'emisor' ? 'E' : rel.tipo_relacion === 'receptor' ? 'R' : 'E/R'})
+              </Badge>
+            </div>
+          );
+        })}
       </div>
     );
   };
 
-  const renderPuestos = (puestos: PuestoAsignado[], cliente: Cliente) => {
+  // Renderizado de puestos
+  const renderPuestos = (puestos: PuestoAsignado[]) => {
+    if (!puestos || puestos.length === 0) return '—';
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1">
-          {puestos && puestos.length > 0 ? (
-            puestos.map((pa) => {
-              let badgeColor: BadgeColor = 'light';
-              if (pa.seccion === 'A') badgeColor = 'primary';
-              else if (pa.seccion === 'B') badgeColor = 'info';
-              else if (pa.seccion === 'C') badgeColor = 'success';
-              const tooltipText = `${pa.puestos?.numero_puesto} - ${pa.puestos?.lugares_operativos?.nombre || '?'} (Sede: ${pa.puestos?.lugares_operativos?.sedes?.nombre || '?'})${pa.seccion ? ` - Sección ${pa.seccion}` : ''}`;
-              return (
-                <div key={pa.id_cliente_puesto} className="relative group" title={tooltipText}>
-                  <Badge size="sm" color={badgeColor}>
-                    {pa.puestos?.numero_puesto || pa.id_puesto}
-                    {pa.seccion && <span className="ml-0.5 text-[10px] opacity-80">({pa.seccion})</span>}
-                  </Badge>
-                </div>
-              );
-            })
-          ) : (
-            <span className="text-gray-400 text-sm">—</span>
-          )}
-        </div>
-        <button
-          onClick={() => handlePuestos(cliente)}
-          className="text-green-500 hover:text-green-600 transition-colors"
-          title="Agregar puesto"
-        >
-          <PlusIcon className="h-4 w-4" />
-        </button>
+      <div className="flex flex-wrap gap-1">
+        {puestos.map((pa) => {
+          let badgeColor: BadgeColor = 'light';
+          if (pa.seccion === 'A') badgeColor = 'primary';
+          else if (pa.seccion === 'B') badgeColor = 'info';
+          else if (pa.seccion === 'C') badgeColor = 'success';
+          const tooltipText = `${pa.puestos?.numero_puesto} - ${pa.puestos?.lugares_operativos?.nombre || '?'} (Sede: ${pa.puestos?.lugares_operativos?.sedes?.nombre || '?'})${pa.seccion ? ` - Sección ${pa.seccion}` : ''}`;
+          return (
+            <div key={pa.id_cliente_puesto} className="relative group" title={tooltipText}>
+              <Badge size="sm" color={badgeColor}>
+                {pa.puestos?.numero_puesto || pa.id_puesto}
+                {pa.seccion && <span className="ml-0.5 text-[10px] opacity-80">({pa.seccion})</span>}
+              </Badge>
+            </div>
+          );
+        })}
       </div>
     );
   };
 
+  // Renderizado de lugares operativos (únicos)
   const renderLugaresOperativos = (puestos: PuestoAsignado[]) => {
     if (!puestos || puestos.length === 0) return '—';
+
     const lugaresUnicos = new Map();
     puestos.forEach(pa => {
       const lugar = pa.puestos?.lugares_operativos;
@@ -199,6 +181,7 @@ export default function ClientesTable() {
         });
       }
     });
+
     if (lugaresUnicos.size === 0) return '—';
     return (
       <div className="flex flex-wrap gap-1">
@@ -237,62 +220,30 @@ export default function ClientesTable() {
     <div className="space-y-4">
       {/* Filtros */}
       <div className="flex flex-wrap justify-between gap-4">
-        <div className="flex flex-wrap gap-4 items-end">
-          {/* Búsqueda local */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="text-gray-700 dark:text-gray-300 mb-1 block">Buscar</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Nombre, apellido o teléfono..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
-              />
-              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-            </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="relative w-64">
+            <input
+              type="text"
+              placeholder="Buscar por nombre, apellido o teléfono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+            />
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           </div>
-
-          {/* Tipo relación (backend) */}
-          <div className="w-48">
-            <label className="text-gray-700 dark:text-gray-300 mb-1 block">Tipo Relación</label>
-            <select
-              value={tipo_relacion}
-              onChange={(e) => setTipoRelacion(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
-            >
-              <option value="todos">Todos</option>
-              <option value="emisor">Emisor</option>
-              <option value="receptor">Receptor</option>
-              <option value="ambos">Ambos</option>
-            </select>
-          </div>
-
-          {/* Estado (backend) */}
-          <div className="w-48">
-            <label className="text-gray-700 dark:text-gray-300 mb-1 block">Estado</label>
-            <select
-              value={estado === 'todos' ? 'todos' : estado.toString()}
-              onChange={(e) => setEstado(e.target.value === 'todos' ? 'todos' : e.target.value === 'true')}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
-            >
-              <option value="todos">Todos</option>
-              <option value="true">Activos</option>
-              <option value="false">Inactivos</option>
-            </select>
-          </div>
-
-          {/* Botón limpiar (solo si hay filtros activos) */}
-          {(searchTerm || estado !== 'todos' || tipo_relacion !== 'todos') && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSearchTerm('');
-                resetFilters();
-              }}
-              className="self-end mb-0.5"
-            >
+          <select
+            value={estado === 'todos' ? 'todos' : estado.toString()}
+            onChange={(e) =>
+              setEstado(e.target.value === 'todos' ? 'todos' : e.target.value === 'true')
+            }
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+          >
+            <option value="todos">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </select>
+          {(searchTerm || estado !== 'todos') && (
+            <Button variant="outline" size="sm" onClick={() => { setSearchTerm(''); resetFilters(); }}>
               Limpiar filtros
             </Button>
           )}
@@ -334,26 +285,18 @@ export default function ClientesTable() {
                       <TableCell className="px-5 py-4 font-medium text-gray-800 dark:text-white/90">{cliente.nombres}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{cliente.apellidos || '—'}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{cliente.telefono || '—'}</TableCell>
-                      <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
-                        {renderSedes(cliente.cliente_sede || [], cliente)}
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
-                        {renderLugaresOperativos((cliente.clientes_puestos as PuestoAsignado[]) || [])}
-                      </TableCell>
-                      <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
-                        {renderPuestos((cliente.clientes_puestos as PuestoAsignado[]) || [], cliente)}
-                      </TableCell>
+                      <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{renderSedes(cliente.cliente_sede || [])}</TableCell>
+                      <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{renderLugaresOperativos((cliente.clientes_puestos as PuestoAsignado[]) || [])}</TableCell>
+                      <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">{renderPuestos((cliente.clientes_puestos as PuestoAsignado[]) || [])}</TableCell>
                       <TableCell className="px-5 py-4">
                         <Switch label="" defaultChecked={cliente.estado} onChange={(checked) => handleToggleStatus(cliente, checked)} color="blue" />
                       </TableCell>
                       <TableCell className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <button onClick={() => handleEdit(cliente)} className="text-gray-500 hover:text-brand-500" title="Editar cliente">
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          <button onClick={() => handleDelete(cliente)} className="text-gray-500 hover:text-error-500" title="Eliminar cliente">
-                            <TrashBinIcon className="h-5 w-5" />
-                          </button>
+                          <button onClick={() => handleEdit(cliente)} className="text-gray-500 hover:text-brand-500" title="Editar cliente"><PencilIcon className="h-5 w-5" /></button>
+                          <button onClick={() => handleSedes(cliente)} className="text-gray-500 hover:text-brand-500" title="Gestionar sedes"><ListIcon className="h-5 w-5" />Gesionar sedes</button>
+                          <button onClick={() => handlePuestos(cliente)} className="text-gray-500 hover:text-brand-500" title="Gestionar puestos"><StoreIcon className="h-5 w-5" />gestionar puestos </button>
+                          <button onClick={() => handleDelete(cliente)} className="text-gray-500 hover:text-error-500" title="Eliminar cliente"><TrashBinIcon className="h-5 w-5" /></button>
                         </div>
                       </TableCell>
                     </TableRow>

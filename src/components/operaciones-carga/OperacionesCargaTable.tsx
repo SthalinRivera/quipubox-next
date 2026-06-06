@@ -184,16 +184,7 @@ export default function OperacionesCargaTable() {
                                                     >
                                                         <Trash2 className="h-5 w-5" />
                                                     </button>
-                                                    <select
-                                                        value={op.estado}
-                                                        onChange={(e) => handleChangeState(op.id_operacion, e.target.value)}
-                                                        className="rounded border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-brand-400"
-                                                    >
-                                                        <option value="pendiente">Pendiente</option>
-                                                        <option value="en_proceso">En proceso</option>
-                                                        <option value="completada">Completada</option>
-                                                        <option value="cancelada">Cancelada</option>
-                                                    </select>
+
                                                 </div>
                                             </TableCell>
                                         </TableRow>

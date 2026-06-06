@@ -14,25 +14,27 @@ interface PaginatedResponse {
 const fetchClientes = async (
     page: number,
     search: string,
-    estado: boolean | 'todos'
+    estado: boolean | 'todos',
+    tipo_relacion: string
 ): Promise<PaginatedResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('limit', '10');
     if (search) params.append('buscar', search);
     if (estado !== 'todos') params.append('estado', estado.toString());
-
+    if (tipo_relacion !== 'todos') params.append('tipo_relacion', tipo_relacion); // ✅ AGREGADO
     const response = await fetchWithAuth<PaginatedResponse>(`clientes?${params.toString()}`);
     return response;
 };
 
 export const useClientesData = () => {
-    const { page, search, estado, setPage } = useClientesUIStore();
+    const { page, search, estado, tipo_relacion, setPage } = useClientesUIStore();
+
     const queryClient = useQueryClient();
 
     const query = useQuery({
-        queryKey: ['clientes', { page, search, estado }],
-        queryFn: () => fetchClientes(page, search, estado),
+        queryKey: ['clientes', { page, search, estado, tipo_relacion }],
+        queryFn: () => fetchClientes(page, search, estado, tipo_relacion),
         placeholderData: keepPreviousData,  // ✅ v5 usa placeholderData
     });
 
