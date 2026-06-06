@@ -58,7 +58,7 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
     );
     if (clientSedeIds.length > 0) {
       disponibles = disponibles.filter((p: Puesto) =>
-        clientSedeIds.includes(p.lugares_operativos?.id_sede ?? 0)
+        clientSedeIds.includes(p.lugares_operativos?.sedes?.id_sede ?? 0)
       );
     }
     if (searchTerm.trim()) {
