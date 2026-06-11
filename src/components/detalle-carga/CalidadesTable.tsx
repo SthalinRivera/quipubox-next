@@ -17,21 +17,25 @@ import type { DetalleCalidad } from "@/types/detalleCarga";
 
 interface CalidadesTableProps {
     detalleId: number;
+    maxCantidad: number;
 }
 
-export function CalidadesTable({ detalleId }: CalidadesTableProps) {
+export function CalidadesTable({ detalleId, maxCantidad }: CalidadesTableProps) {
     const { fetchCalidades, addCalidad, updateCalidad, deleteCalidad } = useDetallesCarga(0);
     const toast = useToast();
     const [calidades, setCalidades] = useState<DetalleCalidad[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedCalidad, setSelectedCalidad] = useState<DetalleCalidad | null>(null);
+    const [totalCantidad, setTotalCantidad] = useState(0);
 
     const loadCalidades = async () => {
         setLoading(true);
         try {
             const data = await fetchCalidades(detalleId);
             setCalidades(data);
+            const total = data.reduce((sum, c) => sum + c.cantidad, 0);
+            setTotalCantidad(total);
         } catch (error) {
             console.error(error);
         } finally {
@@ -77,6 +81,9 @@ export function CalidadesTable({ detalleId }: CalidadesTableProps) {
         setModalOpen(false);
     };
 
+    const porcentaje = (totalCantidad / maxCantidad) * 100;
+    const excede = totalCantidad > maxCantidad;
+
     if (loading) {
         return (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -87,15 +94,27 @@ export function CalidadesTable({ detalleId }: CalidadesTableProps) {
 
     return (
         <div className="space-y-3">
-            <div className="flex justify-between items-center">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Calidades
-                </h4>
+            <div className="space-y-1">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <span>Total calidades: {totalCantidad} / {maxCantidad} jabas</span>
+                    {excede && <span className="text-red-500 dark:text-red-400">¡Excede el límite!</span>}
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                    <div
+                        className={`h-2 rounded-full ${excede ? "bg-red-500" : "bg-brand-500"}`}
+                        style={{ width: `${Math.min(porcentaje, 100)}%` }}
+                    />
+                </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Calidades</h4>
                 <Button
                     size="sm"
                     onClick={handleCreate}
                     startIcon={<Plus className="h-4 w-4" />}
-                    className="text-sm"
+                    disabled={totalCantidad >= maxCantidad}
+                    className="dark:bg-brand-600 dark:hover:bg-brand-700"
                 >
                     Agregar
                 </Button>
@@ -106,28 +125,16 @@ export function CalidadesTable({ detalleId }: CalidadesTableProps) {
                     <Table>
                         <TableHeader className="border-b border-gray-100 dark:border-gray-700">
                             <TableRow>
-                                <TableCell
-                                    isHeader
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
-                                >
+                                <TableCell isHeader className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                     Calidad
                                 </TableCell>
-                                <TableCell
-                                    isHeader
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
-                                >
+                                <TableCell isHeader className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                     Cantidad
                                 </TableCell>
-                                <TableCell
-                                    isHeader
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
-                                >
+                                <TableCell isHeader className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                     Precio Unit.
                                 </TableCell>
-                                <TableCell
-                                    isHeader
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
-                                >
+                                <TableCell isHeader className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                     Acciones
                                 </TableCell>
                             </TableRow>
@@ -135,10 +142,7 @@ export function CalidadesTable({ detalleId }: CalidadesTableProps) {
                         <TableBody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {calidades.length === 0 ? (
                                 <TableRow>
-                                    <TableCell
-                                        colSpan={4}
-                                        className="py-6 text-center text-sm text-gray-500 dark:text-gray-400"
-                                    >
+                                    <TableCell colSpan={4} className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                                         Sin calidades registradas
                                     </TableCell>
                                 </TableRow>
@@ -159,14 +163,14 @@ export function CalidadesTable({ detalleId }: CalidadesTableProps) {
                                                 <button
                                                     onClick={() => handleEdit(c)}
                                                     className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-                                                    title="Editar calidad"
+                                                    title="Editar"
                                                 >
                                                     <Pencil className="h-4 w-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(c.id_detalle_carga_calidad)}
-                                                    className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400"
-                                                    title="Eliminar calidad"
+                                                    className="text-gray-500 transition-colors hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
+                                                    title="Eliminar"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -185,6 +189,8 @@ export function CalidadesTable({ detalleId }: CalidadesTableProps) {
                 onClose={() => setModalOpen(false)}
                 editingCalidad={selectedCalidad}
                 onSave={handleSave}
+                maxCantidad={maxCantidad}
+                currentTotal={totalCantidad}
             />
         </div>
     );

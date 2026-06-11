@@ -1,3 +1,4 @@
+// hooks/useCalidades.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -20,28 +21,37 @@ export const useCalidades = () => {
         }
     }, []);
 
-    const create = async (calidad: Partial<Calidad>) => {
+    const create = useCallback(async (calidad: Partial<Calidad>) => {
         const newCalidad = await fetchWithAuth<Calidad>('calidades', {
             method: 'POST',
             body: calidad,
         });
-        await fetchAll();
+        // ✅ Actualización local: agregar al final
+        setCalidades(prev => [...prev, newCalidad]);
         return newCalidad;
-    };
+    }, []);
 
-    const update = async (id: number, calidad: Partial<Calidad>) => {
+    const update = useCallback(async (id: number, calidad: Partial<Calidad>) => {
         const updated = await fetchWithAuth<Calidad>(`calidades/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',   // cambio de PUT a PATCH
             body: calidad,
         });
-        await fetchAll();
+        // ✅ Actualización local: reemplazar la modificada
+        setCalidades(prev => prev.map(c => c.id_calidad === id ? updated : c));
         return updated;
-    };
+    }, []);
 
-    const remove = async (id: number) => {
-        await fetchWithAuth(`calidades/${id}`, { method: 'DELETE' });
-        await fetchAll();
-    };
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+        const updated = await fetchWithAuth<Calidad>(`calidades/${id}/estado`, {
+            method: 'PATCH',
+            body: { estado },
+        });
+        // ✅ Actualización local: cambiar estado
+        setCalidades(prev => prev.map(c => c.id_calidad === id ? updated : c));
+        return updated;
+    }, []);
 
-    return { calidades, loading, fetchAll, create, update, remove };
+    // ❌ remove eliminado
+
+    return { calidades, loading, fetchAll, create, update, toggleEstado };
 };

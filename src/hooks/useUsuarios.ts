@@ -1,6 +1,5 @@
 // hooks/useUsuarios.ts
 'use client';
-
 import { useCallback, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
 import { useUsuariosStore } from '@/stores/usuariosStore';
@@ -11,12 +10,11 @@ export const useUsuarios = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<any>(null);
 
-    const fetchAll = useCallback(async (force = false) => {
+    const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
             const data = await fetchWithAuth<Usuario[]>('usuarios');
             setUsuarios(data);
-            return data;
         } catch (err) {
             setError(err);
             throw err;
@@ -25,7 +23,7 @@ export const useUsuarios = () => {
         }
     }, [setUsuarios]);
 
-    const create = async (usuario: any) => {
+    const create = useCallback(async (usuario: any) => {
         setLoading(true);
         try {
             const newUser = await fetchWithAuth<Usuario>('usuarios', { method: 'POST', body: usuario });
@@ -34,9 +32,9 @@ export const useUsuarios = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [usuarios, setUsuarios]);
 
-    const update = async (id: number, data: any) => {
+    const update = useCallback(async (id: number, data: any) => {
         setLoading(true);
         try {
             const updated = await fetchWithAuth<Usuario>(`usuarios/${id}`, { method: 'PUT', body: data });
@@ -45,39 +43,37 @@ export const useUsuarios = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [updateUsuario]);
 
-    const remove = async (id: number) => {
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
         setLoading(true);
         try {
-            await fetchWithAuth(`usuarios/${id}`, { method: 'DELETE' });
-            removeUsuario(id);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const bloquear = async (id: number) => {
-        setLoading(true);
-        try {
-            const updated = await fetchWithAuth<Usuario>(`usuarios/${id}/bloquear`, { method: 'PATCH' });
+            const updated = await fetchWithAuth<Usuario>(`usuarios/${id}/estado`, {
+                method: 'PATCH',
+                body: { estado },
+            });
             updateUsuario(id, updated);
+            return updated;
         } finally {
             setLoading(false);
         }
-    };
+    }, [updateUsuario]);
 
-    const activar = async (id: number) => {
+    const cambiarEstadoAcceso = useCallback(async (id: number, estadoAcceso: 'activo' | 'bloqueado') => {
         setLoading(true);
         try {
-            const updated = await fetchWithAuth<Usuario>(`usuarios/${id}/activar`, { method: 'PATCH' });
+            const updated = await fetchWithAuth<Usuario>(`usuarios/${id}/estado-acceso`, {
+                method: 'PATCH',
+                body: { estado_acceso: estadoAcceso },
+            });
             updateUsuario(id, updated);
+            return updated;
         } finally {
             setLoading(false);
         }
-    };
+    }, [updateUsuario]);
 
-    const assignRole = async (usuarioId: number, rolId: number) => {
+    const assignRole = useCallback(async (usuarioId: number, rolId: number) => {
         setLoading(true);
         try {
             await fetchWithAuth(`usuarios/${usuarioId}/roles`, { method: 'POST', body: { id_rol_usuario: rolId } });
@@ -87,9 +83,9 @@ export const useUsuarios = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [updateUsuario]);
 
-    const removeRole = async (usuarioId: number, rolId: number) => {
+    const removeRole = useCallback(async (usuarioId: number, rolId: number) => {
         setLoading(true);
         try {
             await fetchWithAuth(`usuarios/${usuarioId}/roles/${rolId}`, { method: 'DELETE' });
@@ -98,7 +94,7 @@ export const useUsuarios = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [updateUsuario]);
 
     return {
         usuarios,
@@ -107,9 +103,8 @@ export const useUsuarios = () => {
         fetchAll,
         create,
         update,
-        remove,
-        bloquear,
-        activar,
+        toggleEstado,
+        cambiarEstadoAcceso,
         assignRole,
         removeRole,
     };

@@ -1,4 +1,4 @@
-// components/variedades/VariedadModal.tsx
+// components/roles/RolModal.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -9,30 +9,27 @@ import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
-import Select from '@/components/form/Select';
-import { useVariedades } from '@/hooks/useVariedades';
-import { useFrutas } from '@/hooks/useFrutas';
+import { useRoles } from '@/hooks/useRoles';
 import { useToast } from '@/hooks/useToast';
-import type { Variedad } from '@/types/variedad';
+import type { Rol } from '@/types/rol';
 
-const variedadSchema = z.object({
+const rolSchema = z.object({
     nombre: z.string().min(1, 'El nombre es obligatorio'),
-    fruta_id: z.number().min(1, 'Debes seleccionar una fruta'),
+    descripcion: z.string().optional(),
     estado: z.boolean().default(true),
 });
 
-type VariedadFormData = z.infer<typeof variedadSchema>;
+type RolFormData = z.infer<typeof rolSchema>;
 
-interface VariedadModalProps {
+interface RolModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    editingVariedad: Variedad | null;
+    editingRol?: Rol | null;
     onSaved: () => void;
 }
 
-export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: VariedadModalProps) {
-    const { create, update } = useVariedades();
-    const { frutas, fetchAll: fetchFrutas } = useFrutas();
+export function RolModal({ open, onOpenChange, editingRol, onSaved }: RolModalProps) {
+    const { create, update } = useRoles();
     const toast = useToast();
 
     const {
@@ -40,45 +37,35 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
         handleSubmit,
         reset,
         formState: { errors, isSubmitting, isValid },
-    } = useForm<VariedadFormData>({
-        resolver: zodResolver(variedadSchema) as any,
-        defaultValues: { nombre: '', fruta_id: 0, estado: true },
+    } = useForm<RolFormData>({
+        resolver: zodResolver(rolSchema) as any,
+        defaultValues: { nombre: '', descripcion: '', estado: true },
         mode: 'onChange',
     });
 
     useEffect(() => {
-        if (open) fetchFrutas();
-    }, [open, fetchFrutas]);
-
-    useEffect(() => {
         if (open) {
-            if (editingVariedad) {
-                const frutaId = editingVariedad.fruta_id ?? editingVariedad.frutas?.id_fruta ?? 0;
+            if (editingRol) {
                 reset({
-                    nombre: editingVariedad.nombre,
-                    fruta_id: frutaId,
-                    estado: editingVariedad.estado ?? true,
+                    nombre: editingRol.nombre,
+                    descripcion: editingRol.descripcion || '',
+                    estado: editingRol.estado,
                 });
             } else {
-                reset({ nombre: '', fruta_id: 0, estado: true });
+                reset({ nombre: '', descripcion: '', estado: true });
             }
         }
-    }, [open, editingVariedad, reset]);
+    }, [open, editingRol, reset]);
 
-    const frutasOptions = frutas.map((f) => ({
-        value: f.id_fruta.toString(),
-        label: f.nombre,
-    }));
-
-    const onSubmit = async (data: VariedadFormData) => {
+    const onSubmit = async (data: RolFormData) => {
         try {
-            const payload = { ...data, id_empresa: 1 }; // Ajusta según tu lógica
-            if (editingVariedad) {
-                await update(editingVariedad.id_variedad, payload);
-                toast.success('Variedad actualizada');
+            const payload = { ...data, estado: data.estado };
+            if (editingRol) {
+                await update(editingRol.id_rol_usuario, payload);
+                toast.success('Rol actualizado');
             } else {
                 await create(payload);
-                toast.success('Variedad creada');
+                toast.success('Rol creado');
             }
             onSaved();
             onOpenChange(false);
@@ -91,10 +78,12 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
         <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[584px] p-5 lg:p-10">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
-                    {editingVariedad ? 'Editar Variedad' : 'Nueva Variedad'}
+                    {editingRol ? 'Editar rol' : 'Nuevo rol'}
                 </h4>
                 <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-                    {editingVariedad ? 'Modifica los datos de la variedad' : 'Completa la información para crear una nueva variedad'}
+                    {editingRol
+                        ? 'Modifica los datos del rol'
+                        : 'Completa la información para crear un nuevo rol'}
                 </p>
 
                 <div className="space-y-4">
@@ -106,31 +95,15 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
                         <Controller
                             name="nombre"
                             control={control}
-                            render={({ field }) => (
-                                <Input {...field} error={!!errors.nombre} />
-                            )}
+                            render={({ field }) => <Input {...field} error={!!errors.nombre} />}
                         />
                         {errors.nombre && <p className="mt-1 text-xs text-error-500">{errors.nombre.message}</p>}
                     </div>
 
-                    {/* Fruta */}
+                    {/* Descripción */}
                     <div>
-                        <Label className="text-gray-700 dark:text-gray-300">
-                            Fruta <span className="text-error-500">*</span>
-                        </Label>
-                        <Controller
-                            name="fruta_id"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    options={frutasOptions}
-                                    placeholder="Selecciona una fruta"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
-                                />
-                            )}
-                        />
-                        {errors.fruta_id && <p className="mt-1 text-xs text-error-500">{errors.fruta_id.message}</p>}
+                        <Label className="text-gray-700 dark:text-gray-300">Descripción</Label>
+                        <Controller name="descripcion" control={control} render={({ field }) => <Input {...field} />} />
                     </div>
 
                     {/* Estado (checkbox) */}
@@ -159,7 +132,7 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
                         Cancelar
                     </Button>
                     <Button type="submit" size="sm" disabled={isSubmitting || !isValid}>
-                        {isSubmitting ? 'Guardando...' : editingVariedad ? 'Actualizar' : 'Crear'}
+                        {isSubmitting ? 'Guardando...' : editingRol ? 'Actualizar' : 'Crear'}
                     </Button>
                 </div>
             </form>

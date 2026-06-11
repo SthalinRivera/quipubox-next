@@ -1,7 +1,8 @@
+// components/lugares-operativos/LugarOperativoTable.tsx
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { useEffect, useState } from 'react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
     TableBody,
@@ -14,75 +15,27 @@ import Button from '@/components/ui/button/Button';
 import { LugarOperativoModal } from './LugarOperativoModal';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { useToast } from '@/hooks/useToast';
-import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
+import { PencilIcon, PlusIcon, SearchIcon } from '@/icons';
+import { Power, Play } from "lucide-react";
 import type { LugarOperativo } from '@/types/lugarOperativo';
-
-// Cache simple en memoria
-let cachedMercados: LugarOperativo[] | null = null;
-let activePromise: Promise<LugarOperativo[]> | null = null;
+import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function LugarOperativoTable() {
-    const [mercados, setMercados] = useState<LugarOperativo[]>(() => cachedMercados || []);
-    const [loading, setLoading] = useState(!cachedMercados);
-    const [error, setError] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const abortRef = useRef<AbortController | null>(null);
-
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedMercado, setSelectedMercado] = useState<LugarOperativo | null>(null);
-
-    const { remove } = useLugarOperativo();
+    const { lugares, loading, fetchAll, toggleEstado } = useLugarOperativo();
     const toast = useToast();
 
-    const cargarMercados = useCallback(async (forceRefresh = false) => {
-        if (forceRefresh) cachedMercados = null;
-        if (cachedMercados && !forceRefresh) {
-            setMercados(cachedMercados);
-            setLoading(false);
-            return;
-        }
-        if (activePromise) {
-            try {
-                const data = await activePromise;
-                if (!cachedMercados) cachedMercados = data;
-                setMercados(data);
-                setLoading(false);
-            } catch { }
-            return;
-        }
-        if (abortRef.current) abortRef.current.abort();
-        const controller = new AbortController();
-        abortRef.current = controller;
-        setLoading(true);
-        setError(null);
-
-        const promise = (async () => {
-            try {
-                const data = await fetchWithAuth<LugarOperativo[]>('lugares-operativos', { signal: controller.signal });
-                cachedMercados = data;
-                setMercados(data);
-                return data;
-            } catch (err: any) {
-                if (err.name === 'AbortError') return cachedMercados || [];
-                setError(err.message || 'Error al cargar mercados');
-                throw err;
-            } finally {
-                setLoading(false);
-                activePromise = null;
-                abortRef.current = null;
-            }
-        })();
-        activePromise = promise;
-        return promise;
-    }, []);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedMercado, setSelectedMercado] = useState<LugarOperativo | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ item: LugarOperativo; nuevoEstado: boolean } | null>(null);
 
     useEffect(() => {
-        cargarMercados();
-        return () => abortRef.current?.abort();
-    }, [cargarMercados]);
+        fetchAll();
+    }, [fetchAll]);
 
-    const filteredMercados = (mercados || []).filter((m) =>
-        m.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
+    const filteredItems = (lugares || []).filter(item =>
+        item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleCreate = () => {
@@ -90,47 +43,41 @@ export default function LugarOperativoTable() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (mercado: LugarOperativo) => {
-        setSelectedMercado(mercado);
+    const handleEdit = (item: LugarOperativo) => {
+        setSelectedMercado(item);
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: number, nombre: string) => {
-        if (window.confirm(`¿Desactivar el Lugar Operativo "${nombre}"?`)) {
-            try {
-                await remove(id);
-                toast.success('Lugar Operativo desactivado');
-                cargarMercados(true);
-            } catch (err: any) {
-                toast.error(err.message || 'Error al eliminar');
-            }
-        }
+    const handleToggle = (item: LugarOperativo) => {
+        const nuevoEstado = !item.estado;
+        setPendingAction({ item, nuevoEstado });
+        setConfirmOpen(true);
     };
 
-    const handleSaved = () => cargarMercados(true);
+    const executeToggle = async () => {
+        if (!pendingAction) return;
+        const { item, nuevoEstado } = pendingAction;
+        await toggleEstado(item.id_lugar, nuevoEstado);
+        toast.success(`Lugar operativo ${nuevoEstado ? 'activado' : 'desactivado'}`);
+        setConfirmOpen(false);
+        setPendingAction(null);
+    };
+
+    const handleSaved = () => {
+        setIsModalOpen(false);
+    };
 
     if (loading) {
         return (
-            <div className="p-4 text-center">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"></div>
-                <span className="ml-2 text-gray-700 dark:text-gray-300">Cargando lugares operativos...</span>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 text-center">
-                <p className="mb-4 text-red-500 dark:text-red-400">Error: {error}</p>
-                <Button size="sm" onClick={() => cargarMercados(true)}>
-                    Reintentar
-                </Button>
+            <div className="p-4 text-center text-gray-700 dark:text-gray-300">
+                <TableSkeleton columns={7} rows={10} showActionButton={true} />;
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
+            {/* Barra de herramientas */}
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="relative">
                     <input
@@ -145,119 +92,67 @@ export default function LugarOperativoTable() {
                 <Button
                     size="sm"
                     onClick={handleCreate}
-                    startIcon={<PlusIcon className="h-4 w-4 fill-current" />}
+                    startIcon={<PlusIcon className="h-4 w-4" />}
                 >
                     Nuevo Lugar Operativo
                 </Button>
             </div>
 
+            {/* Tabla */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
                 <div className="max-w-full overflow-x-auto">
-                    <div className="min-w-[700px]">
+                    <div className="min-w-[900px]">
                         <Table>
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        ID
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Empresa
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Sede
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Nombre
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Tipo Lugar
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Dirección/Referencia
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Estado
-                                    </TableCell>
-                                    <TableCell
-                                        isHeader
-                                        className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400"
-                                    >
-                                        Acciones
-                                    </TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Empresa</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Sede</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Tipo</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Dirección</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Estado</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Acciones</TableCell>
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                                {filteredMercados.length === 0 ? (
+                                {filteredItems.length === 0 ? (
                                     <TableRow>
-                                        <TableCell
-                                            colSpan={7}
-                                            className="py-8 text-center text-gray-500 dark:text-gray-400"
-                                        >
-                                            No hay mercados registrados.
+                                        <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                            No hay lugares operativos registrados.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredMercados.map((mercado) => (
-                                        <TableRow key={mercado.id_lugar}>
+                                    filteredItems.map((item) => (
+                                        <TableRow key={item.id_lugar}>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.id_lugar}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.empresas?.razon_social || '—'}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.sedes?.nombre || '—'}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {mercado.id_lugar}
+                                                {item.tipo_lugar ? item.tipo_lugar.charAt(0).toUpperCase() + item.tipo_lugar.slice(1) : '—'}
                                             </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {mercado.empresas?.razon_social || '—'}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {mercado.sedes?.nombre || '—'}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {mercado.nombre}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {mercado.tipo_lugar ? mercado.tipo_lugar.charAt(0).toUpperCase() + mercado.tipo_lugar.slice(1) : '—'}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                                                {mercado.direccion_referencia || '—'}
-                                            </TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{item.direccion_referencia || '—'}</TableCell>
                                             <TableCell className="px-5 py-4">
-                                                <Badge size="sm" color={mercado.estado ? 'success' : 'error'}>
-                                                    {mercado.estado ? 'Activo' : 'Inactivo'}
+                                                <Badge size="sm" color={item.estado ? 'success' : 'error'}>
+                                                    {item.estado ? 'Activo' : 'Inactivo'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <button
-                                                        onClick={() => handleEdit(mercado)}
+                                                        onClick={() => handleEdit(item)}
                                                         className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
                                                         title="Editar"
                                                     >
                                                         <PencilIcon className="h-5 w-5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(mercado.id_lugar, mercado.nombre)}
-                                                        className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400"
-                                                        title="Eliminar"
+                                                        onClick={() => handleToggle(item)}
+                                                        className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                        title={item.estado ? 'Desactivar' : 'Activar'}
                                                     >
-                                                        <TrashBinIcon className="h-5 w-5" />
+                                                        {item.estado ? <Power className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                                                     </button>
                                                 </div>
                                             </TableCell>
@@ -275,6 +170,17 @@ export default function LugarOperativoTable() {
                 onOpenChange={setIsModalOpen}
                 editingMercado={selectedMercado}
                 onSaved={handleSaved}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={executeToggle}
+                title={pendingAction?.nuevoEstado ? 'Activar lugar operativo' : 'Desactivar lugar operativo'}
+                message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} el lugar operativo "${pendingAction?.item.nombre}"?`}
+                confirmText={pendingAction?.nuevoEstado ? 'Activar' : 'Desactivar'}
+                variant={pendingAction?.nuevoEstado ? 'info' : 'danger'}
+                icon={pendingAction?.nuevoEstado ? <Play className="h-5 w-5" /> : <Power className="h-5 w-5" />}
             />
         </div>
     );

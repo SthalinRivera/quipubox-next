@@ -1,15 +1,29 @@
-"use client";
+// components/camiones/CamionModal.tsx
+'use client';
 
-import { useState, useEffect } from "react";
-import { useCamiones } from "@/hooks/useCamiones";
-import { useEmpresas } from "@/hooks/useEmpresas";
-import { useToast } from "@/hooks/useToast";
-import { Modal } from "@/components/ui/modal";
-import Button from "@/components/ui/button/Button";
-import Input from "@/components/form/input/InputField";
-import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
-import type { Camion } from "@/types/camion";
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Modal } from '@/components/ui/modal';
+import Button from '@/components/ui/button/Button';
+import Input from '@/components/form/input/InputField';
+import Label from '@/components/form/Label';
+import Select from '@/components/form/Select';
+import { useCamiones } from '@/hooks/useCamiones';
+import { useEmpresas } from '@/hooks/useEmpresas';
+import { useToast } from '@/hooks/useToast';
+import type { Camion } from '@/types/camion';
+
+const camionSchema = z.object({
+    id_empresa: z.number().min(1, 'Debes seleccionar una empresa'),
+    placa: z.string().min(1, 'La placa es obligatoria'),
+    descripcion: z.string().optional(),
+    observaciones: z.string().optional(),
+    estado: z.boolean().default(true),
+});
+
+type CamionFormData = z.infer<typeof camionSchema>;
 
 interface CamionModalProps {
     open: boolean;
@@ -22,143 +36,160 @@ export function CamionModal({ open, onOpenChange, editingCamion, onSaved }: Cami
     const { create, update } = useCamiones();
     const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const toast = useToast();
-    const [submitting, setSubmitting] = useState(false);
 
-    const [form, setForm] = useState({
-        id_empresa: "",
-        placa: "",
-        observaciones: "",
-        descripcion: "",
-        estado: true,
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting, isValid },
+    } = useForm<CamionFormData>({
+        resolver: zodResolver(camionSchema) as any,
+        defaultValues: {
+            id_empresa: 0,
+            placa: '',
+            descripcion: '',
+            observaciones: '',
+            estado: true,
+        },
+        mode: 'onChange',
     });
 
     useEffect(() => {
-        fetchEmpresas();
-    }, []);
+        if (open) fetchEmpresas();
+    }, [open, fetchEmpresas]);
 
     useEffect(() => {
-        if (editingCamion) {
-            setForm({
-                id_empresa: editingCamion.id_empresa.toString(),
-                placa: editingCamion.placa,
-                observaciones: editingCamion.observaciones || "",
-                descripcion: editingCamion.descripcion || "",
-                estado: editingCamion.estado,
-            });
-        } else {
-            setForm({
-                id_empresa: "",
-                placa: "",
-                observaciones: "",
-                descripcion: "",
-                estado: true,
-            });
+        if (open) {
+            if (editingCamion) {
+                reset({
+                    id_empresa: editingCamion.id_empresa,
+                    placa: editingCamion.placa,
+                    descripcion: editingCamion.descripcion || '',
+                    observaciones: editingCamion.observaciones || '',
+                    estado: editingCamion.estado,
+                });
+            } else {
+                reset({ id_empresa: 0, placa: '', descripcion: '', observaciones: '', estado: true });
+            }
         }
-    }, [editingCamion, open]);
+    }, [open, editingCamion, reset]);
 
     const empresasOptions = empresas.map(emp => ({
         value: emp.id_empresa.toString(),
         label: emp.razon_social,
     }));
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSubmitting(true);
+    const onSubmit = async (data: CamionFormData) => {
         try {
-            const payload: any = {
-                id_empresa: Number(form.id_empresa),
-                placa: form.placa,
-                observaciones: form.observaciones || undefined,
-                descripcion: form.descripcion || undefined,
-                estado: form.estado,
+            const payload = {
+                id_empresa: data.id_empresa,
+                placa: data.placa,
+                descripcion: data.descripcion || undefined,
+                observaciones: data.observaciones || undefined,
+                estado: data.estado,
             };
             if (editingCamion) {
                 await update(editingCamion.id_camion, payload);
-                toast.success("Camión actualizado");
+                toast.success('Camión actualizado');
             } else {
                 await create(payload);
-                toast.success("Camión creado");
+                toast.success('Camión creado');
             }
             onSaved();
             onOpenChange(false);
         } catch (error: any) {
-            toast.error(error.message || "Error al guardar");
-        } finally {
-            setSubmitting(false);
+            toast.error(error.message || 'Error al guardar');
         }
     };
 
     return (
-        <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-md">
-            <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                    {editingCamion ? "Editar camión" : "Nuevo camión"}
-                </h2>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[584px] p-5 lg:p-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
+                    {editingCamion ? 'Editar camión' : 'Nuevo camión'}
+                </h4>
+                <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
                     {editingCamion
-                        ? "Modifica los datos del camión"
-                        : "Completa la información para crear un nuevo camión"}
+                        ? 'Modifica los datos del camión'
+                        : 'Completa la información para crear un nuevo camión'}
                 </p>
 
-                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="id_empresa">Empresa *</Label>
-                        <Select
-                            key={`empresa-select-${form.id_empresa || "empty"}`}
-                            options={empresasOptions}
-                            placeholder="Seleccionar empresa"
-                            defaultValue={form.id_empresa}
-                            onChange={(value) => setForm({ ...form, id_empresa: value })}
+                <div className="space-y-4">
+                    {/* Empresa */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Empresa <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="id_empresa"
+                            control={control}
+                            render={({ field }) => (
+                                <Select
+                                    options={empresasOptions}
+                                    placeholder="Seleccionar empresa"
+                                    value={field.value ? field.value.toString() : ''}
+                                    onChange={(val) => field.onChange(Number(val))}
+                                />
+                            )}
                         />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="placa">Placa *</Label>
-                        <Input
-                            id="placa"
-                            value={form.placa}
-                            onChange={(e) => setForm({ ...form, placa: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="descripcion">Descripción</Label>
-                        <Input
-                            id="descripcion"
-                            value={form.descripcion}
-                            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="observaciones">Observaciones</Label>
-                        <Input
-                            id="observaciones"
-                            value={form.observaciones}
-                            onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="estado">Estado</Label>
-                        <select
-                            id="estado"
-                            value={form.estado ? "activo" : "inactivo"}
-                            onChange={(e) => setForm({ ...form, estado: e.target.value === "activo" })}
-                            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                        >
-                            <option value="activo">Activo</option>
-                            <option value="inactivo">Inactivo</option>
-                        </select>
+                        {errors.id_empresa && <p className="mt-1 text-xs text-error-500">{errors.id_empresa.message}</p>}
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={submitting}>
-                            {submitting ? "Guardando..." : editingCamion ? "Actualizar" : "Crear"}
-                        </Button>
+                    {/* Placa */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Placa <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="placa"
+                            control={control}
+                            render={({ field }) => <Input {...field} error={!!errors.placa} />}
+                        />
+                        {errors.placa && <p className="mt-1 text-xs text-error-500">{errors.placa.message}</p>}
                     </div>
-                </form>
-            </div>
+
+                    {/* Descripción */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">Descripción</Label>
+                        <Controller name="descripcion" control={control} render={({ field }) => <Input {...field} />} />
+                    </div>
+
+                    {/* Observaciones */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">Observaciones</Label>
+                        <Controller name="observaciones" control={control} render={({ field }) => <Input {...field} />} />
+                    </div>
+
+                    {/* Estado (checkbox) */}
+                    <div className="flex items-center gap-2">
+                        <Controller
+                            name="estado"
+                            control={control}
+                            render={({ field }) => (
+                                <input
+                                    type="checkbox"
+                                    id="estado"
+                                    checked={field.value}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
+                                />
+                            )}
+                        />
+                        <Label htmlFor="estado" className="!mb-0 text-gray-700 dark:text-gray-300 cursor-pointer">
+                            Activo
+                        </Label>
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                    <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" size="sm" disabled={isSubmitting || !isValid}>
+                        {isSubmitting ? 'Guardando...' : editingCamion ? 'Actualizar' : 'Crear'}
+                    </Button>
+                </div>
+            </form>
         </Modal>
     );
 }

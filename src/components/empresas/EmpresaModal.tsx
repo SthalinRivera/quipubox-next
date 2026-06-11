@@ -1,13 +1,30 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useEmpresas } from "@/hooks/useEmpresas";
-import { useToast } from "@/hooks/useToast";
-import { Modal } from "@/components/ui/modal";
-import Button from "@/components/ui/button/Button";
-import Input from "@/components/form/input/InputField";
-import Label from "@/components/form/Label";
-import type { Empresa } from "@/types/empresa";
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useEmpresas } from '@/hooks/useEmpresas';
+import { useToast } from '@/hooks/useToast';
+import { Modal } from '@/components/ui/modal';
+import Button from '@/components/ui/button/Button';
+import Input from '@/components/form/input/InputField';
+import Label from '@/components/form/Label';
+import type { Empresa } from '@/types/empresa';
+
+// Esquema con estado obligatorio (siempre presente)
+const empresaSchema = z.object({
+    razon_social: z.string().min(1, 'La razón social es obligatoria'),
+    nombre_comercial: z.string().min(1, 'El nombre comercial es obligatorio'),
+    ruc: z.string()
+        .optional()
+        .refine(val => !val || /^\d{11}$/.test(val), { message: 'El RUC debe tener 11 dígitos' }),
+    telefono: z.string().optional(),
+    direccion: z.string().optional(),
+    estado: z.boolean(), // ahora es obligatorio, pero se asigna por default en el formulario
+});
+
+type EmpresaFormData = z.infer<typeof empresaSchema>;
 
 interface EmpresaModalProps {
     isOpen: boolean;
@@ -16,153 +33,210 @@ interface EmpresaModalProps {
     onSaved: () => void;
 }
 
-export function EmpresaModal({
-    isOpen,
-    onClose,
-    editingEmpresa,
-    onSaved,
-}: EmpresaModalProps) {
+export function EmpresaModal({ isOpen, onClose, editingEmpresa, onSaved }: EmpresaModalProps) {
     const { create, update } = useEmpresas();
     const toast = useToast();
-    const [submitting, setSubmitting] = useState(false);
 
-    const [form, setForm] = useState({
-        razon_social: "",
-        nombre_comercial: "",
-        ruc: "",
-        telefono: "",
-        direccion: "",
-        estado: true,
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting, isValid },
+    } = useForm<EmpresaFormData>({
+        resolver: zodResolver(empresaSchema),
+        defaultValues: {
+            razon_social: '',
+            nombre_comercial: '',
+            ruc: '',
+            telefono: '',
+            direccion: '',
+            estado: true,
+        },
+        mode: 'onChange',
     });
 
     useEffect(() => {
-        if (editingEmpresa) {
-            setForm({
-                razon_social: editingEmpresa.razon_social,
-                nombre_comercial: editingEmpresa.nombre_comercial,
-                ruc: editingEmpresa.ruc || "",
-                telefono: editingEmpresa.telefono || "",
-                direccion: editingEmpresa.direccion || "",
-                estado: editingEmpresa.estado,
-            });
-        } else {
-            setForm({
-                razon_social: "",
-                nombre_comercial: "",
-                ruc: "",
-                telefono: "",
-                direccion: "",
-                estado: true,
-            });
+        if (isOpen) {
+            if (editingEmpresa) {
+                reset({
+                    razon_social: editingEmpresa.razon_social ?? '',
+                    nombre_comercial: editingEmpresa.nombre_comercial ?? '',
+                    ruc: editingEmpresa.ruc ?? '',
+                    telefono: editingEmpresa.telefono ?? '',
+                    direccion: editingEmpresa.direccion ?? '',
+                    estado: editingEmpresa.estado ?? true,
+                });
+            } else {
+                reset({
+                    razon_social: '',
+                    nombre_comercial: '',
+                    ruc: '',
+                    telefono: '',
+                    direccion: '',
+                    estado: true,
+                });
+            }
         }
-    }, [editingEmpresa, isOpen]);
+    }, [isOpen, editingEmpresa, reset]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSubmitting(true);
+    const onSubmit = async (data: EmpresaFormData) => {
         try {
             const payload = {
-                razon_social: form.razon_social,
-                nombre_comercial: form.nombre_comercial,
-                ruc: form.ruc || undefined,
-                telefono: form.telefono || undefined,
-                direccion: form.direccion || undefined,
-                estado: form.estado,
+                razon_social: data.razon_social,
+                nombre_comercial: data.nombre_comercial,
+                ruc: data.ruc || undefined,
+                telefono: data.telefono || undefined,
+                direccion: data.direccion || undefined,
+                estado: data.estado,
             };
             if (editingEmpresa) {
                 await update(editingEmpresa.id_empresa, payload);
-                toast.success("Empresa actualizada");
+                toast.success('Empresa actualizada');
             } else {
                 await create(payload);
-                toast.success("Empresa creada");
+                toast.success('Empresa creada');
             }
             onSaved();
             onClose();
         } catch (error: any) {
-            toast.error(error.message || "Error al guardar");
-        } finally {
-            setSubmitting(false);
+            toast.error(error.message || 'Error al guardar');
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="max-w-md">
-            <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                    {editingEmpresa ? "Editar empresa" : "Nueva empresa"}
-                </h2>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <Modal isOpen={isOpen} onClose={onClose} className="max-w-[584px] p-5 lg:p-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
+                    {editingEmpresa ? 'Editar empresa' : 'Nueva empresa'}
+                </h4>
+                <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
                     {editingEmpresa
-                        ? "Modifica los datos de la empresa"
-                        : "Completa la información para crear una nueva empresa"}
+                        ? 'Modifica los datos de la empresa'
+                        : 'Completa la información para crear una nueva empresa'}
                 </p>
 
-                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="razon_social">Razón Social *</Label>
-                        <Input
-                            id="razon_social"
-                            value={form.razon_social}
-                            onChange={(e) => setForm({ ...form, razon_social: e.target.value })}
-                            required
+                <div className="space-y-4">
+                    {/* Razón Social */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Razón Social <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="razon_social"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.razon_social}
+                                />
+                            )}
                         />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="nombre_comercial">Nombre Comercial *</Label>
-                        <Input
-                            id="nombre_comercial"
-                            value={form.nombre_comercial}
-                            onChange={(e) => setForm({ ...form, nombre_comercial: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="ruc">RUC</Label>
-                        <Input
-                            id="ruc"
-                            value={form.ruc}
-                            onChange={(e) => setForm({ ...form, ruc: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="telefono">Teléfono</Label>
-                        <Input
-                            id="telefono"
-                            value={form.telefono}
-                            onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="direccion">Dirección</Label>
-                        <Input
-                            id="direccion"
-                            value={form.direccion}
-                            onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="estado">Estado</Label>
-                        <select
-                            id="estado"
-                            value={form.estado ? "activo" : "inactivo"}
-                            onChange={(e) => setForm({ ...form, estado: e.target.value === "activo" })}
-                            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
-                        >
-                            <option value="activo">Activo</option>
-                            <option value="inactivo">Inactivo</option>
-                        </select>
+                        {errors.razon_social && <p className="mt-1 text-xs text-error-500">{errors.razon_social.message}</p>}
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={submitting}>
-                            {submitting ? "Guardando..." : editingEmpresa ? "Actualizar" : "Crear"}
-                        </Button>
+                    {/* Nombre Comercial */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">
+                            Nombre Comercial <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="nombre_comercial"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.nombre_comercial}
+                                />
+                            )}
+                        />
+                        {errors.nombre_comercial && <p className="mt-1 text-xs text-error-500">{errors.nombre_comercial.message}</p>}
                     </div>
-                </form>
-            </div>
+
+                    {/* RUC */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">RUC</Label>
+                        <Controller
+                            name="ruc"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.ruc}
+                                />
+                            )}
+                        />
+                        {errors.ruc && <p className="mt-1 text-xs text-error-500">{errors.ruc.message}</p>}
+                    </div>
+
+                    {/* Teléfono */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">Teléfono</Label>
+                        <Controller
+                            name="telefono"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="tel"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                />
+                            )}
+                        />
+                    </div>
+
+                    {/* Dirección */}
+                    <div>
+                        <Label className="text-gray-700 dark:text-gray-300">Dirección</Label>
+                        <Controller
+                            name="direccion"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                />
+                            )}
+                        />
+                    </div>
+
+                    {/* Estado (checkbox) */}
+                    <div className="flex items-center gap-2 pt-2">
+                        <Controller
+                            name="estado"
+                            control={control}
+                            render={({ field }) => (
+                                <input
+                                    type="checkbox"
+                                    id="estado"
+                                    checked={field.value}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-brand-500"
+                                />
+                            )}
+                        />
+                        <Label htmlFor="estado" className="!mb-0 text-gray-700 dark:text-gray-300 cursor-pointer">
+                            Activo
+                        </Label>
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                    <Button type="button" variant="outline" size="sm" onClick={onClose}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" size="sm" disabled={isSubmitting || !isValid}>
+                        {isSubmitting ? 'Guardando...' : editingEmpresa ? 'Actualizar' : 'Crear'}
+                    </Button>
+                </div>
+            </form>
         </Modal>
     );
 }

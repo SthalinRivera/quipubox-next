@@ -1,3 +1,4 @@
+// components/puestos/PuestosTable.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,6 +6,7 @@ import { usePuestos } from '@/hooks/usePuestos';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { useToast } from '@/hooks/useToast';
 import { usePuestosUIStore } from '@/stores/puestosStore';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { TIPOS_LUGAR } from '@/types/enums';
 import {
   Table,
@@ -16,19 +18,23 @@ import {
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
 import { PuestoModal } from './PuestoModal';
-import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
+import { PencilIcon, PlusIcon, SearchIcon } from '@/icons';
+export { Power, Play } from 'lucide-react';
 import type { Puesto } from '@/types/puesto';
+import { Play, Power } from 'lucide-react';
+import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function PuestosTable() {
-  const { puestos, loading, fetchAll, remove } = usePuestos();
-  const { lugarOpertivo, fetchAll: fetchMercados } = useLugarOperativo();
+  const { puestos, loading, fetchAll, toggleEstado } = usePuestos();
+  const { lugares, fetchAll: fetchMercados } = useLugarOperativo();
   const toast = useToast();
 
-  const { search, mercadoId, tipoLugar, setSearch, setMercadoId, setTipoLugar, resetFilters } =
-    usePuestosUIStore();
+  const { search, mercadoId, tipoLugar, setSearch, setMercadoId, setTipoLugar, resetFilters } = usePuestosUIStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPuesto, setSelectedPuesto] = useState<Puesto | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ puesto: Puesto; nuevoEstado: boolean } | null>(null);
 
   useEffect(() => {
     fetchAll();
@@ -36,8 +42,7 @@ export default function PuestosTable() {
   }, []);
 
   const filteredPuestos = (puestos || []).filter((p) => {
-    if (search && !p.numero_puesto.toLowerCase().includes(search.toLowerCase()))
-      return false;
+    if (search && !p.numero_puesto.toLowerCase().includes(search.toLowerCase())) return false;
     if (mercadoId && p.id_lugar !== Number(mercadoId)) return false;
     if (tipoLugar && (p.lugares_operativos as any)?.tipo_lugar !== tipoLugar) return false;
     return true;
@@ -53,23 +58,28 @@ export default function PuestosTable() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number, numero: string) => {
-    if (window.confirm(`¿Desactivar el puesto "${numero}"?`)) {
-      try {
-        await remove(id);
-        toast.success('Puesto desactivado');
-        fetchAll();
-      } catch (err: any) {
-        toast.error(err.message || 'Error al eliminar');
-      }
-    }
+  const handleToggle = (puesto: Puesto) => {
+    const nuevoEstado = !puesto.estado;
+    setPendingAction({ puesto, nuevoEstado });
+    setConfirmOpen(true);
   };
 
-  const handleSaved = () => fetchAll();
+  const executeToggle = async () => {
+    if (!pendingAction) return;
+    const { puesto, nuevoEstado } = pendingAction;
+    await toggleEstado(puesto.id_puesto, nuevoEstado);
+    toast.success(`Puesto ${nuevoEstado ? 'activado' : 'desactivado'}`);
+    setConfirmOpen(false);
+    setPendingAction(null);
+  };
+
+  const handleSaved = () => {
+    setIsModalOpen(false);
+  };
 
   const mercadosOptions = [
     { value: '', label: 'Todos los mercados' },
-    ...lugarOpertivo.map((m) => ({
+    ...lugares.map((m) => ({
       value: m.id_lugar.toString(),
       label: m.nombre,
     })),
@@ -86,16 +96,16 @@ export default function PuestosTable() {
   if (loading) {
     return (
       <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-        <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"></div>
-        <span className="ml-2">Cargando puestos...</span>
+        <TableSkeleton columns={7} rows={10} showActionButton={true} />;
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4 ">
-        <div className='flex flex-wrap gap-4'>
+      {/* Barra de filtros (igual que antes) */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-4">
           <div className="relative w-64">
             <input
               type="text"
@@ -130,6 +140,7 @@ export default function PuestosTable() {
               </option>
             ))}
           </select>
+
           {(search || mercadoId || tipoLugar) && (
             <Button variant="outline" size="sm" onClick={resetFilters}>
               Limpiar filtros
@@ -137,14 +148,12 @@ export default function PuestosTable() {
           )}
         </div>
 
-
-
         <Button size="sm" onClick={handleCreate} startIcon={<PlusIcon className="h-4 w-4" />}>
           Nuevo Puesto
         </Button>
-
       </div>
 
+      {/* Tabla */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="max-w-full overflow-x-auto">
           <div className="min-w-[700px]">
@@ -182,11 +191,19 @@ export default function PuestosTable() {
                       </TableCell>
                       <TableCell className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => handleEdit(puesto)} className="text-gray-500 hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400" title="Editar">
+                          <button
+                            onClick={() => handleEdit(puesto)}
+                            className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+                            title="Editar"
+                          >
                             <PencilIcon className="h-5 w-5" />
                           </button>
-                          <button onClick={() => handleDelete(puesto.id_puesto, puesto.numero_puesto)} className="text-gray-500 hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400" title="Eliminar">
-                            <TrashBinIcon className="h-5 w-5" />
+                          <button
+                            onClick={() => handleToggle(puesto)}
+                            className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                            title={puesto.estado ? 'Desactivar' : 'Activar'}
+                          >
+                            {puesto.estado ? <Power className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                           </button>
                         </div>
                       </TableCell>
@@ -204,6 +221,17 @@ export default function PuestosTable() {
         onOpenChange={setIsModalOpen}
         editingPuesto={selectedPuesto}
         onSaved={handleSaved}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={executeToggle}
+        title={pendingAction?.nuevoEstado ? 'Activar puesto' : 'Desactivar puesto'}
+        message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} el puesto "${pendingAction?.puesto.numero_puesto}"?`}
+        confirmText={pendingAction?.nuevoEstado ? 'Activar' : 'Desactivar'}
+        variant={pendingAction?.nuevoEstado ? 'info' : 'danger'}
+        icon={pendingAction?.nuevoEstado ? <Play className="h-5 w-5" /> : <Power className="h-5 w-5" />}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+// hooks/useCamiones.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -20,28 +21,34 @@ export const useCamiones = () => {
         }
     }, []);
 
-    const create = async (camion: Partial<Camion>) => {
+    const create = useCallback(async (camion: Partial<Camion>) => {
         const newCamion = await fetchWithAuth<Camion>('camiones', {
             method: 'POST',
             body: camion,
         });
-        await fetchAll();
+        setCamiones(prev => [...prev, newCamion]);
         return newCamion;
-    };
+    }, []);
 
-    const update = async (id: number, camion: Partial<Camion>) => {
+    const update = useCallback(async (id: number, camion: Partial<Camion>) => {
         const updated = await fetchWithAuth<Camion>(`camiones/${id}`, {
-            method: 'PUT',
+            method: 'PATCH', // Cambiado de PUT a PATCH
             body: camion,
         });
-        await fetchAll();
+        setCamiones(prev => prev.map(c => c.id_camion === id ? updated : c));
         return updated;
-    };
+    }, []);
 
-    const remove = async (id: number) => {
-        await fetchWithAuth(`camiones/${id}`, { method: 'DELETE' });
-        await fetchAll();
-    };
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+        const updated = await fetchWithAuth<Camion>(`camiones/${id}/estado`, {
+            method: 'PATCH',
+            body: { estado },
+        });
+        setCamiones(prev => prev.map(c => c.id_camion === id ? updated : c));
+        return updated;
+    }, []);
 
-    return { camiones, loading, fetchAll, create, update, remove };
+    // ❌ remove eliminado
+
+    return { camiones, loading, fetchAll, create, update, toggleEstado };
 };

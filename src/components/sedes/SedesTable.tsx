@@ -1,3 +1,4 @@
+// components/sedes/SedesTable.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -13,29 +14,30 @@ import {
 } from '@/components/ui/table';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SedeModal } from '@/components/sedes/SedeModal';
-import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
+import { PencilIcon, PlusIcon, SearchIcon } from '@/icons';
+import { Power, Play } from 'lucide-react';
 import type { Sede } from '@/types/sede';
+import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function SedesTable() {
-    const { sedes, loading, fetchAll, remove } = useSedes();
+    const { sedes, loading, fetchAll, toggleEstado } = useSedes();
     const toast = useToast();
 
     const { search, tipoSede, setSearch, setTipoSede, resetFilters } = useSedesUIStore();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSede, setSelectedSede] = useState<Sede | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ sede: Sede; nuevoEstado: boolean } | null>(null);
 
     useEffect(() => {
         fetchAll();
     }, []);
 
-    // Filtrado local
     const filteredSedes = (sedes || []).filter((sede) => {
-        // Filtro por búsqueda (nombre)
-        if (search && !sede.nombre.toLowerCase().includes(search.toLowerCase()))
-            return false;
-        // Filtro por tipo de sede
+        if (search && !sede.nombre.toLowerCase().includes(search.toLowerCase())) return false;
         if (tipoSede && sede.tipo_sede !== tipoSede) return false;
         return true;
     });
@@ -50,16 +52,17 @@ export default function SedesTable() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: number, nombre: string) => {
-        if (window.confirm(`¿Desactivar la sede "${nombre}"?`)) {
-            try {
-                await remove(id);
-                toast.success('Sede desactivada');
-                fetchAll(); // refrescar lista
-            } catch (err: any) {
-                toast.error(err.message || 'Error al eliminar');
-            }
-        }
+    const handleToggle = (sede: Sede) => {
+        const nuevoEstado = !sede.estado;
+        setPendingAction({ sede, nuevoEstado });
+        setConfirmOpen(true);
+    };
+
+    const executeToggle = async () => {
+        if (!pendingAction) return;
+        const { sede, nuevoEstado } = pendingAction;
+        await toggleEstado(sede.id_sede, nuevoEstado);
+        toast.success(`Sede ${nuevoEstado ? 'activada' : 'desactivada'} correctamente`);
     };
 
     const handleSaved = () => fetchAll();
@@ -67,15 +70,14 @@ export default function SedesTable() {
     if (loading) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900 dark:border-white"></div>
-                <span className="ml-2">Cargando sedes...</span>
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
-            {/* Barra de filtros */}
+            {/* Barra de filtros (igual) */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className='flex flex-wrap gap-4'>
                     <div className="relative w-64">
@@ -107,12 +109,7 @@ export default function SedesTable() {
                     )}
                 </div>
 
-
-                <Button
-                    size="sm"
-                    onClick={handleCreate}
-                    startIcon={<PlusIcon className="h-4 w-4" />}
-                >
+                <Button size="sm" onClick={handleCreate} startIcon={<PlusIcon className="h-4 w-4" />}>
                     Nueva Sede
                 </Button>
             </div>
@@ -124,27 +121,13 @@ export default function SedesTable() {
                         <Table>
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        ID
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Empresa
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Nombre
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Tipo
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Ciudad
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Estado
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Acciones
-                                    </TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Empresa</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Tipo</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Ciudad</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Estado</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Acciones</TableCell>
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -157,27 +140,13 @@ export default function SedesTable() {
                                 ) : (
                                     filteredSedes.map((sede) => (
                                         <TableRow key={sede.id_sede}>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {sede.id_sede}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {sede.empresas?.razon_social || '—'}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {sede.nombre}
-                                            </TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{sede.id_sede}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{sede.empresas?.razon_social || '—'}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{sede.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                                                {sede.tipo_sede === 'origen'
-                                                    ? 'Origen'
-                                                    : sede.tipo_sede === 'destino'
-                                                        ? 'Destino'
-                                                        : sede.tipo_sede === 'ambos'
-                                                            ? 'Ambos'
-                                                            : '—'}
+                                                {sede.tipo_sede === 'origen' ? 'Origen' : sede.tipo_sede === 'destino' ? 'Destino' : sede.tipo_sede === 'ambos' ? 'Ambos' : '—'}
                                             </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                                                {sede.ciudad || '—'}
-                                            </TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{sede.ciudad || '—'}</TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <Badge size="sm" color={sede.estado ? 'success' : 'error'}>
                                                     {sede.estado ? 'Activo' : 'Inactivo'}
@@ -193,11 +162,11 @@ export default function SedesTable() {
                                                         <PencilIcon className="h-5 w-5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(sede.id_sede, sede.nombre)}
-                                                        className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400"
-                                                        title="Eliminar"
+                                                        onClick={() => handleToggle(sede)}
+                                                        className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                        title={sede.estado ? "Desactivar" : "Activar"}
                                                     >
-                                                        <TrashBinIcon className="h-5 w-5" />
+                                                        {sede.estado ? <Power className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                                                     </button>
                                                 </div>
                                             </TableCell>
@@ -215,6 +184,17 @@ export default function SedesTable() {
                 onClose={() => setIsModalOpen(false)}
                 editingSede={selectedSede}
                 onSaved={handleSaved}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={executeToggle}
+                title={pendingAction?.nuevoEstado ? "Activar sede" : "Desactivar sede"}
+                message={`¿${pendingAction?.nuevoEstado ? "activar" : "desactivar"} la sede "${pendingAction?.sede.nombre}"?`}
+                confirmText={pendingAction?.nuevoEstado ? "Activar" : "Desactivar"}
+                variant={pendingAction?.nuevoEstado ? "info" : "danger"}
+                icon={pendingAction?.nuevoEstado ? <Play className="h-5 w-5" /> : <Power className="h-5 w-5" />}
             />
         </div>
     );

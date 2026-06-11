@@ -124,13 +124,8 @@ export function ClienteSedesModal({
                     <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90">
                         🏢 Sedes del cliente
                     </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {cliente?.nombres} — Aquí puedes ver y administrar las sedes donde opera.
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        Cada sede tiene un rol: <strong>emisor</strong> (envía mercadería),{' '}
-                        <strong>receptor</strong> (recibe) o <strong>ambos</strong>.
-                    </p>
+
+
                 </div>
 
                 {/* Lista de sedes ya asociadas */}

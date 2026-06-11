@@ -1,6 +1,6 @@
 // stores/usuariosStore.ts
 import { create } from 'zustand';
-import { Usuario } from '@/types/usuario';
+import type { Usuario } from '@/types/usuario';
 
 interface UsuariosStore {
     usuarios: Usuario[];

@@ -1,14 +1,25 @@
+// components/frutas/FrutaModal.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
-import TextArea from '@/components/form/input/TextArea';
 import Label from '@/components/form/Label';
 import { useFrutas } from '@/hooks/useFrutas';
 import { useToast } from '@/hooks/useToast';
 import type { Fruta } from '@/types/fruta';
+
+const frutaSchema = z.object({
+    nombre: z.string().min(1, 'El nombre es obligatorio'),
+    descripcion: z.string().optional(),
+    estado: z.boolean().default(true),
+});
+
+type FrutaFormData = z.infer<typeof frutaSchema>;
 
 interface FrutaModalProps {
     open: boolean;
@@ -20,52 +31,51 @@ interface FrutaModalProps {
 export function FrutaModal({ open, onOpenChange, editingFruta, onSaved }: FrutaModalProps) {
     const { create, update } = useFrutas();
     const toast = useToast();
-    const [submitting, setSubmitting] = useState(false);
-    const [form, setForm] = useState({
-        nombre: '',
-        descripcion: '',
-        estado: true,
+
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting, isValid },
+    } = useForm<FrutaFormData>({
+        resolver: zodResolver(frutaSchema) as any,
+        defaultValues: { nombre: '', descripcion: '', estado: true },
+        mode: 'onChange',
     });
 
     useEffect(() => {
-        if (editingFruta) {
-            setForm({
-                nombre: editingFruta.nombre || '',
-                descripcion: editingFruta.descripcion || '',
-                estado: editingFruta.estado ?? true,
-            });
-        } else {
-            setForm({ nombre: '', descripcion: '', estado: true });
+        if (open) {
+            if (editingFruta) {
+                reset({
+                    nombre: editingFruta.nombre,
+                    descripcion: editingFruta.descripcion || '',
+                    estado: editingFruta.estado ?? true,
+                });
+            } else {
+                reset({ nombre: '', descripcion: '', estado: true });
+            }
         }
-    }, [editingFruta, open]);
+    }, [open, editingFruta, reset]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!form.nombre.trim()) {
-            toast.error('El nombre es obligatorio');
-            return;
-        }
-        setSubmitting(true);
+    const onSubmit = async (data: FrutaFormData) => {
         try {
             if (editingFruta) {
-                await update(editingFruta.id_fruta, form);
+                await update(editingFruta.id_fruta, data);
                 toast.success('Fruta actualizada');
             } else {
-                await create(form);
+                await create(data);
                 toast.success('Fruta creada');
             }
-            onSaved();
+            onSaved(); // solo cierra el modal, NO llama a fetchAll
             onOpenChange(false);
-        } catch (err: any) {
-            toast.error(err.message || 'Error al guardar');
-        } finally {
-            setSubmitting(false);
+        } catch (error: any) {
+            toast.error(error.message || 'Error al guardar');
         }
     };
 
     return (
         <Modal isOpen={open} onClose={() => onOpenChange(false)} className="max-w-[584px] p-5 lg:p-10">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
                     {editingFruta ? 'Editar Fruta' : 'Nueva Fruta'}
                 </h4>
@@ -75,32 +85,60 @@ export function FrutaModal({ open, onOpenChange, editingFruta, onSaved }: FrutaM
 
                 <div className="space-y-4">
                     <div>
-                        <Label htmlFor="nombre">Nombre *</Label>
-                        <Input
-                            id="nombre"
-                            value={form.nombre}
-                            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                            required
+                        <Label htmlFor="nombre" className="text-gray-700 dark:text-gray-300">
+                            Nombre <span className="text-error-500">*</span>
+                        </Label>
+                        <Controller
+                            name="nombre"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    id="nombre"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                    error={!!errors.nombre}
+                                />
+                            )}
                         />
+                        {errors.nombre && <p className="mt-1 text-xs text-error-500">{errors.nombre.message}</p>}
                     </div>
-                    <div>
-                        <Label htmlFor="descripcion">Descripción</Label>
-                        <Input
-                            id="descripcion"
-                            value={form.descripcion}
-                            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
 
+                    <div>
+                        <Label htmlFor="descripcion" className="text-gray-700 dark:text-gray-300">
+                            Descripción
+                        </Label>
+                        <Controller
+                            name="descripcion"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    id="descripcion"
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                />
+                            )}
                         />
                     </div>
+
                     <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="estado"
-                            checked={form.estado}
-                            onChange={(e) => setForm({ ...form, estado: e.target.checked })}
-                            className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                        <Controller
+                            name="estado"
+                            control={control}
+                            render={({ field }) => (
+                                <input
+                                    type="checkbox"
+                                    id="estado"
+                                    checked={field.value}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
+                                />
+                            )}
                         />
-                        <Label htmlFor="estado" className="!mb-0">Activo</Label>
+                        <Label htmlFor="estado" className="!mb-0 text-gray-700 dark:text-gray-300">
+                            Activo
+                        </Label>
                     </div>
                 </div>
 
@@ -108,8 +146,8 @@ export function FrutaModal({ open, onOpenChange, editingFruta, onSaved }: FrutaM
                     <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                         Cancelar
                     </Button>
-                    <Button type="submit" size="sm" disabled={submitting}>
-                        {submitting ? 'Guardando...' : editingFruta ? 'Actualizar' : 'Crear'}
+                    <Button type="submit" size="sm" disabled={isSubmitting || !isValid}>
+                        {isSubmitting ? 'Guardando...' : editingFruta ? 'Actualizar' : 'Crear'}
                     </Button>
                 </div>
             </form>

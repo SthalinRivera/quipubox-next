@@ -22,44 +22,53 @@ const fetchClientes = async (
     params.append('limit', '10');
     if (search) params.append('buscar', search);
     if (estado !== 'todos') params.append('estado', estado.toString());
-    if (tipo_relacion !== 'todos') params.append('tipo_relacion', tipo_relacion); // ✅ AGREGADO
+    if (tipo_relacion !== 'todos') params.append('tipo_relacion', tipo_relacion);
     const response = await fetchWithAuth<PaginatedResponse>(`clientes?${params.toString()}`);
     return response;
 };
 
 export const useClientesData = () => {
     const { page, search, estado, tipo_relacion, setPage } = useClientesUIStore();
-
     const queryClient = useQueryClient();
 
+    // -------------------- Consulta principal --------------------
     const query = useQuery({
         queryKey: ['clientes', { page, search, estado, tipo_relacion }],
         queryFn: () => fetchClientes(page, search, estado, tipo_relacion),
-        placeholderData: keepPreviousData,  // ✅ v5 usa placeholderData
+        placeholderData: keepPreviousData,
     });
 
+    // -------------------- Crear cliente --------------------
     const createCliente = useMutation({
         mutationFn: (cliente: any) =>
             fetchWithAuth<Cliente>('clientes', { method: 'POST', body: cliente }),
-        onSuccess: async () => {
-            await queryClient.refetchQueries({ queryKey: ['clientes'], exact: false });
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clientes'] });
         },
     });
 
+    // -------------------- Actualizar cliente (PATCH) --------------------
     const updateCliente = useMutation({
         mutationFn: ({ id, data }: { id: number; data: any }) =>
-            fetchWithAuth<Cliente>(`clientes/${id}`, { method: 'PUT', body: data }),
-        onSuccess: async () => {
-            await queryClient.refetchQueries({ queryKey: ['clientes'], exact: false });
+            fetchWithAuth<Cliente>(`clientes/${id}`, { method: 'PATCH', body: data }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clientes'] });
         },
     });
 
-    const deleteCliente = useMutation({
-        mutationFn: (id: number) => fetchWithAuth(`clientes/${id}`, { method: 'DELETE' }),
-        onSuccess: async () => {
-            await queryClient.refetchQueries({ queryKey: ['clientes'], exact: false });
+    // -------------------- Soft delete: activar/desactivar --------------------
+    const toggleEstado = useMutation({
+        mutationFn: ({ id, estado }: { id: number; estado: boolean }) =>
+            fetchWithAuth<Cliente>(`clientes/${id}/estado`, {
+                method: 'PATCH',
+                body: { estado },
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clientes'] });
         },
     });
+
+    // ❌ deleteCliente eliminado (ya no se usa)
 
     return {
         clientes: query.data?.data ?? [],
@@ -73,6 +82,6 @@ export const useClientesData = () => {
         refetch: query.refetch,
         createCliente: createCliente.mutateAsync,
         updateCliente: updateCliente.mutateAsync,
-        deleteCliente: deleteCliente.mutateAsync,
+        toggleEstado: toggleEstado.mutateAsync,   // ✅ función unificada
     };
 };

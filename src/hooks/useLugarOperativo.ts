@@ -1,3 +1,4 @@
+// hooks/useLugarOperativo.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -5,43 +6,49 @@ import { fetchWithAuth } from '@/lib/api-client';
 import type { LugarOperativo } from '@/types/lugarOperativo';
 
 export const useLugarOperativo = () => {
-    const [lugarOpertivo, setMercados] = useState<LugarOperativo[]>([]);
+    const [lugares, setLugares] = useState<LugarOperativo[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
             const data = await fetchWithAuth<LugarOperativo[]>('lugares-operativos');
-            setMercados(data);
+            setLugares(data);
         } catch (error) {
-            console.error('Error fetching mercados:', error);
+            console.error('Error fetching lugares operativos:', error);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    const create = async (mercado: Partial<LugarOperativo>) => {
-        const newMercado = await fetchWithAuth<LugarOperativo>('lugares-operativos', {
+    const create = useCallback(async (payload: Partial<LugarOperativo>) => {
+        const newItem = await fetchWithAuth<LugarOperativo>('lugares-operativos', {
             method: 'POST',
-            body: mercado,
+            body: payload,
         });
-        await fetchAll();
-        return newMercado;
-    };
+        setLugares(prev => [...prev, newItem]);
+        return newItem;
+    }, []);
 
-    const update = async (id: number, mercado: Partial<LugarOperativo>) => {
+    const update = useCallback(async (id: number, payload: Partial<LugarOperativo>) => {
         const updated = await fetchWithAuth<LugarOperativo>(`lugares-operativos/${id}`, {
-            method: 'PUT',
-            body: mercado,
+            method: 'PATCH', // Cambiado de PUT a PATCH
+            body: payload,
         });
-        await fetchAll();
+        setLugares(prev => prev.map(item => item.id_lugar === id ? updated : item));
         return updated;
-    };
+    }, []);
 
-    const remove = async (id: number) => {
-        await fetchWithAuth(`lugares-operativos/${id}`, { method: 'DELETE' });
-        await fetchAll();
-    };
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+        const updated = await fetchWithAuth<LugarOperativo>(`lugares-operativos/${id}/estado`, {
+            method: 'PATCH',
+            body: { estado },
+        });
+        setLugares(prev => prev.map(item => item.id_lugar === id ? updated : item));
+        return updated;
+    }, []);
 
-    return { lugarOpertivo, loading, fetchAll, create, update, remove };
+    // ❌ remove eliminado
+
+    return { lugares, loading, fetchAll, create, update, toggleEstado };
 };

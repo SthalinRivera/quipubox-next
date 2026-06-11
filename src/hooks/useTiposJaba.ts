@@ -1,3 +1,4 @@
+// hooks/useTiposJaba.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -20,28 +21,37 @@ export const useTiposJaba = () => {
         }
     }, []);
 
-    const create = async (tipo: Partial<TipoJaba>) => {
+    const create = useCallback(async (tipo: Partial<TipoJaba>) => {
         const newTipo = await fetchWithAuth<TipoJaba>('tipos-jaba', {
             method: 'POST',
             body: tipo,
         });
-        await fetchAll();
+        // ✅ Actualización local: agregar al final
+        setTiposJaba(prev => [...prev, newTipo]);
         return newTipo;
-    };
+    }, []);
 
-    const update = async (id: number, tipo: Partial<TipoJaba>) => {
+    const update = useCallback(async (id: number, tipo: Partial<TipoJaba>) => {
         const updated = await fetchWithAuth<TipoJaba>(`tipos-jaba/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',   // cambiar de PUT a PATCH
             body: tipo,
         });
-        await fetchAll();
+        // ✅ Actualización local: reemplazar el modificado
+        setTiposJaba(prev => prev.map(t => t.id_tipo_jaba === id ? updated : t));
         return updated;
-    };
+    }, []);
 
-    const remove = async (id: number) => {
-        await fetchWithAuth(`tipos-jaba/${id}`, { method: 'DELETE' });
-        await fetchAll();
-    };
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+        const updated = await fetchWithAuth<TipoJaba>(`tipos-jaba/${id}/estado`, {
+            method: 'PATCH',
+            body: { estado },
+        });
+        // ✅ Actualización local: cambiar estado
+        setTiposJaba(prev => prev.map(t => t.id_tipo_jaba === id ? updated : t));
+        return updated;
+    }, []);
 
-    return { tiposJaba, loading, fetchAll, create, update, remove };
+    // ❌ remove eliminado
+
+    return { tiposJaba, loading, fetchAll, create, update, toggleEstado };
 };

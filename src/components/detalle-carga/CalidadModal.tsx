@@ -13,9 +13,18 @@ interface CalidadModalProps {
     onClose: () => void;
     editingCalidad?: DetalleCalidad | null;
     onSave: (data: CreateDetalleCalidadDto) => Promise<void>;
+    maxCantidad: number;
+    currentTotal: number;
 }
 
-export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: CalidadModalProps) {
+export function CalidadModal({
+    isOpen,
+    onClose,
+    editingCalidad,
+    onSave,
+    maxCantidad,
+    currentTotal,
+}: CalidadModalProps) {
     const [calidades, setCalidades] = useState<{ id_calidad: number; nombre: string }[]>([]);
     const [form, setForm] = useState<CreateDetalleCalidadDto>({
         id_calidad: 0,
@@ -27,7 +36,7 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
     useEffect(() => {
         if (!isOpen) return;
         fetchWithAuth<{ id_calidad: number; nombre: string }[]>("calidades")
-            .then(data => setCalidades(data || []))
+            .then((data) => setCalidades(data || []))
             .catch(console.error);
     }, [isOpen]);
 
@@ -49,12 +58,27 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
             alert("Complete los campos obligatorios");
             return;
         }
+
+        let nuevaCantidad = form.cantidad;
+        let totalActual = currentTotal;
+        if (editingCalidad) {
+            totalActual = currentTotal - editingCalidad.cantidad;
+        }
+        if (totalActual + nuevaCantidad > maxCantidad) {
+            const disponible = maxCantidad - totalActual;
+            alert(
+                `La suma de calidades no puede exceder ${maxCantidad} jabas. Quedan disponibles ${disponible}.`
+            );
+            return;
+        }
+
         setSubmitting(true);
         try {
             await onSave(form);
             onClose();
         } catch (error) {
             console.error(error);
+            alert("Error al guardar la calidad");
         } finally {
             setSubmitting(false);
         }
@@ -62,7 +86,7 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} className="max-w-md">
-            <div className="p-6">
+            <div className="p-6 dark:bg-gray-900">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
                     {editingCalidad ? "Editar calidad" : "Nueva calidad"}
                 </h2>
@@ -71,7 +95,6 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                    {/* Calidad */}
                     <div className="space-y-2">
                         <Label htmlFor="calidad" className="text-gray-700 dark:text-gray-300">
                             Calidad *
@@ -92,7 +115,6 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
                         </select>
                     </div>
 
-                    {/* Cantidad */}
                     <div className="space-y-2">
                         <Label htmlFor="cantidad" className="text-gray-700 dark:text-gray-300">
                             Cantidad *
@@ -108,7 +130,6 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
                         />
                     </div>
 
-                    {/* Precio unitario */}
                     <div className="space-y-2">
                         <Label htmlFor="precio" className="text-gray-700 dark:text-gray-300">
                             Precio Unitario (opcional)
@@ -139,7 +160,11 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSave }: Calida
                         >
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={submitting}>
+                        <Button
+                            type="submit"
+                            disabled={submitting}
+                            className="dark:bg-brand-600 dark:hover:bg-brand-700"
+                        >
                             {submitting ? "Guardando..." : "Guardar"}
                         </Button>
                     </div>

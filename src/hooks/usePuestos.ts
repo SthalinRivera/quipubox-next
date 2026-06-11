@@ -1,3 +1,4 @@
+// hooks/usePuestos.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -13,7 +14,7 @@ export const usePuestos = () => {
         try {
             const data = await fetchWithAuth<Puesto[]>('puestos');
             setPuestos(data);
-            return data; // ✅ retorna los datos
+            return data;
         } catch (error) {
             console.error('Error fetching puestos:', error);
             throw error;
@@ -41,7 +42,7 @@ export const usePuestos = () => {
         try {
             const data = await fetchWithAuth<Puesto[]>(`clientes/${clienteId}/puestos`);
             setPuestos(data);
-            return data; // ✅ retorna los datos
+            return data;
         } catch (error) {
             console.error('Error fetching puestos by cliente:', error);
             throw error;
@@ -50,28 +51,32 @@ export const usePuestos = () => {
         }
     }, []);
 
-    const create = async (puesto: Partial<Puesto>) => {
+    const create = useCallback(async (puesto: Partial<Puesto>) => {
         const newPuesto = await fetchWithAuth<Puesto>('puestos', {
             method: 'POST',
             body: puesto,
         });
-        await fetchAll();
+        setPuestos(prev => [...prev, newPuesto]);
         return newPuesto;
-    };
+    }, []);
 
-    const update = async (id: number, puesto: Partial<Puesto>) => {
+    const update = useCallback(async (id: number, puesto: Partial<Puesto>) => {
         const updated = await fetchWithAuth<Puesto>(`puestos/${id}`, {
-            method: 'PUT',
+            method: 'PATCH', // Cambiado de PUT a PATCH
             body: puesto,
         });
-        await fetchAll();
+        setPuestos(prev => prev.map(p => p.id_puesto === id ? updated : p));
         return updated;
-    };
+    }, []);
 
-    const remove = async (id: number) => {
-        await fetchWithAuth(`puestos/${id}`, { method: 'DELETE' });
-        await fetchAll();
-    };
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+        const updated = await fetchWithAuth<Puesto>(`puestos/${id}/estado`, {
+            method: 'PATCH',
+            body: { estado },
+        });
+        setPuestos(prev => prev.map(p => p.id_puesto === id ? updated : p));
+        return updated;
+    }, []);
 
     return {
         puestos,
@@ -81,6 +86,6 @@ export const usePuestos = () => {
         fetchByCliente,
         create,
         update,
-        remove,
+        toggleEstado,
     };
 };

@@ -109,7 +109,18 @@ export const useClientes = () => {
             throw err;
         }
     };
-
+    // ✅ Nuevo método toggleEstado (soft delete)
+    const toggleEstado = async (id: number, estado: boolean) => {
+        setLoading(true);
+        try {
+            const updated = await fetchWithAuth<Cliente>(`clientes/${id}/estado`, {
+                method: 'PATCH',
+                body: { estado },
+            });
+            setClientes(prev => prev.map(c => c.id_cliente === id ? updated : c));
+            return updated;
+        } finally { setLoading(false); }
+    };
     // ✅ Devuelve PuestoAsignado[] (incluye la relación completa)
     const getPuestos = async (clienteId: number) => {
         try {
@@ -160,6 +171,7 @@ export const useClientes = () => {
         error,
         fetchAll,
         create,
+        toggleEstado,
         update,
         remove,
         getSedes,

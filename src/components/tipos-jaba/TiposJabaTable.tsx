@@ -1,7 +1,8 @@
+// components/tipos-jaba/TiposJabaTable.tsx
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { useEffect, useState } from 'react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
     TableBody,
@@ -14,74 +15,25 @@ import Button from '@/components/ui/button/Button';
 import { TipoJabaModal } from './TipoJabaModal';
 import { useTiposJaba } from '@/hooks/useTiposJaba';
 import { useToast } from '@/hooks/useToast';
-import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
+import { PencilIcon, PlusIcon, SearchIcon } from '@/icons';
+import { Power, Play } from 'lucide-react';
 import type { TipoJaba } from '@/types/tipoJaba';
-
-// Cache simple en memoria
-let cachedTipos: TipoJaba[] | null = null;
-let activePromise: Promise<TipoJaba[]> | null = null;
+import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function TiposJabaTable() {
-    const [tipos, setTipos] = useState<TipoJaba[]>(() => cachedTipos || []);
-    const [loading, setLoading] = useState(!cachedTipos);
-    const [error, setError] = useState<string | null>(null);
+    const { tiposJaba, loading, fetchAll, toggleEstado } = useTiposJaba();
+    const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
-    const abortRef = useRef<AbortController | null>(null);
-
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTipo, setSelectedTipo] = useState<TipoJaba | null>(null);
-
-    const { remove } = useTiposJaba();
-    const toast = useToast();
-
-    const cargarTipos = useCallback(async (forceRefresh = false) => {
-        if (forceRefresh) cachedTipos = null;
-        if (cachedTipos && !forceRefresh) {
-            setTipos(cachedTipos);
-            setLoading(false);
-            return;
-        }
-        if (activePromise) {
-            try {
-                const data = await activePromise;
-                if (!cachedTipos) cachedTipos = data;
-                setTipos(data);
-                setLoading(false);
-            } catch { }
-            return;
-        }
-        if (abortRef.current) abortRef.current.abort();
-        const controller = new AbortController();
-        abortRef.current = controller;
-        setLoading(true);
-        setError(null);
-
-        const promise = (async () => {
-            try {
-                const data = await fetchWithAuth<TipoJaba[]>('tipos-jaba', { signal: controller.signal });
-                cachedTipos = data;
-                setTipos(data);
-                return data;
-            } catch (err: any) {
-                if (err.name === 'AbortError') return cachedTipos || [];
-                setError(err.message || 'Error al cargar tipos de jaba');
-                throw err;
-            } finally {
-                setLoading(false);
-                activePromise = null;
-                abortRef.current = null;
-            }
-        })();
-        activePromise = promise;
-        return promise;
-    }, []);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ tipo: TipoJaba; nuevoEstado: boolean } | null>(null);
 
     useEffect(() => {
-        cargarTipos();
-        return () => abortRef.current?.abort();
-    }, [cargarTipos]);
+        fetchAll();
+    }, [fetchAll]);
 
-    const filteredTipos = tipos.filter(t =>
+    const filteredTipos = tiposJaba.filter(t =>
         t.nombre.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -95,34 +47,30 @@ export default function TiposJabaTable() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: number, nombre: string) => {
-        if (window.confirm(`¿Desactivar el tipo de jaba "${nombre}"?`)) {
-            try {
-                await remove(id);
-                toast.success('Tipo de jaba desactivado');
-                cargarTipos(true);
-            } catch (err: any) {
-                toast.error(err.message || 'Error al eliminar');
-            }
-        }
+    const handleToggle = (tipo: TipoJaba) => {
+        const nuevoEstado = !tipo.estado;
+        setPendingAction({ tipo, nuevoEstado });
+        setConfirmOpen(true);
     };
 
-    const handleSaved = () => cargarTipos(true);
+    const executeToggle = async () => {
+        if (!pendingAction) return;
+        const { tipo, nuevoEstado } = pendingAction;
+        await toggleEstado(tipo.id_tipo_jaba, nuevoEstado);
+        toast.success(`Tipo de jaba ${nuevoEstado ? 'activado' : 'desactivado'}`);
+        setConfirmOpen(false);
+        setPendingAction(null);
+    };
+
+    const handleSaved = () => {
+        // Solo cerrar modal (el estado local ya se actualiza en el hook)
+        setIsModalOpen(false);
+    };
 
     if (loading) {
         return (
-            <div className="p-4 text-center">
-                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-white"></div>
-                <span className="ml-2">Cargando tipos de jaba...</span>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 text-center">
-                <p className="text-red-500 mb-4">Error: {error}</p>
-                <Button size="sm" onClick={() => cargarTipos(true)}>Reintentar</Button>
+            <div className="p-4 text-center text-gray-700 dark:text-gray-300">
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
             </div>
         );
     }
@@ -140,7 +88,7 @@ export default function TiposJabaTable() {
                     />
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                 </div>
-                <Button size="sm" onClick={handleCreate} startIcon={<PlusIcon className="w-4 h-4 fill-current" />}>
+                <Button size="sm" onClick={handleCreate} startIcon={<PlusIcon className="w-4 h-4" />}>
                     Nuevo Tipo de Jaba
                 </Button>
             </div>
@@ -182,11 +130,19 @@ export default function TiposJabaTable() {
                                             </TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <button onClick={() => handleEdit(tipo)} className="text-gray-500 hover:text-brand-500">
+                                                    <button
+                                                        onClick={() => handleEdit(tipo)}
+                                                        className="text-gray-500 hover:text-brand-500 transition-colors"
+                                                        title="Editar"
+                                                    >
                                                         <PencilIcon className="w-5 h-5" />
                                                     </button>
-                                                    <button onClick={() => handleDelete(tipo.id_tipo_jaba, tipo.nombre)} className="text-gray-500 hover:text-error-500">
-                                                        <TrashBinIcon className="w-5 h-5" />
+                                                    <button
+                                                        onClick={() => handleToggle(tipo)}
+                                                        className="text-gray-500 hover:text-blue-500 transition-colors"
+                                                        title={tipo.estado ? 'Desactivar' : 'Activar'}
+                                                    >
+                                                        {tipo.estado ? <Power className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                                                     </button>
                                                 </div>
                                             </TableCell>
@@ -204,6 +160,17 @@ export default function TiposJabaTable() {
                 onOpenChange={setIsModalOpen}
                 editingTipo={selectedTipo}
                 onSaved={handleSaved}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={executeToggle}
+                title={pendingAction?.nuevoEstado ? 'Activar tipo de jaba' : 'Desactivar tipo de jaba'}
+                message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} el tipo de jaba "${pendingAction?.tipo.nombre}"?`}
+                confirmText={pendingAction?.nuevoEstado ? 'Activar' : 'Desactivar'}
+                variant={pendingAction?.nuevoEstado ? 'info' : 'danger'}
+                icon={pendingAction?.nuevoEstado ? <Play className="w-5 h-5" /> : <Power className="w-5 h-5" />}
             />
         </div>
     );

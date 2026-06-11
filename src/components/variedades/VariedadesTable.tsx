@@ -1,7 +1,8 @@
+// components/variedades/VariedadesTable.tsx
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { useEffect, useState } from 'react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
     TableBody,
@@ -14,71 +15,24 @@ import Button from '@/components/ui/button/Button';
 import { VariedadModal } from '@/components/variedades/VariedadModal';
 import { useVariedades } from '@/hooks/useVariedades';
 import { useToast } from '@/hooks/useToast';
-import { PencilIcon, TrashBinIcon, PlusIcon } from '@/icons';
-import type { Variedad } from '@/types/variedad';
+import { PencilIcon, PlusIcon } from '@/icons';
 
-// Cache simple
-let cachedVariedades: Variedad[] | null = null;
-let activePromise: Promise<Variedad[]> | null = null;
+import { Power, Play } from 'lucide-react';
+import type { Variedad } from '@/types/variedad';
+import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function VariedadesTable() {
-    const [variedades, setVariedades] = useState<Variedad[]>(() => cachedVariedades || []);
-    const [loading, setLoading] = useState(!cachedVariedades);
-    const [error, setError] = useState<string | null>(null);
-    const abortRef = useRef<AbortController | null>(null);
+    const { variedades, loading, fetchAll, toggleEstado } = useVariedades();
+    const toast = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedVariedad, setSelectedVariedad] = useState<Variedad | null>(null);
-
-    const { remove } = useVariedades();
-    const toast = useToast();
-
-    const cargarVariedades = useCallback(async (forceRefresh = false) => {
-        if (forceRefresh) cachedVariedades = null;
-        if (cachedVariedades && !forceRefresh) {
-            setVariedades(cachedVariedades);
-            setLoading(false);
-            return;
-        }
-        if (activePromise) {
-            try {
-                const data = await activePromise;
-                if (!cachedVariedades) cachedVariedades = data;
-                setVariedades(data);
-                setLoading(false);
-            } catch { }
-            return;
-        }
-        if (abortRef.current) abortRef.current.abort();
-        const controller = new AbortController();
-        abortRef.current = controller;
-        setLoading(true);
-        setError(null);
-
-        const promise = (async () => {
-            try {
-                const data = await fetchWithAuth<Variedad[]>('variedades', { signal: controller.signal });
-                cachedVariedades = data;
-                setVariedades(data);
-                return data;
-            } catch (err: any) {
-                if (err.name === 'AbortError') return cachedVariedades || [];
-                setError(err.message || 'Error al cargar variedades');
-                throw err;
-            } finally {
-                setLoading(false);
-                activePromise = null;
-                abortRef.current = null;
-            }
-        })();
-        activePromise = promise;
-        return promise;
-    }, []);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ variedad: Variedad; nuevoEstado: boolean } | null>(null);
 
     useEffect(() => {
-        cargarVariedades();
-        return () => abortRef.current?.abort();
-    }, [cargarVariedades]);
+        fetchAll();
+    }, [fetchAll]);
 
     const handleCreate = () => {
         setSelectedVariedad(null);
@@ -90,36 +44,30 @@ export default function VariedadesTable() {
         setIsModalOpen(true);
     };
 
-    const handleEliminar = async (id: number) => {
-        if (window.confirm('¿Está seguro de eliminar esta variedad?')) {
-            try {
-                await remove(id);
-                toast.success('Variedad eliminada');
-                cargarVariedades(true);
-            } catch (err: any) {
-                toast.error(err.message || 'Error al eliminar variedad');
-            }
-        }
+    const handleToggle = (variedad: Variedad) => {
+        const nuevoEstado = !variedad.estado;
+        setPendingAction({ variedad, nuevoEstado });
+        setConfirmOpen(true);
     };
 
-    const handleSaved = () => cargarVariedades(true);
+    const executeToggle = async () => {
+        if (!pendingAction) return;
+        const { variedad, nuevoEstado } = pendingAction;
+        await toggleEstado(variedad.id_variedad, nuevoEstado);
+        toast.success(`Variedad ${nuevoEstado ? 'activada' : 'desactivada'}`);
+        setConfirmOpen(false);
+        setPendingAction(null);
+    };
+
+    const handleSaved = () => {
+        // Solo cierra el modal (el estado local ya se actualizó en el hook)
+        setIsModalOpen(false);
+    };
 
     if (loading) {
         return (
-            <div className="p-4 text-center">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-gray-900"></div>
-                <span className="ml-2">Cargando variedades...</span>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 text-center">
-                <p className="mb-4 text-red-500">Error: {error}</p>
-                <Button size="sm" onClick={() => cargarVariedades(true)}>
-                    Reintentar
-                </Button>
+            <div className="p-4 text-center text-gray-700 dark:text-gray-300">
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
             </div>
         );
     }
@@ -127,11 +75,7 @@ export default function VariedadesTable() {
     return (
         <div className="space-y-4">
             <div className="flex justify-end">
-                <Button
-                    size="sm"
-                    onClick={handleCreate}
-                    startIcon={<PlusIcon className="h-4 w-4 fill-current" />}
-                >
+                <Button size="sm" onClick={handleCreate} startIcon={<PlusIcon className="h-4 w-4" />}>
                     Nueva Variedad
                 </Button>
             </div>
@@ -142,21 +86,11 @@ export default function VariedadesTable() {
                         <Table>
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        ID
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Nombre
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Fruta
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Estado
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Acciones
-                                    </TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Fruta</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Estado</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Acciones</TableCell>
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -169,12 +103,8 @@ export default function VariedadesTable() {
                                 ) : (
                                     variedades.map((variedad) => (
                                         <TableRow key={variedad.id_variedad}>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {variedad.id_variedad}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {variedad.nombre}
-                                            </TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{variedad.id_variedad}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{variedad.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
                                                 {variedad.frutas?.nombre || '—'}
                                             </TableCell>
@@ -193,11 +123,11 @@ export default function VariedadesTable() {
                                                         <PencilIcon className="h-5 w-5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleEliminar(variedad.id_variedad)}
-                                                        className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400"
-                                                        title="Eliminar"
+                                                        onClick={() => handleToggle(variedad)}
+                                                        className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                        title={variedad.estado ? 'Desactivar' : 'Activar'}
                                                     >
-                                                        <TrashBinIcon className="h-5 w-5" />
+                                                        {variedad.estado ? <Power className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                                                     </button>
                                                 </div>
                                             </TableCell>
@@ -215,6 +145,17 @@ export default function VariedadesTable() {
                 onOpenChange={setIsModalOpen}
                 editingVariedad={selectedVariedad}
                 onSaved={handleSaved}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={executeToggle}
+                title={pendingAction?.nuevoEstado ? 'Activar variedad' : 'Desactivar variedad'}
+                message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} la variedad "${pendingAction?.variedad.nombre}"?`}
+                confirmText={pendingAction?.nuevoEstado ? 'Activar' : 'Desactivar'}
+                variant={pendingAction?.nuevoEstado ? 'info' : 'danger'}
+                icon={pendingAction?.nuevoEstado ? <Play className="h-5 w-5" /> : <Power className="h-5 w-5" />}
             />
         </div>
     );

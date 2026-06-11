@@ -5,7 +5,7 @@ import ClientesTable from '@/components/clientes/ClientesTable';
 export default function ClientesTestPage() {
     return (
         <div>
-            <PageBreadcrumb pageTitle="Clientes (API real)" />
+            <PageBreadcrumb pageTitle=" Gestion de Clientes" />
             <div className="space-y-6">
                 <ComponentCard title="Listado de clientes desde backend">
                     <ClientesTable />

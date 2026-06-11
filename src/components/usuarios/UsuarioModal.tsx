@@ -1,4 +1,4 @@
-// components/usuarios/UsuarioModal.tsx
+// components/usuarios/UsuarioModal.tsx (versión corregida)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -28,13 +28,14 @@ export function UsuarioModal({
     onSaved,
 }: UsuarioModalProps) {
     const { create, update, assignRole, removeRole } = useUsuarios();
-    const { roles } = useRoles();
+
     const { empresas, loading: loadingEmpresas, fetchAll: fetchEmpresas } = useEmpresas();
-    const { sedes, loading: loadingSedes } = useSedes(); // todas las sedes
+    const { sedes, loading: loadingSedes } = useSedes();
+    const { roles, fetchAll: fetchRoles } = useRoles();
     const toast = useToast();
     const [submitting, setSubmitting] = useState(false);
-
     const [selectedEmpresaId, setSelectedEmpresaId] = useState<number | undefined>(undefined);
+
     const [form, setForm] = useState({
         nombres: '',
         apellidos: '',
@@ -46,14 +47,13 @@ export function UsuarioModal({
         id_sede: '',
     });
 
-    // Cargar empresas al abrir el modal
     useEffect(() => {
         if (isOpen) {
             fetchEmpresas();
+            fetchRoles();
         }
     }, [isOpen, fetchEmpresas]);
 
-    // Cargar datos del usuario a editar
     useEffect(() => {
         if (editingUser) {
             setForm({
@@ -64,7 +64,8 @@ export function UsuarioModal({
                 id_rol_usuario: editingUser.usuarios_roles?.[0]?.id_rol_usuario?.toString() || '',
                 estado_acceso: editingUser.estado_acceso,
                 id_empresa: editingUser.id_empresa?.toString() || '',
-                id_sede: editingUser.id_sede?.toString() || '',
+                // ✅ Convertir null/undefined a cadena vacía
+                id_sede: editingUser.id_sede ? editingUser.id_sede.toString() : '',
             });
             setSelectedEmpresaId(editingUser.id_empresa);
         } else {
@@ -82,7 +83,6 @@ export function UsuarioModal({
         }
     }, [editingUser, isOpen]);
 
-    // Opciones para selects
     const rolesOptions = roles.map((rol) => ({
         value: rol.id_rol_usuario.toString(),
         label: rol.nombre,
@@ -93,10 +93,7 @@ export function UsuarioModal({
         label: emp.nombre_comercial || emp.razon_social,
     }));
 
-    // Filtrar sedes según la empresa seleccionada
-    const sedesFiltradas = sedes.filter(
-        (sede) => sede.id_empresa === Number(form.id_empresa)
-    );
+    const sedesFiltradas = sedes.filter((sede) => sede.id_empresa === Number(form.id_empresa));
     const sedesOptions = sedesFiltradas.map((sede) => ({
         value: sede.id_sede.toString(),
         label: sede.nombre,
@@ -122,6 +119,13 @@ export function UsuarioModal({
 
         setSubmitting(true);
         try {
+            // ✅ Asegurar que id_sede sea number o undefined (nunca null o NaN)
+            const sedeId = form.id_sede ? Number(form.id_sede) : undefined;
+            if (sedeId === undefined || isNaN(sedeId)) {
+                toast.error('Sede inválida');
+                return;
+            }
+
             const userPayload = {
                 nombres: form.nombres,
                 apellidos: form.apellidos || undefined,
@@ -129,7 +133,7 @@ export function UsuarioModal({
                 telefono: form.telefono || undefined,
                 estado_acceso: form.estado_acceso,
                 id_empresa: Number(form.id_empresa),
-                id_sede: Number(form.id_sede),
+                id_sede: sedeId,
                 estado: true,
             };
 
@@ -159,7 +163,6 @@ export function UsuarioModal({
         }
     };
 
-    // Determinar si el select de sede debe estar visualmente deshabilitado
     const isSedeDisabled = !selectedEmpresaId || loadingSedes;
 
     return (
@@ -217,7 +220,6 @@ export function UsuarioModal({
 
                         {/* Columna derecha */}
                         <div className="space-y-4">
-                            {/* Empresa */}
                             <div className="space-y-2">
                                 <Label htmlFor="empresa">Empresa *</Label>
                                 {loadingEmpresas ? (
@@ -236,7 +238,6 @@ export function UsuarioModal({
                                 )}
                             </div>
 
-                            {/* Sede */}
                             <div className="space-y-2">
                                 <Label htmlFor="sede">Sede *</Label>
                                 <div className="bg-white dark:bg-gray-800 rounded-md">
@@ -261,7 +262,6 @@ export function UsuarioModal({
                                 )}
                             </div>
 
-                            {/* Rol */}
                             <div className="space-y-2">
                                 <Label htmlFor="rol">Rol</Label>
                                 <div className="bg-white dark:bg-gray-800 rounded-md">
@@ -274,7 +274,6 @@ export function UsuarioModal({
                                 </div>
                             </div>
 
-                            {/* Estado acceso */}
                             <div className="space-y-2">
                                 <Label htmlFor="estado_acceso">Estado acceso</Label>
                                 <div className="bg-white dark:bg-gray-800 rounded-md">

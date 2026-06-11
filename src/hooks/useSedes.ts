@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
 import type { Sede } from '@/types/sede';
 
-export const useSedes = (idEmpresa?: number) => {   // ← parámetro opcional
+export const useSedes = (idEmpresa?: number) => {
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -21,35 +21,41 @@ export const useSedes = (idEmpresa?: number) => {   // ← parámetro opcional
     } finally {
       setLoading(false);
     }
-  }, [idEmpresa]);   // ← ahora idEmpresa existe
+  }, [idEmpresa]);
 
-  // Ejecuta fetchAll cuando cambie idEmpresa
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  const create = async (sede: Partial<Sede>) => {
+  const create = useCallback(async (sede: Partial<Sede>) => {
     const newSede = await fetchWithAuth<Sede>('sedes', {
       method: 'POST',
       body: sede,
     });
-    await fetchAll();
+    // ✅ Actualización local: agregar la nueva sede al final
+    setSedes(prev => [...prev, newSede]);
     return newSede;
-  };
+  }, []);
 
-  const update = async (id: number, sede: Partial<Sede>) => {
+  const update = useCallback(async (id: number, sede: Partial<Sede>) => {
     const updated = await fetchWithAuth<Sede>(`sedes/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: sede,
     });
-    await fetchAll();
+    // ✅ Actualización local: reemplazar la sede modificada
+    setSedes(prev => prev.map(s => s.id_sede === id ? updated : s));
     return updated;
-  };
+  }, []);
 
-  const remove = async (id: number) => {
-    await fetchWithAuth(`sedes/${id}`, { method: 'DELETE' });
-    await fetchAll();
-  };
+  const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+    const updated = await fetchWithAuth<Sede>(`sedes/${id}/estado`, {
+      method: 'PATCH',
+      body: { estado },
+    });
+    // ✅ Actualización local: cambiar el estado de la sede
+    setSedes(prev => prev.map(s => s.id_sede === id ? updated : s));
+    return updated;
+  }, []);
 
-  return { sedes, loading, fetchAll, create, update, remove };
+  return { sedes, loading, fetchAll, create, update, toggleEstado };
 };

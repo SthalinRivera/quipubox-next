@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useClientesData } from '@/hooks/useClientesData';
 import { useClientesUIStore } from '@/stores/clientesStore';
 import { useToast } from '@/hooks/useToast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   Table,
   TableBody,
@@ -13,14 +14,14 @@ import {
 } from '@/components/ui/table';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
-import Input from '@/components/form/input/InputField';
 import { ClienteModal } from '@/components/clientes/ClienteModal';
 import { ClienteSedesModal } from '@/components/clientes/ClienteSedesModal';
 import { ClientePuestosModal } from '@/components/clientes/ClientePuestosModal';
-import { PencilIcon, TrashBinIcon, PlusIcon, SearchIcon } from '@/icons';
+import { PencilIcon, PlusIcon, SearchIcon, } from '@/icons';
+import { Power, Play, Plus } from "lucide-react";
 import Pagination from './Pagination';
-import Switch from '@/components/form/switch/Switch';
 import type { Cliente, ClienteSede, PuestoAsignado } from '@/types/cliente';
+import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark';
 
@@ -33,7 +34,7 @@ export default function ClientesTable() {
     error,
     page,
     setPage,
-    deleteCliente,
+    toggleEstado,      // ← nueva función (debe venir del hook)
     updateCliente,
     refetch,
   } = useClientesData();
@@ -45,7 +46,8 @@ export default function ClientesTable() {
   const [sedesOpen, setSedesOpen] = useState(false);
   const [puestosOpen, setPuestosOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [filtroTipoRelacion, setFiltroTipoRelacion] = useState('todos');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ cliente: Cliente; nuevoEstado: boolean } | null>(null);
 
   const filteredClientes = clientes.filter((cliente: Cliente) => {
     const term = searchTerm.toLowerCase().trim();
@@ -78,24 +80,26 @@ export default function ClientesTable() {
     setPuestosOpen(true);
   };
 
-  const handleDelete = async (cliente: Cliente) => {
-    if (window.confirm(`¿Eliminar a ${cliente.nombres}?`)) {
-      try {
-        await deleteCliente(cliente.id_cliente);
-        toast.success('Cliente eliminado');
-      } catch (err: any) {
-        toast.error(err.message || 'Error al eliminar');
-      }
-    }
+  // ✅ Nueva función para activar/desactivar (con confirmación)
+  const handleToggleEstado = (cliente: Cliente) => {
+    const nuevoEstado = !cliente.estado;
+    setPendingAction({ cliente, nuevoEstado });
+    setConfirmOpen(true);
   };
 
-  const handleToggleStatus = async (cliente: Cliente, nuevoEstado: boolean) => {
+  const executeToggle = async () => {
+    if (!pendingAction) return;
+    const { cliente, nuevoEstado } = pendingAction;
     try {
-      await updateCliente({ id: cliente.id_cliente, data: { estado: nuevoEstado } });
+      // ✅ CORRECTO:
+      await toggleEstado({ id: cliente.id_cliente, estado: nuevoEstado });
       toast.success(`Cliente ${nuevoEstado ? 'activado' : 'desactivado'}`);
       refetch();
     } catch (err: any) {
       toast.error(err.message || 'Error al cambiar estado');
+    } finally {
+      setConfirmOpen(false);
+      setPendingAction(null);
     }
   };
 
@@ -130,13 +134,11 @@ export default function ClientesTable() {
             <span className="text-gray-400 text-sm">—</span>
           )}
         </div>
-        <button
-          onClick={() => handleSedes(cliente)}
-          className="text-blue-500 hover:text-blue-600 transition-colors"
-          title="Agregar sede"
-        >
-          <PlusIcon className="h-4 w-4" />
-        </button>
+
+
+        <Button size="sm" variant="outline" onClick={() => handleSedes(cliente)} className="h-6 px-2 text-xs">
+          <Plus className="mr-1 h-3 w-3" />
+        </Button>
       </div>
     );
   };
@@ -162,16 +164,14 @@ export default function ClientesTable() {
               );
             })
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 text-sm">Sin puesto</span>
           )}
         </div>
-        <button
-          onClick={() => handlePuestos(cliente)}
-          className="text-green-500 hover:text-green-600 transition-colors"
-          title="Agregar puesto"
-        >
-          <PlusIcon className="h-4 w-4" />
-        </button>
+
+        <Button size="sm" variant="outline" onClick={() => handlePuestos(cliente)} className="h-6 px-2 text-xs">
+          <Plus className="mr-1 h-3 w-3" />
+
+        </Button>
       </div>
     );
   };
@@ -216,8 +216,8 @@ export default function ClientesTable() {
   if (isLoading) {
     return (
       <div className="p-4 text-center">
-        <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-        <span className="ml-2">Cargando clientes...</span>
+
+        <TableSkeleton columns={7} rows={10} showActionButton={true} />;
       </div>
     );
   }
@@ -235,10 +235,9 @@ export default function ClientesTable() {
 
   return (
     <div className="space-y-4">
-      {/* Filtros */}
+      {/* Filtros (igual que antes) */}
       <div className="flex flex-wrap justify-between gap-4">
         <div className="flex flex-wrap gap-4 items-end">
-          {/* Búsqueda local */}
           <div className="flex-1 min-w-[200px]">
             <label className="text-gray-700 dark:text-gray-300 mb-1 block">Buscar</label>
             <div className="relative">
@@ -253,7 +252,6 @@ export default function ClientesTable() {
             </div>
           </div>
 
-          {/* Tipo relación (backend) */}
           <div className="w-48">
             <label className="text-gray-700 dark:text-gray-300 mb-1 block">Tipo Relación</label>
             <select
@@ -268,7 +266,6 @@ export default function ClientesTable() {
             </select>
           </div>
 
-          {/* Estado (backend) */}
           <div className="w-48">
             <label className="text-gray-700 dark:text-gray-300 mb-1 block">Estado</label>
             <select
@@ -282,7 +279,6 @@ export default function ClientesTable() {
             </select>
           </div>
 
-          {/* Botón limpiar (solo si hay filtros activos) */}
           {(searchTerm || estado !== 'todos' || tipo_relacion !== 'todos') && (
             <Button
               variant="outline"
@@ -297,7 +293,7 @@ export default function ClientesTable() {
             </Button>
           )}
         </div>
-        <Button onClick={handleCreate} startIcon={<PlusIcon className="h-4 w-4" />}>
+        <Button onClick={handleCreate} startIcon={<PlusIcon className="h-2 w-4" />}>
           Nuevo Cliente
         </Button>
       </div>
@@ -343,16 +339,28 @@ export default function ClientesTable() {
                       <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
                         {renderPuestos((cliente.clientes_puestos as PuestoAsignado[]) || [], cliente)}
                       </TableCell>
+                      {/* Estado con Badge (ya no Switch) */}
                       <TableCell className="px-5 py-4">
-                        <Switch label="" defaultChecked={cliente.estado} onChange={(checked) => handleToggleStatus(cliente, checked)} color="blue" />
+                        <Badge size="sm" color={cliente.estado ? 'success' : 'error'}>
+                          {cliente.estado ? 'Activo' : 'Inactivo'}
+                        </Badge>
                       </TableCell>
+                      {/* Acciones: Editar + Toggle */}
                       <TableCell className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => handleEdit(cliente)} className="text-gray-500 hover:text-brand-500" title="Editar cliente">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleEdit(cliente)}
+                            className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+                            title="Editar cliente"
+                          >
                             <PencilIcon className="h-5 w-5" />
                           </button>
-                          <button onClick={() => handleDelete(cliente)} className="text-gray-500 hover:text-error-500" title="Eliminar cliente">
-                            <TrashBinIcon className="h-5 w-5" />
+                          <button
+                            onClick={() => handleToggleEstado(cliente)}
+                            className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                            title={cliente.estado ? 'Desactivar cliente' : 'Activar cliente'}
+                          >
+                            {cliente.estado ? <Power className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                           </button>
                         </div>
                       </TableCell>
@@ -376,6 +384,17 @@ export default function ClientesTable() {
       <ClienteModal open={modalOpen} onOpenChange={setModalOpen} editingCliente={selectedCliente} onSaved={handleSaved} />
       <ClienteSedesModal open={sedesOpen} onOpenChange={setSedesOpen} cliente={selectedCliente} onSaved={handleSaved} />
       <ClientePuestosModal open={puestosOpen} onOpenChange={setPuestosOpen} cliente={selectedCliente} onSaved={handleSaved} />
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={executeToggle}
+        title={pendingAction?.nuevoEstado ? 'Activar cliente' : 'Desactivar cliente'}
+        message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} al cliente "${pendingAction?.cliente.nombres}"?`}
+        confirmText="Confirmar"
+        variant={pendingAction?.nuevoEstado ? 'success' : 'danger'}
+      />
     </div>
   );
 }

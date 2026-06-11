@@ -1,3 +1,4 @@
+// hooks/useEmpresas.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -12,8 +13,6 @@ export const useEmpresas = () => {
         setLoading(true);
         try {
             const response = await fetchWithAuth<any>('empresas');
-            console.log('Respuesta empresas:', response); // 👈 Depura
-
             let empresasArray: Empresa[] = [];
             if (Array.isArray(response)) {
                 empresasArray = response;
@@ -30,28 +29,36 @@ export const useEmpresas = () => {
             setLoading(false);
         }
     }, []);
-    const create = async (empresa: Partial<Empresa>) => {
+
+    const create = useCallback(async (empresa: Partial<Empresa>) => {
         const newEmpresa = await fetchWithAuth<Empresa>('empresas', {
             method: 'POST',
             body: empresa,
         });
-        await fetchAll();
+        // ✅ Actualización local: agregar la nueva empresa al final
+        setEmpresas(prev => [...prev, newEmpresa]);
         return newEmpresa;
-    };
+    }, []);
 
-    const update = async (id: number, empresa: Partial<Empresa>) => {
+    const update = useCallback(async (id: number, empresa: Partial<Empresa>) => {
         const updated = await fetchWithAuth<Empresa>(`empresas/${id}`, {
-            method: 'PATCH',     // backend usa PATCH, no PUT
+            method: 'PATCH',
             body: empresa,
         });
-        await fetchAll();
+        // ✅ Actualización local: reemplazar la empresa modificada
+        setEmpresas(prev => prev.map(emp => emp.id_empresa === id ? updated : emp));
         return updated;
-    };
+    }, []);
 
-    const remove = async (id: number) => {
-        await fetchWithAuth(`empresas/${id}`, { method: 'DELETE' });
-        await fetchAll();
-    };
+    const toggleEstado = useCallback(async (id: number, estado: boolean) => {
+        const updated = await fetchWithAuth<Empresa>(`empresas/${id}/estado`, {
+            method: 'PATCH',
+            body: { estado },
+        });
+        // ✅ Actualización local: cambiar el estado de la empresa
+        setEmpresas(prev => prev.map(emp => emp.id_empresa === id ? updated : emp));
+        return updated;
+    }, []);
 
-    return { empresas, loading, fetchAll, create, update, remove };
+    return { empresas, loading, fetchAll, create, update, toggleEstado };
 };
