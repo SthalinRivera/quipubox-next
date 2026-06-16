@@ -105,9 +105,10 @@ export function SedeModal({ isOpen, onClose, editingSede, onSaved }: SedeModalPr
                 id_empresa: data.id_empresa,
                 nombre: data.nombre,
                 tipo_sede: data.tipo_sede,
-                direccion: data.direccion || undefined,
-                ciudad: data.ciudad || undefined,
-                departamento: data.departamento || undefined,
+                ciudad: data.ciudad?.trim() === '' ? null : (data.ciudad || null),
+                direccion: data.direccion?.trim() === '' ? null : (data.direccion || null),
+                departamento: data.departamento?.trim() === '' ? null : (data.departamento || null),
+
                 estado: data.estado,
             };
             if (editingSede) {

@@ -76,7 +76,7 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSaved }: Calid
             const payload = {
                 id_empresa: data.id_empresa,
                 nombre: data.nombre,
-                descripcion: data.descripcion || undefined,
+                descripcion: data.descripcion?.trim() === '' ? null : (data.descripcion || null),
                 estado: data.estado,
             };
             if (editingCalidad) {

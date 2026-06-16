@@ -95,7 +95,7 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                 id_empresa: data.id_empresa,
                 nombre: data.nombre,
                 tipo_material: data.tipo_material,
-                descripcion: data.descripcion || undefined,
+                descripcion: data.descripcion?.trim() === '' ? null : (data.descripcion || null),
                 estado: data.estado,
             };
             if (editingTipo) {

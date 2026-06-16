@@ -22,7 +22,7 @@ import type { Usuario } from '@/types/usuario';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function UsuariosTable() {
-    const { usuarios, loading, fetchAll, toggleEstado, cambiarEstadoAcceso } = useUsuarios();
+    const { usuarios, loading, fetchAll, toggleEstado } = useUsuarios();
     const { roles, loading: rolesLoading, fetchAll: fetchRoles } = useRoles();
     const toast = useToast();
 
@@ -64,10 +64,6 @@ export default function UsuariosTable() {
                 const nuevoEstado = !user.estado;
                 await toggleEstado(user.id_usuario, nuevoEstado);
                 toast.success(`Cuenta de usuario ${nuevoEstado ? 'activada' : 'desactivada'}`);
-            } else if (tipo === 'acceso') {
-                const nuevoEstadoAcceso = user.estado_acceso === 'activo' ? 'bloqueado' : 'activo';
-                await cambiarEstadoAcceso(user.id_usuario, nuevoEstadoAcceso);
-                toast.success(`Acceso de usuario ${nuevoEstadoAcceso === 'activo' ? 'activado' : 'bloqueado'}`);
             }
         } catch (err: any) {
             toast.error(err.message);
@@ -105,8 +101,7 @@ export default function UsuariosTable() {
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Email</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Teléfono</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Sede</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Estado Cuenta</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Estado Acceso</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Estado </TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Roles</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Acciones</TableCell>
                                 </TableRow>
@@ -132,11 +127,7 @@ export default function UsuariosTable() {
                                                     {user.estado ? 'Activo' : 'Inactivo'}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="px-5 py-4">
-                                                <Badge size="sm" color={user.estado_acceso === 'activo' ? 'success' : 'error'}>
-                                                    {user.estado_acceso === 'activo' ? 'Activo' : 'Bloqueado'}
-                                                </Badge>
-                                            </TableCell>
+
                                             <TableCell className="px-5 py-4">
                                                 <UserRolesCell
                                                     usuario={user}
@@ -153,13 +144,7 @@ export default function UsuariosTable() {
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleToggleAcceso(user)}
-                                                        className="text-gray-500 transition-colors hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400"
-                                                        title={user.estado_acceso === 'activo' ? 'Bloquear acceso' : 'Activar acceso'}
-                                                    >
-                                                        {user.estado_acceso === 'activo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                                                    </button>
+
                                                     <button
                                                         onClick={() => handleToggleEstado(user)}
                                                         className="text-gray-500 transition-colors hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"

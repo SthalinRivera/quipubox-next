@@ -18,8 +18,9 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
+import { useAuthStore } from "@/stores/authStore"; // <-- Importa tu store
 
-// Definición de tipos
+// --- Definición de tipos y menús (sin cambios, los mismos que tenías) ---
 type NavItem = {
   name: string;
   icon: React.ReactNode;
@@ -27,9 +28,6 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-// ============================================================
-// MÓDULOS PRINCIPALES ORGANIZADOS POR FASES
-// ============================================================
 const fase1: NavItem = {
   name: "Base del sistema",
   icon: <GridIcon />,
@@ -62,7 +60,6 @@ const fase3: NavItem = {
   icon: <TableIcon />,
   subItems: [
     { name: "Operaciones de carga", path: "/dashboard/operaciones-carga" },
-    // { name: "Detalle por calidades", path: "/dashboard/detalle-calidades" },
   ],
 };
 
@@ -70,9 +67,8 @@ const fase4: NavItem = {
   name: "Reparto y entrega",
   icon: <BoxCubeIcon />,
   subItems: [
-    // { name: "Items de reparto", path: "/dashboard/items-reparto" },
+    { name: "Itens Reparto", path: "/dashboard/items-reparto" },
     { name: "Guías operativas", path: "/dashboard/guias-operativas" },
-    // { name: "Detalle de guías", path: "/dashboard/detalle-guias" },
     { name: "Entregas", path: "/dashboard/entregas" },
   ],
 };
@@ -98,7 +94,6 @@ const fase6: NavItem = {
   ],
 };
 
-// Array principal del menú (puedes añadir Dashboard al inicio si lo deseas)
 const mainNavItems: NavItem[] = [
   {
     name: "Dashboard",
@@ -113,7 +108,6 @@ const mainNavItems: NavItem[] = [
   fase6,
 ];
 
-// Si quieres mantener una sección "Others" con cosas adicionales (Calendar, Profile, etc.)
 const othersItems: NavItem[] = [
   {
     icon: <CalenderIcon />,
@@ -127,123 +121,54 @@ const othersItems: NavItem[] = [
   },
 ];
 
+// --- Configuración de permisos por ruta ---
+type Role = 'administrador' | 'encargado_carga' | 'repartidor' | 'chofer' | 'estibador' | 'encargado_retorno' | 'Supervisor';
+
+const routePermissions: Record<string, Role[]> = {
+  '/dashboard/empresas': ['administrador'],
+  '/dashboard/sedes': ['administrador', 'Supervisor'],
+  '/dashboard/roles': ['administrador'],
+  '/dashboard/usuarios': ['administrador'],
+  '/dashboard/clientes': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/frutas': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/variedades': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/calidades': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/tipos-jaba': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/camiones': ['administrador', 'encargado_carga', 'chofer', 'Supervisor'],
+  '/dashboard/lugares-operativos': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/puestos': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/clientes-puestos': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/operaciones-carga': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/items-reparto': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
+  '/dashboard/guias-operativas': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'Supervisor'],
+
+  '/dashboard/entregas': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
+  '/dashboard/jabas-cobrar': ['administrador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/recuperaciones-jabas': ['administrador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/jabas-pagar': ['administrador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/devoluciones-emisor': ['administrador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/incidencias': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/evidencias': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/logs': ['administrador', 'Supervisor'],
+  // Opcional: dashboard, calendar y profile a quién se lo muestras? A todos los autenticados.
+  '/dashboard': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/calendar': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/profile': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
+};
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const { hasRole } = useAuthStore(); // <-- obtener función de verificación
 
-  const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
-    <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
-        <li key={nav.name}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group ${openSubmenu?.type === menuType && openSubmenu?.index === index
-                ? "menu-item-active"
-                : "menu-item-inactive"
-                } cursor-pointer ${!isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"
-                }`}
-            >
-              <span
-                className={` ${openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "menu-item-icon-active"
-                  : "menu-item-icon-inactive"
-                  }`}
-              >
-                {nav.icon}
-              </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className="menu-item-text">{nav.name}</span>
-              )}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? "rotate-180 text-brand-500"
-                    : ""
-                    }`}
-                />
-              )}
-            </button>
-          ) : (
-            nav.path && (
-              <Link
-                href={nav.path}
-                className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                  }`}
-              >
-                <span
-                  className={`${isActive(nav.path)
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                    }`}
-                >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className="menu-item-text">{nav.name}</span>
-                )}
-              </Link>
-            )
-          )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-            <div
-              ref={(el) => {
-                subMenuRefs.current[`${menuType}-${index}`] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
-              }}
-            >
-              <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link
-                      href={subItem.path}
-                      className={`menu-dropdown-item ${isActive(subItem.path)
-                        ? "menu-dropdown-item-active"
-                        : "menu-dropdown-item-inactive"
-                        }`}
-                    >
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${isActive(subItem.path)
-                              ? "menu-dropdown-badge-active"
-                              : "menu-dropdown-badge-inactive"
-                              } menu-dropdown-badge`}
-                          >
-                            new
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${isActive(subItem.path)
-                              ? "menu-dropdown-badge-active"
-                              : "menu-dropdown-badge-inactive"
-                              } menu-dropdown-badge`}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
+  const isPathAllowed = (path: string) => {
+    const allowedRoles = routePermissions[path];
+    if (!allowedRoles) return false; // si no está definido, no mostrar (puedes cambiarlo a true si quieres que sea público)
+    return hasRole(allowedRoles);
+  };
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -267,7 +192,6 @@ const AppSidebar: React.FC = () => {
             }
           });
         } else if (nav.path && isActive(nav.path)) {
-          // Si es un item sin submenu y está activo, cerramos cualquier submenu abierto
           setOpenSubmenu(null);
           submenuMatched = true;
         }
@@ -293,6 +217,140 @@ const AppSidebar: React.FC = () => {
   const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
     setOpenSubmenu((prev) =>
       prev && prev.type === menuType && prev.index === index ? null : { type: menuType, index }
+    );
+  };
+
+  // Render de items con filtro de permisos
+  const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => {
+    // Filtrar items que no tengan ningún subitem permitido (o el path principal si no es permitido)
+    const filteredItems = navItems.filter(item => {
+      if (item.subItems) {
+        return item.subItems.some(sub => isPathAllowed(sub.path));
+      } else if (item.path) {
+        return isPathAllowed(item.path);
+      }
+      return false;
+    });
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+      setMounted(true);
+    }, []);
+    if (!mounted) {
+      // Devuelve un placeholder vacío o un esqueleto para evitar hidratación
+      return <aside className="fixed mt-16 ... w-[290px]" />;
+    }
+
+    return (
+      <ul className="flex flex-col gap-4">
+        {filteredItems.map((nav, index) => (
+          <li key={nav.name}>
+            {nav.subItems ? (
+              <button
+                onClick={() => handleSubmenuToggle(index, menuType)}
+                className={`menu-item group ${openSubmenu?.type === menuType && openSubmenu?.index === index
+                  ? "menu-item-active"
+                  : "menu-item-inactive"
+                  } cursor-pointer ${!isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"
+                  }`}
+              >
+                <span
+                  className={` ${openSubmenu?.type === menuType && openSubmenu?.index === index
+                    ? "menu-item-icon-active"
+                    : "menu-item-icon-inactive"
+                    }`}
+                >
+                  {nav.icon}
+                </span>
+                {(isExpanded || isHovered || isMobileOpen) && (
+                  <span className="menu-item-text">{nav.name}</span>
+                )}
+                {(isExpanded || isHovered || isMobileOpen) && (
+                  <ChevronDownIcon
+                    className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === menuType && openSubmenu?.index === index
+                      ? "rotate-180 text-brand-500"
+                      : ""
+                      }`}
+                  />
+                )}
+              </button>
+            ) : (
+              nav.path && (
+                <Link
+                  href={nav.path}
+                  className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                    }`}
+                >
+                  <span
+                    className={`${isActive(nav.path)
+                      ? "menu-item-icon-active"
+                      : "menu-item-icon-inactive"
+                      }`}
+                  >
+                    {nav.icon}
+                  </span>
+                  {(isExpanded || isHovered || isMobileOpen) && (
+                    <span className="menu-item-text">{nav.name}</span>
+                  )}
+                </Link>
+              )
+            )}
+            {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+              <div
+                ref={(el) => {
+                  subMenuRefs.current[`${menuType}-${index}`] = el;
+                }}
+                className="overflow-hidden transition-all duration-300"
+                style={{
+                  height:
+                    openSubmenu?.type === menuType && openSubmenu?.index === index
+                      ? `${subMenuHeight[`${menuType}-${index}`]}px`
+                      : "0px",
+                }}
+              >
+                <ul className="mt-2 space-y-1 ml-9">
+                  {nav.subItems
+                    .filter(subItem => isPathAllowed(subItem.path))
+                    .map((subItem) => (
+                      <li key={subItem.name}>
+                        <Link
+                          href={subItem.path}
+                          className={`menu-dropdown-item ${isActive(subItem.path)
+                            ? "menu-dropdown-item-active"
+                            : "menu-dropdown-item-inactive"
+                            }`}
+                        >
+                          {subItem.name}
+                          <span className="flex items-center gap-1 ml-auto">
+                            {subItem.new && (
+                              <span
+                                className={`ml-auto ${isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                                  } menu-dropdown-badge`}
+                              >
+                                new
+                              </span>
+                            )}
+                            {subItem.pro && (
+                              <span
+                                className={`ml-auto ${isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                                  } menu-dropdown-badge`}
+                              >
+                                pro
+                              </span>
+                            )}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     );
   };
 

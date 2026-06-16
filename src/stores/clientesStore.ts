@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import type { Cliente } from '@/types/cliente';
 interface ClientesUIState {
     // Filtros y paginación
     page: number;
@@ -36,3 +37,24 @@ export const useClientesUIStore = create<ClientesUIState>()(
         }
     )
 );
+
+
+
+interface ClientesStore {
+    clientes: Cliente[];
+    setClientes: (clientes: Cliente[]) => void;
+    addCliente: (cliente: Cliente) => void;
+    updateCliente: (id: number, updatedCliente: Cliente) => void;
+}
+
+export const useClientesStore = create<ClientesStore>((set) => ({
+    clientes: [],
+    setClientes: (clientes) => set({ clientes }),
+    addCliente: (cliente) => set((state) => ({ clientes: [...state.clientes, cliente] })),
+    updateCliente: (id, updatedCliente) =>
+        set((state) => ({
+            clientes: state.clientes.map((c) =>
+                Number(c.id_cliente) === Number(id) ? { ...c, ...updatedCliente } : c
+            ),
+        })),
+}));

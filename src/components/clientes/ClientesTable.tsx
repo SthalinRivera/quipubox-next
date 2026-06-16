@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // ← Importante
 import { useClientesData } from '@/hooks/useClientesData';
 import { useClientesUIStore } from '@/stores/clientesStore';
 import { useToast } from '@/hooks/useToast';
@@ -17,8 +18,8 @@ import Button from '@/components/ui/button/Button';
 import { ClienteModal } from '@/components/clientes/ClienteModal';
 import { ClienteSedesModal } from '@/components/clientes/ClienteSedesModal';
 import { ClientePuestosModal } from '@/components/clientes/ClientePuestosModal';
-import { PencilIcon, PlusIcon, SearchIcon, } from '@/icons';
-import { Power, Play, Plus } from "lucide-react";
+import { PencilIcon, PlusIcon, SearchIcon, EyeIcon } from '@/icons'; // Asegúrate de tener EyeIcon en tus iconos
+import { Power, Play, Plus } from 'lucide-react';
 import Pagination from './Pagination';
 import type { Cliente, ClienteSede, PuestoAsignado } from '@/types/cliente';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
@@ -26,6 +27,7 @@ import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark';
 
 export default function ClientesTable() {
+  const router = useRouter(); // Para navegación
   const {
     clientes,
     totalPages,
@@ -34,8 +36,7 @@ export default function ClientesTable() {
     error,
     page,
     setPage,
-    toggleEstado,      // ← nueva función (debe venir del hook)
-    updateCliente,
+    toggleEstado,
     refetch,
   } = useClientesData();
   const { estado, setEstado, resetFilters, tipo_relacion, setTipoRelacion } = useClientesUIStore();
@@ -54,9 +55,9 @@ export default function ClientesTable() {
     if (!term) return true;
     return (
       cliente.nombres.toLowerCase().includes(term) ||
-      (cliente.apellidos && cliente.apellidos.toLowerCase().includes(term)) ||
-      (cliente.apodo && cliente.apodo.toLowerCase().includes(term)) ||
-      (cliente.telefono && cliente.telefono.includes(term))
+      (cliente.apellidos?.toLowerCase().includes(term)) ||
+      (cliente.apodo?.toLowerCase().includes(term)) ||
+      (cliente.telefono?.includes(term))
     );
   });
 
@@ -80,7 +81,10 @@ export default function ClientesTable() {
     setPuestosOpen(true);
   };
 
-  // ✅ Nueva función para activar/desactivar (con confirmación)
+  const handleViewDetail = (clienteId: number) => {
+    router.push(`/dashboard/clientes/${clienteId}`);
+  };
+
   const handleToggleEstado = (cliente: Cliente) => {
     const nuevoEstado = !cliente.estado;
     setPendingAction({ cliente, nuevoEstado });
@@ -91,7 +95,6 @@ export default function ClientesTable() {
     if (!pendingAction) return;
     const { cliente, nuevoEstado } = pendingAction;
     try {
-      // ✅ CORRECTO:
       await toggleEstado({ id: cliente.id_cliente, estado: nuevoEstado });
       toast.success(`Cliente ${nuevoEstado ? 'activado' : 'desactivado'}`);
       refetch();
@@ -110,6 +113,7 @@ export default function ClientesTable() {
     refetch();
   };
 
+  // Renderizado de sedes (igual que antes)
   const renderSedes = (sedes: ClienteSede[], cliente: Cliente) => {
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -134,8 +138,6 @@ export default function ClientesTable() {
             <span className="text-gray-400 text-sm">—</span>
           )}
         </div>
-
-
         <Button size="sm" variant="outline" onClick={() => handleSedes(cliente)} className="h-6 px-2 text-xs">
           <Plus className="mr-1 h-3 w-3" />
         </Button>
@@ -167,10 +169,8 @@ export default function ClientesTable() {
             <span className="text-gray-400 text-sm">Sin puesto</span>
           )}
         </div>
-
         <Button size="sm" variant="outline" onClick={() => handlePuestos(cliente)} className="h-6 px-2 text-xs">
           <Plus className="mr-1 h-3 w-3" />
-
         </Button>
       </div>
     );
@@ -216,8 +216,7 @@ export default function ClientesTable() {
   if (isLoading) {
     return (
       <div className="p-4 text-center">
-
-        <TableSkeleton columns={7} rows={10} showActionButton={true} />;
+        <TableSkeleton columns={7} rows={10} showActionButton={true} />
       </div>
     );
   }
@@ -235,7 +234,7 @@ export default function ClientesTable() {
 
   return (
     <div className="space-y-4">
-      {/* Filtros (igual que antes) */}
+      {/* Filtros */}
       <div className="flex flex-wrap justify-between gap-4">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[200px]">
@@ -339,15 +338,15 @@ export default function ClientesTable() {
                       <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
                         {renderPuestos((cliente.clientes_puestos as PuestoAsignado[]) || [], cliente)}
                       </TableCell>
-                      {/* Estado con Badge (ya no Switch) */}
                       <TableCell className="px-5 py-4">
                         <Badge size="sm" color={cliente.estado ? 'success' : 'error'}>
                           {cliente.estado ? 'Activo' : 'Inactivo'}
                         </Badge>
                       </TableCell>
-                      {/* Acciones: Editar + Toggle */}
+                      {/* Acciones: Editar, Ver detalle, Activar/Desactivar */}
                       <TableCell className="px-5 py-4">
                         <div className="flex items-center gap-3">
+                          {/* Editar */}
                           <button
                             onClick={() => handleEdit(cliente)}
                             className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
@@ -355,6 +354,15 @@ export default function ClientesTable() {
                           >
                             <PencilIcon className="h-5 w-5" />
                           </button>
+                          {/* Ver detalle (nuevo) */}
+                          <button
+                            onClick={() => handleViewDetail(cliente.id_cliente)}
+                            className="text-gray-500 transition-colors hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400"
+                            title="Ver detalle completo"
+                          >
+                            <EyeIcon className="h-5 w-5" />
+                          </button>
+                          {/* Activar/Desactivar */}
                           <button
                             onClick={() => handleToggleEstado(cliente)}
                             className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
@@ -380,7 +388,7 @@ export default function ClientesTable() {
         </div>
       )}
 
-      {/* Modales */}
+      {/* Modales (se mantienen por compatibilidad) */}
       <ClienteModal open={modalOpen} onOpenChange={setModalOpen} editingCliente={selectedCliente} onSaved={handleSaved} />
       <ClienteSedesModal open={sedesOpen} onOpenChange={setSedesOpen} cliente={selectedCliente} onSaved={handleSaved} />
       <ClientePuestosModal open={puestosOpen} onOpenChange={setPuestosOpen} cliente={selectedCliente} onSaved={handleSaved} />

@@ -46,10 +46,20 @@ export interface ClientePuesto {
     id_cliente_puesto: number;
     id_cliente: number;
     id_puesto: number;
-    fecha_inicio?: string;
-    fecha_fin?: string;
+    fecha_inicio: string;
+    fecha_fin?: string | null;
     estado: boolean;
-    puestos?: Puesto;
+    seccion?: string | null;
+    puestos?: {
+        id_puesto: number;
+        numero_puesto: string;
+        lugares_operativos?: {
+            id_lugar: number;
+            nombre: string;
+            tipo_lugar?: string;
+            sedes?: { nombre: string };
+        };
+    };
 }
 export interface PuestoAsignado {
     id_cliente_puesto: number;

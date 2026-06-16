@@ -3,8 +3,8 @@ export interface LugarOperativo {
     id_empresa: number;
     id_sede: number;
     nombre: string;
-    direccion_referencia?: string;
-    observaciones?: string;
+    direccion_referencia?: string | null;   // ✅ permitir null
+    observaciones?: string | null;
     estado: boolean;
     tipo_lugar: string; // o TipoLugar
     created_at: string;

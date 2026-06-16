@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useToast } from "@/hooks/useToast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-
 import {
     Table,
     TableBody,
@@ -14,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
-import { Pencil, Power, Play, Plus } from "lucide-react"; // Power para desactivar, Play para activar
+import { Pencil, Power, Play, Plus } from "lucide-react";
 import { EmpresaModal } from "./EmpresaModal";
 import type { Empresa } from "@/types/empresa";
 import { TableSkeleton } from "../ui/skeleton/TableSkeleton";
@@ -24,18 +23,22 @@ export default function EmpresasTable() {
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEmpresa, setSelectedEmpresa] = useState<Empresa | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ empresa: Empresa; nuevoEstado: boolean } | null>(null);
 
     useEffect(() => {
         fetchAll();
-    }, []);
+    }, [fetchAll]);
 
     const handleEdit = (empresa: Empresa) => {
         setSelectedEmpresa(empresa);
         setModalOpen(true);
     };
 
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [pendingAction, setPendingAction] = useState<{ empresa: Empresa; nuevoEstado: boolean } | null>(null);
+    const handleCreate = () => {
+        setSelectedEmpresa(null);
+        setModalOpen(true);
+    };
 
     const handleToggle = (empresa: Empresa) => {
         const nuevoEstado = !empresa.estado;
@@ -46,23 +49,29 @@ export default function EmpresasTable() {
     const executeToggle = async () => {
         if (!pendingAction) return;
         const { empresa, nuevoEstado } = pendingAction;
-        await toggleEstado(empresa.id_empresa, nuevoEstado);
-        // Opcional: mostrar toast de éxito
+        try {
+            await toggleEstado(empresa.id_empresa, nuevoEstado);
+            toast.success(`Empresa ${nuevoEstado ? "activada" : "desactivada"}`);
+        } catch (error: any) {
+            toast.error(error.message || "Error al cambiar el estado");
+        } finally {
+            setConfirmOpen(false);
+            setPendingAction(null);
+        }
     };
 
-    const handleCreate = () => {
-        setSelectedEmpresa(null);
-        setModalOpen(true);
+    const handleModalClose = () => {
+        setModalOpen(false);
+
     };
 
-
-
-    if (loading)
+    if (loading) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />
             </div>
         );
+    }
 
     return (
         <div className="space-y-4">
@@ -119,7 +128,6 @@ export default function EmpresasTable() {
                                             </TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    {/* Botón Editar */}
                                                     <button
                                                         onClick={() => handleEdit(empresa)}
                                                         className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
@@ -128,9 +136,7 @@ export default function EmpresasTable() {
                                                         <Pencil className="h-5 w-5" />
                                                     </button>
 
-                                                    {/* Botón Activar/Desactivar (intuitivo) */}
                                                     {empresa.estado ? (
-                                                        // Estado activo: botón para desactivar (rojo)
                                                         <button
                                                             onClick={() => handleToggle(empresa)}
                                                             className="text-gray-500 transition-colors hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500"
@@ -139,7 +145,6 @@ export default function EmpresasTable() {
                                                             <Power className="h-5 w-5" />
                                                         </button>
                                                     ) : (
-                                                        // Estado inactivo: botón para activar (verde)
                                                         <button
                                                             onClick={() => handleToggle(empresa)}
                                                             className="text-gray-500 transition-colors hover:text-green-600 dark:text-gray-400 dark:hover:text-green-500"
@@ -161,9 +166,9 @@ export default function EmpresasTable() {
 
             <EmpresaModal
                 isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
+                onClose={handleModalClose}
                 editingEmpresa={selectedEmpresa}
-                onSaved={fetchAll}
+                onSaved={handleModalClose}
             />
 
             <ConfirmDialog

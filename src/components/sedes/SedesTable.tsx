@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useSedes } from '@/hooks/useSedes';
 import { useToast } from '@/hooks/useToast';
-import { useSedesUIStore } from '@/stores/sedesStore';
+import { useSedesUIStore } from '@/stores/sedesStore'; // ✅ store de UI (filtros)
 import {
     Table,
     TableBody,
@@ -25,6 +25,7 @@ export default function SedesTable() {
     const { sedes, loading, fetchAll, toggleEstado } = useSedes();
     const toast = useToast();
 
+    // ✅ Filtros desde el store de UI (correcto)
     const { search, tipoSede, setSearch, setTipoSede, resetFilters } = useSedesUIStore();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,8 +34,8 @@ export default function SedesTable() {
     const [pendingAction, setPendingAction] = useState<{ sede: Sede; nuevoEstado: boolean } | null>(null);
 
     useEffect(() => {
-        fetchAll();
-    }, []);
+        fetchAll(); // solo carga inicial
+    }, [fetchAll]);
 
     const filteredSedes = (sedes || []).filter((sede) => {
         if (search && !sede.nombre.toLowerCase().includes(search.toLowerCase())) return false;
@@ -61,25 +62,35 @@ export default function SedesTable() {
     const executeToggle = async () => {
         if (!pendingAction) return;
         const { sede, nuevoEstado } = pendingAction;
-        await toggleEstado(sede.id_sede, nuevoEstado);
-        toast.success(`Sede ${nuevoEstado ? 'activada' : 'desactivada'} correctamente`);
+        try {
+            await toggleEstado(sede.id_sede, nuevoEstado);
+            toast.success(`Sede ${nuevoEstado ? 'activada' : 'desactivada'} correctamente`);
+        } catch (error) {
+            toast.error('Error al cambiar el estado');
+        } finally {
+            setConfirmOpen(false);
+            setPendingAction(null);
+        }
     };
 
-    const handleSaved = () => fetchAll();
+    // ✅ Solo cierra el modal, no recarga la tabla
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+    };
 
     if (loading) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
-            {/* Barra de filtros (igual) */}
+            {/* Barra de filtros */}
             <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className='flex flex-wrap gap-4'>
+                <div className="flex flex-wrap gap-4">
                     <div className="relative w-64">
                         <input
                             type="text"
@@ -181,9 +192,9 @@ export default function SedesTable() {
 
             <SedeModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={handleModalClose}
                 editingSede={selectedSede}
-                onSaved={handleSaved}
+                onSaved={handleModalClose}   // ✅ solo cierra, no recarga
             />
 
             <ConfirmDialog

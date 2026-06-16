@@ -1,4 +1,3 @@
-// components/variedades/VariedadModal.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -15,9 +14,10 @@ import { useFrutas } from '@/hooks/useFrutas';
 import { useToast } from '@/hooks/useToast';
 import type { Variedad } from '@/types/variedad';
 
+// ✅ Cambiamos fruta_id → id_fruta
 const variedadSchema = z.object({
     nombre: z.string().min(1, 'El nombre es obligatorio'),
-    fruta_id: z.number().min(1, 'Debes seleccionar una fruta'),
+    id_fruta: z.number().min(1, 'Debes seleccionar una fruta'),
     estado: z.boolean().default(true),
 });
 
@@ -42,7 +42,7 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
         formState: { errors, isSubmitting, isValid },
     } = useForm<VariedadFormData>({
         resolver: zodResolver(variedadSchema) as any,
-        defaultValues: { nombre: '', fruta_id: 0, estado: true },
+        defaultValues: { nombre: '', id_fruta: 0, estado: true },
         mode: 'onChange',
     });
 
@@ -53,14 +53,15 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
     useEffect(() => {
         if (open) {
             if (editingVariedad) {
-                const frutaId = editingVariedad.fruta_id ?? editingVariedad.frutas?.id_fruta ?? 0;
+                // ✅ Usamos id_fruta (puede venir de la relación o directamente)
+                const frutaId = editingVariedad.id_fruta ?? editingVariedad.frutas?.id_fruta ?? 0;
                 reset({
                     nombre: editingVariedad.nombre,
-                    fruta_id: frutaId,
+                    id_fruta: frutaId,
                     estado: editingVariedad.estado ?? true,
                 });
             } else {
-                reset({ nombre: '', fruta_id: 0, estado: true });
+                reset({ nombre: '', id_fruta: 0, estado: true });
             }
         }
     }, [open, editingVariedad, reset]);
@@ -72,7 +73,14 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
 
     const onSubmit = async (data: VariedadFormData) => {
         try {
-            const payload = { ...data, id_empresa: 1 }; // Ajusta según tu lógica
+            // ✅ Enviamos id_fruta (no fruta_id) y el id_empresa que necesites
+            const payload = {
+                nombre: data.nombre,
+                id_fruta: data.id_fruta,
+                estado: data.estado,
+                id_empresa: 1, // Ajusta según tu lógica (siempre requerido)
+                
+            };
             if (editingVariedad) {
                 await update(editingVariedad.id_variedad, payload);
                 toast.success('Variedad actualizada');
@@ -106,20 +114,18 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
                         <Controller
                             name="nombre"
                             control={control}
-                            render={({ field }) => (
-                                <Input {...field} error={!!errors.nombre} />
-                            )}
+                            render={({ field }) => <Input {...field} error={!!errors.nombre} />}
                         />
                         {errors.nombre && <p className="mt-1 text-xs text-error-500">{errors.nombre.message}</p>}
                     </div>
 
-                    {/* Fruta */}
+                    {/* Fruta - ahora con id_fruta */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Fruta <span className="text-error-500">*</span>
                         </Label>
                         <Controller
-                            name="fruta_id"
+                            name="id_fruta"
                             control={control}
                             render={({ field }) => (
                                 <Select
@@ -130,7 +136,7 @@ export function VariedadModal({ open, onOpenChange, editingVariedad, onSaved }: 
                                 />
                             )}
                         />
-                        {errors.fruta_id && <p className="mt-1 text-xs text-error-500">{errors.fruta_id.message}</p>}
+                        {errors.id_fruta && <p className="mt-1 text-xs text-error-500">{errors.id_fruta.message}</p>}
                     </div>
 
                     {/* Estado (checkbox) */}

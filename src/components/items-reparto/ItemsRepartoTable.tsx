@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useItemsReparto } from "@/hooks/useItemsReparto";
+import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/useToast";
 import {
     Table,
@@ -10,11 +11,13 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+
 import Button from "@/components/ui/button/Button";
 import Badge from "@/components/ui/badge/Badge";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Eye } from "lucide-react";
 import { ItemRepartoModal } from "./ItemRepartoModal";
 import type { ItemReparto } from "@/types/itemReparto";
+import router from "next/router";
 
 interface ItemsRepartoTableProps {
     detalleId?: number;
@@ -55,7 +58,9 @@ export default function ItemsRepartoTable({ detalleId, hideCreateButton }: Items
             }
         }
     };
-
+    const handleViewDetails = (id: number) => {
+        router.push(`/dashboard/items-reparto/${id}/detalle`);
+    };
     if (loading) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
@@ -133,6 +138,13 @@ export default function ItemsRepartoTable({ detalleId, hideCreateButton }: Items
                                                         title="Editar"
                                                     >
                                                         <Pencil className="h-5 w-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleViewDetails(item.id_item_reparto)}
+                                                        className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                        title="Ver detalles (calidades)"
+                                                    >
+                                                        <Eye className="h-5 w-5" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(item.id_item_reparto)}

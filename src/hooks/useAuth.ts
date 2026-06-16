@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react'
 import { fetchWithAuth } from '@/lib/api-client'
+import { useAuthStore } from '@/stores/authStore';
 
 export const useAuth = () => {
     const [user, setUser] = useState<any>(null)
@@ -18,6 +19,8 @@ export const useAuth = () => {
                 headers: { Authorization: `Bearer ${token}` },
             })
             setUser(profile)
+            useAuthStore.getState().setUser(profile); // <- guardar en store
+
             return profile
         } catch (error) {
             console.error('fetchUser error:', error)

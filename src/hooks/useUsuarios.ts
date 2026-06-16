@@ -22,7 +22,13 @@ export const useUsuarios = () => {
             setLoading(false);
         }
     }, [setUsuarios]);
+    const createFull = useCallback(async (data: any) => {
+        return fetchWithAuth('usuarios/full', { method: 'POST', body: data });
+    }, []);
 
+    const updateFull = useCallback(async (id: number, data: any) => {
+        return fetchWithAuth(`usuarios/${id}/full`, { method: 'PUT', body: data });
+    }, []);
     const create = useCallback(async (usuario: any) => {
         setLoading(true);
         try {
@@ -59,19 +65,6 @@ export const useUsuarios = () => {
         }
     }, [updateUsuario]);
 
-    const cambiarEstadoAcceso = useCallback(async (id: number, estadoAcceso: 'activo' | 'bloqueado') => {
-        setLoading(true);
-        try {
-            const updated = await fetchWithAuth<Usuario>(`usuarios/${id}/estado-acceso`, {
-                method: 'PATCH',
-                body: { estado_acceso: estadoAcceso },
-            });
-            updateUsuario(id, updated);
-            return updated;
-        } finally {
-            setLoading(false);
-        }
-    }, [updateUsuario]);
 
     const assignRole = useCallback(async (usuarioId: number, rolId: number) => {
         setLoading(true);
@@ -104,7 +97,6 @@ export const useUsuarios = () => {
         create,
         update,
         toggleEstado,
-        cambiarEstadoAcceso,
         assignRole,
         removeRole,
     };

@@ -1,13 +1,17 @@
 // hooks/useSedes.ts
-import { useState, useCallback, useEffect } from 'react';
+'use client';
+
+import { useCallback, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
+import { useSedesDataStore } from '@/stores/sedesDataStore'; // ✅ import correcto
 import type { Sede } from '@/types/sede';
 
-export const useSedes = (idEmpresa?: number) => {
-  const [sedes, setSedes] = useState<Sede[]>([]);
+export const useSedes = () => {
+  const { sedes, setSedes, addSede, updateSede } = useSedesDataStore();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<any>(null);
 
-  const fetchAll = useCallback(async (tipo?: string) => {
+  const fetchAll = useCallback(async (tipo?: string, idEmpresa?: number) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -16,46 +20,51 @@ export const useSedes = (idEmpresa?: number) => {
       const url = params.toString() ? `sedes?${params}` : 'sedes';
       const data = await fetchWithAuth<Sede[]>(url);
       setSedes(data);
-    } catch (error) {
-      console.error('Error fetching sedes:', error);
+    } catch (err) {
+      setError(err);
     } finally {
       setLoading(false);
     }
-  }, [idEmpresa]);
+  }, [setSedes]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  const create = useCallback(async (sedeData: Partial<Sede>) => {
+    try {
+      const newSede = await fetchWithAuth<Sede>('sedes', {
+        method: 'POST',
+        body: sedeData,
+      });
+      addSede(newSede);
+      return newSede;
+    } catch (err) {
+      throw err;
+    }
+  }, [addSede]);
 
-  const create = useCallback(async (sede: Partial<Sede>) => {
-    const newSede = await fetchWithAuth<Sede>('sedes', {
-      method: 'POST',
-      body: sede,
-    });
-    // ✅ Actualización local: agregar la nueva sede al final
-    setSedes(prev => [...prev, newSede]);
-    return newSede;
-  }, []);
-
-  const update = useCallback(async (id: number, sede: Partial<Sede>) => {
-    const updated = await fetchWithAuth<Sede>(`sedes/${id}`, {
-      method: 'PATCH',
-      body: sede,
-    });
-    // ✅ Actualización local: reemplazar la sede modificada
-    setSedes(prev => prev.map(s => s.id_sede === id ? updated : s));
-    return updated;
-  }, []);
+  const update = useCallback(async (id: number, sedeData: Partial<Sede>) => {
+    try {
+      const updated = await fetchWithAuth<Sede>(`sedes/${id}`, {
+        method: 'PUT',
+        body: sedeData,
+      });
+      updateSede(id, updated);
+      return updated;
+    } catch (err) {
+      throw err;
+    }
+  }, [updateSede]);
 
   const toggleEstado = useCallback(async (id: number, estado: boolean) => {
-    const updated = await fetchWithAuth<Sede>(`sedes/${id}/estado`, {
-      method: 'PATCH',
-      body: { estado },
-    });
-    // ✅ Actualización local: cambiar el estado de la sede
-    setSedes(prev => prev.map(s => s.id_sede === id ? updated : s));
-    return updated;
-  }, []);
+    try {
+      const updated = await fetchWithAuth<Sede>(`sedes/${id}/estado`, {
+        method: 'PATCH',
+        body: { estado },
+      });
+      updateSede(id, updated);
+      return updated;
+    } catch (err) {
+      throw err;
+    }
+  }, [updateSede]);
 
-  return { sedes, loading, fetchAll, create, update, toggleEstado };
+  return { sedes, loading, error, fetchAll, create, update, toggleEstado };
 };

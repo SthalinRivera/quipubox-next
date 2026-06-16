@@ -51,10 +51,16 @@ export default function RolesTable() {
     const executeToggle = async () => {
         if (!pendingAction) return;
         const { rol, nuevoEstado } = pendingAction;
-        await toggleEstado(rol.id_rol_usuario, nuevoEstado);
-        toast.success(`Rol ${nuevoEstado ? 'activado' : 'desactivado'}`);
-        setConfirmOpen(false);
-        setPendingAction(null);
+        try {
+            await toggleEstado(rol.id_rol_usuario, nuevoEstado);
+            toast.success(`Rol ${nuevoEstado ? 'activado' : 'desactivado'}`);
+        } catch (error: any) {
+            toast.error(error.message || 'Error al cambiar el estado');
+            console.error(error);
+        } finally {
+            setConfirmOpen(false);
+            setPendingAction(null);
+        }
     };
 
     const handleSaved = () => {
@@ -64,7 +70,7 @@ export default function RolesTable() {
     if (loading) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />
             </div>
         );
     }
@@ -111,6 +117,7 @@ export default function RolesTable() {
                                             <TableCell className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <button
+                                                        type="button"
                                                         onClick={() => openEditModal(rol)}
                                                         className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
                                                         title="Editar"
@@ -118,6 +125,7 @@ export default function RolesTable() {
                                                         <Pencil className="h-5 w-5" />
                                                     </button>
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleToggle(rol)}
                                                         className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
                                                         title={rol.estado ? 'Desactivar' : 'Activar'}

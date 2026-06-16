@@ -122,8 +122,8 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                 id_empresa: data.id_empresa,
                 id_sede: data.id_sede,
                 nombre: data.nombre,
-                direccion_referencia: data.direccion_referencia || undefined,
-                observaciones: data.observaciones || undefined,
+                direccion_referencia: data.direccion_referencia?.trim() === '' ? null : (data.direccion_referencia || null),
+                observaciones: data.observaciones?.trim() === '' ? null : (data.observaciones || null),
                 tipo_lugar: data.tipo_lugar,
                 estado: data.estado,
             };

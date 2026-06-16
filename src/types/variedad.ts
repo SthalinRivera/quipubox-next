@@ -1,7 +1,9 @@
 export interface Variedad {
     id_variedad: number;
     nombre: string;
-    fruta_id: number;
     estado: boolean;
-    frutas?: { id_fruta: number; nombre: string };  // 👈 añade esta línea
+    id_fruta?: number;      // ← Usar este nombre
+    id_empresa?: number;
+    frutas?: { id_fruta: number; nombre: string };
+    empresas?: { id_empresa: number; razon_social: string };
 }

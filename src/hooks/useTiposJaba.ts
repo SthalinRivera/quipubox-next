@@ -1,57 +1,69 @@
-// hooks/useTiposJaba.ts
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
+import { useTiposJabaStore } from '@/stores/tiposJabaStore';
 import type { TipoJaba } from '@/types/tipoJaba';
 
 export const useTiposJaba = () => {
-    const [tiposJaba, setTiposJaba] = useState<TipoJaba[]>([]);
+    const { tiposJaba, setTiposJaba, addTipoJaba, updateTipoJaba } = useTiposJabaStore();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<any>(null);
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
             const data = await fetchWithAuth<TipoJaba[]>('tipos-jaba');
             setTiposJaba(data);
-        } catch (error) {
-            console.error('Error fetching tipos de jaba:', error);
+        } catch (err) {
+            setError(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setTiposJaba]);
 
-    const create = useCallback(async (tipo: Partial<TipoJaba>) => {
-        const newTipo = await fetchWithAuth<TipoJaba>('tipos-jaba', {
-            method: 'POST',
-            body: tipo,
-        });
-        // ✅ Actualización local: agregar al final
-        setTiposJaba(prev => [...prev, newTipo]);
-        return newTipo;
-    }, []);
+    const create = useCallback(async (tipoData: Partial<TipoJaba>) => {
+        try {
+            const newTipo = await fetchWithAuth<TipoJaba>('tipos-jaba', {
+                method: 'POST',
+                body: tipoData,
+            });
+            addTipoJaba(newTipo);
+            return newTipo;
+        } catch (err) {
+            throw err;
+        }
+    }, [addTipoJaba]);
 
-    const update = useCallback(async (id: number, tipo: Partial<TipoJaba>) => {
-        const updated = await fetchWithAuth<TipoJaba>(`tipos-jaba/${id}`, {
-            method: 'PATCH',   // cambiar de PUT a PATCH
-            body: tipo,
-        });
-        // ✅ Actualización local: reemplazar el modificado
-        setTiposJaba(prev => prev.map(t => t.id_tipo_jaba === id ? updated : t));
-        return updated;
-    }, []);
+    const update = useCallback(async (id: number, tipoData: Partial<TipoJaba>) => {
+        try {
+            const updated = await fetchWithAuth<TipoJaba>(`tipos-jaba/${id}`, {
+                method: 'PUT',
+                body: tipoData,
+            });
+            // 🔥 Si enviamos descripcion: null, forzamos que el objeto actualizado tenga descripcion: null
+            const finalUpdated = tipoData.descripcion === null
+                ? { ...updated, descripcion: null }
+                : updated;
+            updateTipoJaba(id, finalUpdated);
+            return finalUpdated;
+        } catch (err) {
+            throw err;
+        }
+    }, [updateTipoJaba]);
 
     const toggleEstado = useCallback(async (id: number, estado: boolean) => {
-        const updated = await fetchWithAuth<TipoJaba>(`tipos-jaba/${id}/estado`, {
-            method: 'PATCH',
-            body: { estado },
-        });
-        // ✅ Actualización local: cambiar estado
-        setTiposJaba(prev => prev.map(t => t.id_tipo_jaba === id ? updated : t));
-        return updated;
-    }, []);
+        try {
+            const updated = await fetchWithAuth<TipoJaba>(`tipos-jaba/${id}/estado`, {
+                method: 'PATCH',
+                body: { estado },
+            });
+            updateTipoJaba(id, updated);
+            return updated;
+        } catch (err) {
+            throw err;
+        }
+    }, [updateTipoJaba]);
 
-    // ❌ remove eliminado
-
-    return { tiposJaba, loading, fetchAll, create, update, toggleEstado };
+    return { tiposJaba, loading, error, fetchAll, create, update, toggleEstado };
 };

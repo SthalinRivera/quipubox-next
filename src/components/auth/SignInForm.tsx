@@ -62,7 +62,7 @@ export default function SignInForm() {
                 </span>
               </div>
               <span className="text-2xl font-bold text-white tracking-tight">
-                QuipoBox
+                QuipuBox
               </span>
             </div>
 
@@ -79,7 +79,7 @@ export default function SignInForm() {
 
           <div className="relative z-10 mt-auto pt-12">
             <p className="text-white/60 text-sm">
-              © 2026 QuipoBox. Todos los derechos reservados.
+              © 2026 QuipuBox. Todos los derechos reservados.
             </p>
           </div>
         </div>

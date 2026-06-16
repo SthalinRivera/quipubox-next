@@ -105,7 +105,9 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
                 id_empresa: data.id_empresa,
                 id_lugar: data.id_lugar,
                 numero_puesto: data.numero_puesto,
-                referencia: data.referencia || undefined,
+
+                referencia: data.referencia?.trim() === '' ? null : (data.referencia || null),
+
                 estado: data.estado,
             };
             if (editingPuesto) {

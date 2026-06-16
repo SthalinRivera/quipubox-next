@@ -12,27 +12,28 @@ import {
 } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
-import { Pencil, Trash2, Plus, Layers, FileText, Truck } from "lucide-react";
+import { Pencil, Trash2, Plus, Layers, FileText, Truck, Eye } from "lucide-react";
 import { DetalleCargaModal } from "./DetalleCargaModal";
 import { CalidadesTable } from "./CalidadesTable";
 import { EntregaManualModal } from "./EntregaManualModal";
 import type { DetalleCarga } from "@/types/detalleCarga";
 import Link from "next/link";
 import { fetchWithAuth } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
 
 interface DetallesCargaTableProps {
     operacionId: number;
+    onRefresh?: () => void;  // <--- PROPIEDAD AÑADIDA
 }
 
-export default function DetallesCargaTable({ operacionId }: DetallesCargaTableProps) {
+export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesCargaTableProps) {
     const { detalles, loading, fetchDetalles, deleteDetalle } = useDetallesCarga(operacionId);
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedDetalle, setSelectedDetalle] = useState<DetalleCarga | null>(null);
     const [expandedDetalleId, setExpandedDetalleId] = useState<number | null>(null);
     const [generating, setGenerating] = useState(false);
-    const [entregaModalOpen, setEntregaModalOpen] = useState(false);
-    const [selectedDetalleForEntrega, setSelectedDetalleForEntrega] = useState<DetalleCarga | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         if (operacionId && !isNaN(operacionId)) {
@@ -55,15 +56,12 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
             try {
                 await deleteDetalle(id);
                 toast.success("Detalle eliminado");
+                await fetchDetalles();      // refresca la tabla local
+                onRefresh?.();              // notifica al padre (página) para actualizar el stepper
             } catch (err: any) {
                 toast.error(err.message || "Error al eliminar");
             }
         }
-    };
-
-    const handleOpenEntrega = (detalle: DetalleCarga) => {
-        setSelectedDetalleForEntrega(detalle);
-        setEntregaModalOpen(true);
     };
 
     const handleGenerarGuias = async () => {
@@ -72,11 +70,22 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
             await fetchWithAuth(`operaciones-carga/${operacionId}/generar-guias`, { method: 'POST' });
             toast.success("Guías generadas correctamente");
             await fetchDetalles();
+            onRefresh?.();   // notifica al padre
         } catch (err: any) {
             toast.error(err.message || "Error al generar guías");
         } finally {
             setGenerating(false);
         }
+    };
+
+    // Función que se ejecuta después de guardar un detalle (crear o editar)
+    const handleSaveComplete = async () => {
+        await fetchDetalles();
+        onRefresh?.();   // notifica al padre
+    };
+
+    const handleVerCalidades = (detalleId: number) => {
+        router.push(`/dashboard/operaciones-carga/${operacionId}/detalles/${detalleId}/calidades`);
     };
 
     if (loading) {
@@ -90,21 +99,7 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
     return (
         <div className="space-y-4">
             <div className="flex justify-end gap-3">
-                <Button
-                    onClick={handleGenerarGuias}
-                    disabled={generating}
-                    startIcon={<FileText className="h-4 w-4" />}
-                    className="dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
-                >
-                    {generating ? "Generando..." : "Generar guías pendientes"}
-                </Button>
-                <Button
-                    onClick={handleCreate}
-                    startIcon={<Plus className="h-4 w-4" />}
-                    className="dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
-                >
-                    Agregar Detalle
-                </Button>
+                {/* Puedes agregar botones adicionales aquí si lo deseas */}
             </div>
 
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
@@ -133,9 +128,6 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
                                     </TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         Reparto
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Guía
                                     </TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         Acciones
@@ -182,26 +174,9 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
                                                         <Badge
                                                             size="sm"
                                                             color={det.es_reparto ? "success" : "error"}
-
                                                         >
                                                             {det.es_reparto ? "Sí" : "No"}
                                                         </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="px-5 py-4">
-                                                        {det.es_reparto ? (
-                                                            numeroGuia ? (
-                                                                <Link
-                                                                    href={`/dashboard/guias-operativas/${idGuia}`}
-                                                                    className="text-brand-600 hover:underline dark:text-brand-400"
-                                                                >
-                                                                    {numeroGuia}
-                                                                </Link>
-                                                            ) : (
-                                                                <span className="text-gray-400 dark:text-gray-500">Pendiente</span>
-                                                            )
-                                                        ) : (
-                                                            "—"
-                                                        )}
                                                     </TableCell>
                                                     <TableCell className="px-5 py-4">
                                                         <div className="flex items-center gap-3">
@@ -219,28 +194,24 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
                                                             >
                                                                 <Trash2 className="h-5 w-5" />
                                                             </button>
-
-                                                            {det.es_reparto ? (
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setExpandedDetalleId(
-                                                                            expandedDetalleId === det.id_detalle_carga ? null : det.id_detalle_carga
-                                                                        )
-                                                                    }
-                                                                    className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-                                                                    title="Ver calidades"
-                                                                >
-                                                                    <Layers className="h-5 w-5" />
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => handleOpenEntrega(det)}
-                                                                    className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-                                                                    title="Entregar manualmente"
-                                                                >
-                                                                    <Truck className="h-5 w-5" />
-                                                                </button>
-                                                            )}
+                                                            <button
+                                                                onClick={() => handleVerCalidades(det.id_detalle_carga)}
+                                                                className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+                                                                title="Gestionar calidades (página completa)"
+                                                            >
+                                                                <Eye className="h-5 w-5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setExpandedDetalleId(
+                                                                        expandedDetalleId === det.id_detalle_carga ? null : det.id_detalle_carga
+                                                                    )
+                                                                }
+                                                                className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+                                                                title="Ver calidades"
+                                                            >
+                                                                <Layers className="h-5 w-5" />
+                                                            </button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -272,13 +243,7 @@ export default function DetallesCargaTable({ operacionId }: DetallesCargaTablePr
                 onClose={() => setModalOpen(false)}
                 operacionId={operacionId}
                 editingDetalle={selectedDetalle}
-                onSaved={fetchDetalles}
-            />
-            <EntregaManualModal
-                isOpen={entregaModalOpen}
-                onClose={() => setEntregaModalOpen(false)}
-                detalleId={selectedDetalleForEntrega?.id_detalle_carga!}
-                onSuccess={fetchDetalles}
+                onSaved={handleSaveComplete}   // ← aquí usamos nuestra función que refresca y notifica
             />
         </div>
     );

@@ -1,66 +1,88 @@
-// hooks/useVariedades.ts
-import { useState, useCallback } from 'react';
+'use client';
+
+import { useCallback, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
+import { useVariedadesStore } from '@/stores/variedadesStore';
 import type { Variedad } from '@/types/variedad';
 
 export const useVariedades = () => {
-    const [variedades, setVariedades] = useState<Variedad[]>([]);
+    const { variedades, setVariedades, addVariedad, updateVariedad } = useVariedadesStore();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<any>(null);
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
             const data = await fetchWithAuth<Variedad[]>('variedades');
             setVariedades(data);
-        } catch (error) {
-            console.error('Error fetching variedades:', error);
+        } catch (err) {
+            setError(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setVariedades]);
 
     const fetchByFruta = useCallback(async (frutaId: number) => {
         setLoading(true);
         try {
             const data = await fetchWithAuth<Variedad[]>(`variedades/frutas/${frutaId}/variedades`);
             return data;
-        } catch (error) {
-            console.error('Error fetching variedades by fruta:', error);
+        } catch (err) {
+            setError(err);
             return [];
         } finally {
             setLoading(false);
         }
     }, []);
 
-    const create = useCallback(async (variedad: Partial<Variedad>) => {
-        const newVariedad = await fetchWithAuth<Variedad>('variedades', {
-            method: 'POST',
-            body: variedad,
-        });
-        // ✅ Actualización local: agregar al final
-        setVariedades(prev => [...prev, newVariedad]);
-        return newVariedad;
-    }, []);
+    const create = useCallback(async (variedadData: Partial<Variedad>) => {
+        try {
+            const newVariedad = await fetchWithAuth<Variedad>('variedades', {
+                method: 'POST',
+                body: variedadData,
+            });
+            addVariedad(newVariedad);
+            return newVariedad;
+        } catch (err) {
+            throw err;
+        }
+    }, [addVariedad]);
 
-    const update = useCallback(async (id: number, variedad: Partial<Variedad>) => {
-        const updated = await fetchWithAuth<Variedad>(`variedades/${id}`, {
-            method: 'PATCH', // Cambiado de PUT a PATCH
-            body: variedad,
-        });
-        // ✅ Actualización local: reemplazar la modificada
-        setVariedades(prev => prev.map(v => v.id_variedad === id ? updated : v));
-        return updated;
-    }, []);
+
+    const update = useCallback(async (id: number, variedadData: Partial<Variedad>) => {
+        try {
+            const updated = await fetchWithAuth<Variedad>(`variedades/${id}`, {
+                method: 'PUT',
+                body: variedadData,
+            });
+            updateVariedad(id, updated);
+            return updated;
+        } catch (err) {
+            throw err;
+        }
+    }, [updateVariedad]);
 
     const toggleEstado = useCallback(async (id: number, estado: boolean) => {
-        const updated = await fetchWithAuth<Variedad>(`variedades/${id}/estado`, {
-            method: 'PATCH',
-            body: { estado },
-        });
-        // ✅ Actualización local: cambiar estado
-        setVariedades(prev => prev.map(v => v.id_variedad === id ? updated : v));
-        return updated;
-    }, []);
+        try {
+            const updated = await fetchWithAuth<Variedad>(`variedades/${id}/estado`, {
+                method: 'PATCH',
+                body: { estado },
+            });
+            updateVariedad(id, updated);
+            return updated;
+        } catch (err) {
+            throw err;
+        }
+    }, [updateVariedad]);
 
-    return { variedades, loading, fetchAll, fetchByFruta, create, update, toggleEstado };
+    return {
+        variedades,
+        loading,
+        error,
+        fetchAll,
+        fetchByFruta,
+        create,
+        update,
+        toggleEstado,
+    };
 };

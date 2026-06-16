@@ -30,7 +30,7 @@ export async function GET(request: Request) {
             try {
                 const errData = await profileRes.json();
                 errorMessage = errData.message || errorMessage;
-            } catch {}
+            } catch { }
             return NextResponse.redirect(new URL(`/signin?error=${encodeURIComponent(errorMessage)}`, request.url));
         }
     } catch {
