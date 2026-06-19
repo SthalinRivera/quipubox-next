@@ -192,17 +192,7 @@ export default function EntregasTable() {
                                                             <CheckCircle className="h-5 w-5" />
                                                         </button>
                                                     )}
-                                                    <select
-                                                        value={entrega.estado_entrega}
-                                                        onChange={(e) => changeState(entrega.id_entrega, e.target.value)}
-                                                        className="rounded border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-brand-400"
-                                                    >
-                                                        <option value="pendiente">Pendiente</option>
-                                                        <option value="entregado_parcial">Parcial</option>
-                                                        <option value="entregado_total">Total</option>
-                                                        <option value="rechazado">Rechazado</option>
-                                                        <option value="observado">Observado</option>
-                                                    </select>
+
                                                 </div>
                                             </TableCell>
                                         </TableRow>

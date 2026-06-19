@@ -1,3 +1,4 @@
+// components/ui/badge/Badge.tsx
 import React from "react";
 
 type BadgeVariant = "light" | "solid";
@@ -11,7 +12,7 @@ type BadgeColor =
   | "light"
   | "dark";
 
-interface BadgeProps {
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   size?: BadgeSize;
   color?: BadgeColor;
@@ -27,6 +28,8 @@ const Badge: React.FC<BadgeProps> = ({
   startIcon,
   endIcon,
   children,
+  className = "", // para poder sobrescribir
+  ...rest // resto de props (title, onClick, etc.)
 }) => {
   const baseStyles =
     "inline-flex items-center px-2.5 py-0.5 justify-center gap-1 rounded-full font-medium";
@@ -57,15 +60,16 @@ const Badge: React.FC<BadgeProps> = ({
     },
   };
 
-  // Validación: si variant no es reconocida, usar "light"
   const safeVariant = variants[variant] ? variant : "light";
-  // Si el color no existe dentro de la variante, usar "primary"
   const safeColor = variants[safeVariant][color] ? color : "primary";
   const sizeClass = sizeStyles[size] || sizeStyles.md;
   const colorStyles = variants[safeVariant][safeColor];
 
   return (
-    <span className={`${baseStyles} ${sizeClass} ${colorStyles}`}>
+    <span
+      className={`${baseStyles} ${sizeClass} ${colorStyles} ${className}`}
+      {...rest} // 👈 pasa title, onClick, etc.
+    >
       {startIcon && <span className="mr-1">{startIcon}</span>}
       {children}
       {endIcon && <span className="ml-1">{endIcon}</span>}

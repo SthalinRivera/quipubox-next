@@ -200,17 +200,7 @@ export default function GuiasOperativasTable() {
                                                             <CheckCircle className="h-5 w-5" />
                                                         </button>
                                                     )}
-                                                    <select
-                                                        value={guia.estado}
-                                                        onChange={(e) => changeGuiaState(guia.id_guia, e.target.value)}
-                                                        className="rounded border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-brand-400"
-                                                    >
-                                                        <option value="emitida">Emitida</option>
-                                                        <option value="firmada">Firmada</option>
-                                                        <option value="anulada">Anulada</option>
-                                                        <option value="reemplazada">Reemplazada</option>
-                                                        <option value="observada">Observada</option>
-                                                    </select>
+
                                                 </div>
                                             </TableCell>
                                         </TableRow>

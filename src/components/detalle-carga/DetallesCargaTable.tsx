@@ -216,7 +216,7 @@ export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesC
                                                     </TableCell>
                                                 </TableRow>
 
-                                                {det.es_reparto && expandedDetalleId === det.id_detalle_carga && (
+                                                {expandedDetalleId === det.id_detalle_carga && (
                                                     <TableRow>
                                                         <TableCell colSpan={9} className="bg-gray-50 p-0 dark:bg-gray-800/50">
                                                             <div className="p-4">

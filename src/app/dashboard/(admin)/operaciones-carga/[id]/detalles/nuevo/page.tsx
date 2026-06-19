@@ -17,15 +17,15 @@ interface Cliente {
     apellidos?: string;
     cliente_sede?: { tipo_relacion: string }[];
 }
+
 interface Puesto {
     id_puesto: number;
     numero_puesto: string;
     referencia?: string;
-    // Ahora incluimos la sección preasignada (viene desde clientes_puestos)
     seccion?: string | null;
-    key: string; // clave compuesta: `${id_puesto}-${seccion || ''}`
+    key: string;
 }
-// ✅ Interfaz para la respuesta del backend al crear un detalle
+
 interface NuevoDetalleResponse {
     id_detalle_carga: number;
 }
@@ -38,7 +38,7 @@ export default function NuevoDetallePage() {
     const [submitting, setSubmitting] = useState(false);
     const dataLoadedRef = useRef(false);
     const { setCurrentStep } = useCreacionCargaStore();
-    // Datos maestros
+
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [frutas, setFrutas] = useState<{ id_fruta: number; nombre: string }[]>([]);
     const [variedades, setVariedades] = useState<{ id_variedad: number; nombre: string; id_fruta: number }[]>([]);
@@ -66,7 +66,6 @@ export default function NuevoDetallePage() {
         setCurrentStep(2);
     }, [setCurrentStep]);
 
-    // Carga de datos maestros (sin cambios)
     useEffect(() => {
         if (dataLoadedRef.current) { setLoadingData(false); return; }
         let mounted = true;
@@ -97,7 +96,6 @@ export default function NuevoDetallePage() {
         else setFilteredVariedades([]);
     }, [form.id_fruta, variedades]);
 
-    // Cargar puestos (ahora con sección incluida)
     useEffect(() => {
         if (form.es_reparto || !form.id_cliente_receptor) {
             setPuestos([]);
@@ -108,9 +106,6 @@ export default function NuevoDetallePage() {
             setLoadingPuestos(true);
             try {
                 const data = await fetchWithAuth<any[]>(`clientes/${form.id_cliente_receptor}/puestos`);
-                console.log("clientes", data);
-
-                // Extraemos también la sección de la relación clientes_puestos
                 const puestosExt = data.map(item => ({
                     id_puesto: item.puestos.id_puesto,
                     numero_puesto: item.puestos.numero_puesto,
@@ -120,13 +115,11 @@ export default function NuevoDetallePage() {
                 }));
                 setPuestos(puestosExt);
                 setForm((prev: any) => ({ ...prev, id_puesto: null, id_seccion: null }));
-
             } catch (err) { toast.error('Error cargando puestos'); } finally { setLoadingPuestos(false); }
         };
         load();
     }, [form.es_reparto, form.id_cliente_receptor]);
 
-    // Limpiar campos al cambiar reparto
     useEffect(() => {
         if (form.es_reparto) {
             setPuestos([]);
@@ -137,16 +130,13 @@ export default function NuevoDetallePage() {
     const clientesEmisores = useMemo(() => clientes.filter(c => c.cliente_sede?.some(r => r.tipo_relacion === 'emisor' || r.tipo_relacion === 'ambos')), [clientes]);
     const clientesReceptores = useMemo(() => clientes.filter(c => c.cliente_sede?.some(r => r.tipo_relacion === 'receptor' || r.tipo_relacion === 'ambos')), [clientes]);
 
-    // Manejar cambio de puesto (asigna la sección automáticamente)
     const handlePuestoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedKey = e.target.value;
         if (!selectedKey) {
             setForm({ ...form, id_puesto: null, id_seccion: null });
             return;
         }
-        // La key tiene formato "id_puesto-seccion" (ej: "7-B" o "7-null")
         const [idPuestoStr, seccionVal] = selectedKey.split('-');
-
         const idPuesto = Number(idPuestoStr);
         const seccion = seccionVal === 'null' ? null : seccionVal;
         setForm({
@@ -174,7 +164,6 @@ export default function NuevoDetallePage() {
                 delete payload.id_puesto;
                 delete payload.id_seccion;
             }
-
             const newDetalle = await fetchWithAuth<NuevoDetalleResponse>(`operaciones-carga/${operacionId}/detalles`, {
                 method: 'POST',
                 body: payload,
@@ -195,57 +184,206 @@ export default function NuevoDetallePage() {
     if (loadingData) return <div className="p-6 text-center">Cargando datos...</div>;
 
     return (
-        <div className="max-w-2xl mx-auto p-6">
+        <div className="max-w-3xl mx-auto p-6">
             <Stepper />
-            <h1 className="text-2xl font-bold mb-2">Nuevo detalle de carga</h1>
-            <p className="text-gray-500 mb-6">Complete los datos del detalle</p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Cliente Emisor */}
-                    <div><Label>Cliente Emisor *</Label><select value={form.id_cliente_emisor} onChange={e => setForm({ ...form, id_cliente_emisor: Number(e.target.value) })} required className="w-full rounded-lg border p-2"><option value={0}>Seleccione</option>{clientesEmisores.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.nombres} {c.apellidos || ''}</option>)}</select></div>
-                    {/* Fruta */}
-                    <div><Label>Fruta *</Label><select value={form.id_fruta} onChange={e => setForm({ ...form, id_fruta: Number(e.target.value), id_variedad: null })} required className="w-full rounded-lg border p-2"><option value={0}>Seleccione</option>{frutas.map(f => <option key={f.id_fruta} value={f.id_fruta}>{f.nombre}</option>)}</select></div>
-                    {/* Variedad */}
-                    <div><Label>Variedad</Label><select value={form.id_variedad ?? 0} onChange={e => setForm({ ...form, id_variedad: Number(e.target.value) || null })} disabled={!form.id_fruta} className="w-full rounded-lg border p-2"><option value={0}>-- Ninguna --</option>{filteredVariedades.map(v => <option key={v.id_variedad} value={v.id_variedad}>{v.nombre}</option>)}</select></div>
-                    {/* Tipo de Jaba */}
-                    <div><Label>Tipo de Jaba *</Label><select value={form.id_tipo_jaba} onChange={e => setForm({ ...form, id_tipo_jaba: Number(e.target.value) })} required className="w-full rounded-lg border p-2"><option value={0}>Seleccione</option>{tiposJaba.map(t => <option key={t.id_tipo_jaba} value={t.id_tipo_jaba}>{t.nombre}</option>)}</select></div>
-                    {/* Cantidad */}
-                    <div><Label>Cantidad de Jabas *</Label><Input type="number" min="1" value={form.cantidad_jabas} onChange={e => setForm({ ...form, cantidad_jabas: Number(e.target.value) })} required /></div>
-                    {/* Checkboxes */}
-                    <div className="flex flex-col gap-2"><label className="flex items-center gap-2"><input type="checkbox" checked={form.es_reparto} onChange={e => setForm({ ...form, es_reparto: e.target.checked })} className="h-4 w-4" /> Requiere reparto</label><label className="flex items-center gap-2"><input type="checkbox" checked={form.requiere_retorno_jabas} onChange={e => setForm({ ...form, requiere_retorno_jabas: e.target.checked })} className="h-4 w-4" /> Requiere retorno de jabas</label></div>
-                </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-4">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Nuevo detalle de carga</h1>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">Complete los datos del detalle para agregarlo a la operación.</p>
 
-                {!form.es_reparto && (
-                    <div className="space-y-4 border-t pt-4">
-                        {/* Cliente Receptor */}
-                        <div><Label>Cliente Receptor *</Label><select value={form.id_cliente_receptor ?? 0} onChange={e => setForm({ ...form, id_cliente_receptor: Number(e.target.value) || null, id_puesto: null, id_seccion: null })} required className="w-full rounded-lg border p-2"><option value={0}>Seleccione</option>{clientesReceptores.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.nombres} {c.apellidos || ''}</option>)}</select></div>
-                        {/* Puesto */}
-                        <div><Label>Puesto *</Label>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Sección: Datos principales */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Cliente Emisor <span className="text-red-500">*</span></Label>
                             <select
-                                value={form.id_puesto ? `${form.id_puesto}-${form.id_seccion || ''}` : ''}
-                                onChange={handlePuestoChange}
+                                value={form.id_cliente_emisor}
+                                onChange={e => setForm({ ...form, id_cliente_emisor: Number(e.target.value) })}
                                 required
-                                disabled={loadingPuestos || !form.id_cliente_receptor}
-                                className="w-full rounded-lg border p-2"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             >
-                                <option value="">{loadingPuestos ? 'Cargando...' : 'Seleccione un puesto'}</option>
-                                {puestos.map(p => (
-                                    <option key={p.key} value={p.key}>
-                                        {p.numero_puesto} {p.referencia ? `(${p.referencia})` : ''} - Sección {p.seccion || 'Ninguna'}
+                                <option value={0}>Seleccione un cliente</option>
+                                {clientesEmisores.map(c => (
+                                    <option key={c.id_cliente} value={c.id_cliente}>
+                                        {c.nombres} {c.apellidos || ''}
                                     </option>
                                 ))}
-                            </select>                        </div>
+                            </select>
+                        </div>
+
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Fruta <span className="text-red-500">*</span></Label>
+                            <select
+                                value={form.id_fruta}
+                                onChange={e => setForm({ ...form, id_fruta: Number(e.target.value), id_variedad: null })}
+                                required
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                                <option value={0}>Seleccione una fruta</option>
+                                {frutas.map(f => (
+                                    <option key={f.id_fruta} value={f.id_fruta}>{f.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Variedad</Label>
+                            <select
+                                value={form.id_variedad ?? 0}
+                                onChange={e => setForm({ ...form, id_variedad: Number(e.target.value) || null })}
+                                disabled={!form.id_fruta}
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                                <option value={0}>-- Ninguna --</option>
+                                {filteredVariedades.map(v => (
+                                    <option key={v.id_variedad} value={v.id_variedad}>{v.nombre}</option>
+                                ))}
+                            </select>
+                            {!form.id_fruta && (
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Seleccione una fruta primero</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Tipo de Jaba <span className="text-red-500">*</span></Label>
+                            <select
+                                value={form.id_tipo_jaba}
+                                onChange={e => setForm({ ...form, id_tipo_jaba: Number(e.target.value) })}
+                                required
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                                <option value={0}>Seleccione un tipo</option>
+                                {tiposJaba.map(t => (
+                                    <option key={t.id_tipo_jaba} value={t.id_tipo_jaba}>{t.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Cantidad de Jabas <span className="text-red-500">*</span></Label>
+                            <Input
+                                type="number"
+                                min="1"
+                                value={form.cantidad_jabas}
+                                onChange={e => setForm({ ...form, cantidad_jabas: Number(e.target.value) })}
+                                required
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+
+                        <div className="flex flex-col justify-center gap-2">
+                            <label className="flex items-center gap-3 text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={form.es_reparto}
+                                    onChange={e => setForm({ ...form, es_reparto: e.target.checked })}
+                                    className="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                />
+                                <span className="text-sm font-medium">Requiere reparto</span>
+                            </label>
+                            <label className="flex items-center gap-3 text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={form.requiere_retorno_jabas}
+                                    onChange={e => setForm({ ...form, requiere_retorno_jabas: e.target.checked })}
+                                    className="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                />
+                                <span className="text-sm font-medium">Requiere retorno de jabas</span>
+                            </label>
+                        </div>
                     </div>
-                )}
 
-                <div className="space-y-2"><Label>Instrucciones de reparto</Label><Input value={form.instruccion_reparto} onChange={e => setForm({ ...form, instruccion_reparto: e.target.value })} placeholder="Opcional" /></div>
-                <div className="space-y-2"><Label>Observaciones</Label><textarea rows={3} value={form.observaciones} onChange={e => setForm({ ...form, observaciones: e.target.value })} className="w-full rounded-lg border p-2" /></div>
+                    {/* Sección condicional: Entrega manual */}
+                    {!form.es_reparto && (
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-5 space-y-5">
+                            <h3 className="text-md font-semibold text-gray-800 dark:text-gray-200">Detalles de entrega manual</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <Label className="text-gray-700 dark:text-gray-300">Cliente Receptor <span className="text-red-500">*</span></Label>
+                                    <select
+                                        value={form.id_cliente_receptor ?? 0}
+                                        onChange={e => setForm({ ...form, id_cliente_receptor: Number(e.target.value) || null, id_puesto: null, id_seccion: null })}
+                                        required
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                    >
+                                        <option value={0}>Seleccione un cliente</option>
+                                        {clientesReceptores.map(c => (
+                                            <option key={c.id_cliente} value={c.id_cliente}>
+                                                {c.nombres} {c.apellidos || ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-                    <Button type="submit" disabled={submitting}>{submitting ? 'Guardando...' : 'Crear detalle'}</Button>
-                </div>
-            </form>
+                                <div>
+                                    <Label className="text-gray-700 dark:text-gray-300">Puesto <span className="text-red-500">*</span></Label>
+                                    <select
+                                        value={form.id_puesto ? `${form.id_puesto}-${form.id_seccion || ''}` : ''}
+                                        onChange={handlePuestoChange}
+                                        required
+                                        disabled={loadingPuestos || !form.id_cliente_receptor}
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                    >
+                                        <option value="">
+                                            {loadingPuestos ? 'Cargando puestos...' : 'Seleccione un puesto'}
+                                        </option>
+                                        {puestos.map(p => (
+                                            <option key={p.key} value={p.key}>
+                                                {p.numero_puesto} {p.referencia ? `(${p.referencia})` : ''} - Sección {p.seccion || 'Ninguna'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {!form.id_cliente_receptor && (
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Seleccione un cliente receptor primero</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Campos adicionales */}
+                    <div className="space-y-5">
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Instrucciones de reparto</Label>
+                            <Input
+                                value={form.instruccion_reparto}
+                                onChange={e => setForm({ ...form, instruccion_reparto: e.target.value })}
+                                placeholder="Instrucciones para el repartidor (opcional)"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+
+                        <div>
+                            <Label className="text-gray-700 dark:text-gray-300">Observaciones</Label>
+                            <textarea
+                                rows={3}
+                                value={form.observaciones}
+                                onChange={e => setForm({ ...form, observaciones: e.target.value })}
+                                placeholder="Comentarios adicionales (opcional)"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-y"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => router.back()}
+                            className="px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 transition-colors"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={submitting}
+                            className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {submitting ? 'Guardando...' : 'Crear detalle'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

@@ -60,6 +60,7 @@ const fase3: NavItem = {
   icon: <TableIcon />,
   subItems: [
     { name: "Operaciones de carga", path: "/dashboard/operaciones-carga" },
+    { name: "Crear Nueva", path: "/dashboard/operaciones-carga/nueva" },
   ],
 };
 
@@ -139,6 +140,7 @@ const routePermissions: Record<string, Role[]> = {
   '/dashboard/puestos': ['administrador', 'encargado_carga', 'Supervisor'],
   '/dashboard/clientes-puestos': ['administrador', 'encargado_carga', 'Supervisor'],
   '/dashboard/operaciones-carga': ['administrador', 'encargado_carga', 'Supervisor'],
+  '/dashboard/operaciones-carga/nueva': ['administrador', 'encargado_carga', 'Supervisor'],
   '/dashboard/items-reparto': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
   '/dashboard/guias-operativas': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'Supervisor'],
 

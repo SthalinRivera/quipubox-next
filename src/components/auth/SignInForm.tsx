@@ -2,29 +2,30 @@
 
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
 import { ChevronLeftIcon } from '@/icons';
-import Link from 'next/link';
+
 export default function SignInForm() {
   const { loginWithGoogle, loading } = useAuth();
   const searchParams = useSearchParams();
   const toast = useToast();
   const processedErrorRef = useRef<string | null>(null);
+
   useEffect(() => {
     const error = searchParams.get('error');
     if (error && processedErrorRef.current !== error) {
       processedErrorRef.current = error;
       toast.error(decodeURIComponent(error));
 
-      // Limpiar la sesión de Supabase en el cliente (localStorage)
       const supabase = createClient();
-      if (supabase) {  // ✅ verifica que no sea null
+      if (supabase) {
         supabase.auth.signOut().catch(console.error);
       }
 
-      // Eliminar el parámetro de la URL para futuras recargas
       const url = new URL(window.location.href);
       url.searchParams.delete('error');
       window.history.replaceState({}, '', url.toString());
@@ -35,7 +36,7 @@ export default function SignInForm() {
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
       <div className="flex w-full max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
 
-        {/* Columna izquierda - Branding */}
+        {/* Columna izquierda - Branding (solo escritorio) */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 to-brand-800 dark:from-brand-700 dark:to-brand-900 p-8 flex-col justify-between relative overflow-hidden">
           {/* Patrón de fondo decorativo */}
           <div className="absolute inset-0 opacity-10">
@@ -47,26 +48,22 @@ export default function SignInForm() {
           </div>
 
           <div className="relative z-10">
-            {/* Logo QuipoBox */}
+            {/* Logo con imagen */}
             <div className="flex items-center gap-3 mb-12">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                {/* Reemplaza esta imagen con tu logo real */}
-                {/* <Image
-                  src="/images/logo/quipobox-icon.svg" // Ajusta la ruta
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm p-1.5">
+                <Image
+                  src="/images/logo/logo-icon.svg"
                   alt="QuipoBox"
                   width={32}
                   height={32}
                   className="brightness-0 invert"
-                /> */} <span className="text-2xl font-bold text-white tracking-tight">
-                  Q
-                </span>
+                />
               </div>
               <span className="text-2xl font-bold text-white tracking-tight">
                 QuipuBox
               </span>
             </div>
 
-            {/* Mensaje de bienvenida */}
             <div className="space-y-4">
               <h2 className="text-3xl font-bold text-white leading-tight">
                 Gestión inteligente<br />de tu negocio
@@ -86,7 +83,25 @@ export default function SignInForm() {
 
         {/* Columna derecha - Formulario */}
         <div className="w-full lg:w-1/2 p-6 sm:p-10 flex flex-col">
-          <div className="mb-6">
+          {/* Logo móvil - visible solo en pantallas pequeñas */}
+          <div className="lg:hidden flex items-center justify-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-xl flex items-center justify-center">
+                <Image
+                  src="/images/logo/logo-icon.svg"
+                  alt="QuipoBox"
+                  width={28}
+                  height={28}
+                  className="dark:brightness-0 dark:invert"
+                />
+              </div>
+              <span className="text-xl font-bold text-gray-800 dark:text-white">
+                QuipuBox
+              </span>
+            </div>
+          </div>
+
+          <div className="mb-4">
             <Link
               href="/"
               className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -97,7 +112,7 @@ export default function SignInForm() {
           </div>
 
           <div className="flex flex-col justify-center flex-1">
-            <div className="mb-8 text-center lg:text-left">
+            <div className="mb-8 text-center">
               <h1 className="mb-2 text-2xl font-bold text-gray-800 dark:text-white/90 sm:text-3xl">
                 Bienvenido
               </h1>

@@ -1,19 +1,36 @@
-// components/guias-operativas/GuiaDetallePageComponent.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
-import { Truck, Pencil, Printer } from 'lucide-react';
+import {
+    Truck,
+    Printer,
+    ArrowLeft,
+    Eye,
+    MapPin,
+    User,
+    Package,
+    Building2,
+    Calendar,
+    Clock,
+    CheckCircle,
+    XCircle,
+    AlertCircle,
+    Layers,
+    Apple,
+    Box,
+    RefreshCw,
+    Info,
+} from 'lucide-react';
 import { formatDate } from '@/utils/date';
 import { RegistrarEntregaModal } from '@/components/entregas/RegistrarEntregaModal';
-import { EditarEntregaModal } from '@/components/entregas/EditarEntregaModal';
-import type { GuiaOperativa } from '@/types/guiaOperativa';
-import type { Entrega } from '@/types/entrega';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { GuiaPDF } from './GuiaPDF';
+
 type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark';
 
 const ESTADO_COLOR: Record<string, BadgeColor> = {
@@ -26,28 +43,33 @@ const ESTADO_COLOR: Record<string, BadgeColor> = {
 
 interface Props {
     id: string | number;
+    onBack?: () => void;
 }
 
-export function GuiaDetallePageComponent({ id }: Props) {
-    const [guia, setGuia] = useState<GuiaOperativa | null>(null);
+export function GuiaDetallePageComponent({ id, onBack }: Props) {
+    const router = useRouter();
+    const toast = useToast();
+    const [guia, setGuia] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [entregaModalOpen, setEntregaModalOpen] = useState(false);
-    const [editandoEntrega, setEditandoEntrega] = useState<Entrega | null>(null);
-    const toast = useToast();
 
     const fetchGuia = async () => {
         try {
-            const data = await fetchWithAuth<GuiaOperativa>(`guias-operativas/${id}`);
+            const data = await fetchWithAuth<any>(`guias-operativas/${id}`);
             setGuia(data);
+            return data;
         } catch (error: any) {
             toast.error(error.message || 'Error al cargar la guía');
+            return null;
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (id) fetchGuia();
+        if (id) {
+            fetchGuia();
+        }
     }, [id]);
 
     const handleFirmar = async () => {
@@ -67,198 +89,345 @@ export function GuiaDetallePageComponent({ id }: Props) {
         window.print();
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-700 dark:text-gray-300">Cargando guía...</div>;
-    if (!guia) return <div className="p-8 text-center text-red-500">Guía no encontrada</div>;
+    const handleVolver = () => {
+        if (onBack) {
+            onBack();
+        } else {
+            router.back();
+        }
+    };
 
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-[300px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!guia) {
+        return (
+            <div className="p-8 text-center text-red-500">
+                <p className="text-xl font-semibold">Guía no encontrada</p>
+                <p className="text-sm mt-2">La guía con ID {id} no existe o ha sido eliminada.</p>
+                <Button variant="outline" onClick={handleVolver} className="mt-4">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Volver
+                </Button>
+            </div>
+        );
+    }
+
+    // ===== DATOS DEL BACKEND =====
     const itemReparto = guia.items_reparto;
+    const detalleCarga = itemReparto?.detalle_carga;
+    const operacion = detalleCarga?.operaciones_carga;
+    const tieneEntregas = (guia.entregas?.length ?? 0) > 0;
+    const totalEntregado = guia.entregas?.reduce((sum: number, e: any) => sum + e.cantidad_entregada, 0) || 0;
+    const totalRechazado = guia.entregas?.reduce((sum: number, e: any) => sum + (e.cantidad_rechazada || 0), 0) || 0;
+    const totalAsignado = itemReparto?.cantidad_asignada || 0;
+    const porcentajeEntregado = totalAsignado > 0 ? Math.round((totalEntregado / totalAsignado) * 100) : 0;
+
+    const puedeFirmar = guia.estado !== 'firmada' && guia.estado !== 'anulada';
+    const puedeRegistrarEntrega = guia.estado !== 'anulada';
+
+    // Datos virtuales
+    const itemsDelPuesto = itemReparto?._items_del_puesto || [];
+    const todasLasCalidades = itemReparto?._todas_las_calidades || [];
+    const clientesAgrupados = itemReparto?._clientes_agrupados || [];
+
+    // Agrupar calidades por nombre y guardar los items asociados
+    const calidadesMap = new Map<string, { nombre: string; cantidad_total: number; items: any[]; precio_unitario: any }>();
+    todasLasCalidades.forEach((det: any) => {
+        const nombre = det.detalle_carga_calidades?.calidades?.nombre || 'Sin nombre';
+        if (!calidadesMap.has(nombre)) {
+            calidadesMap.set(nombre, {
+                nombre,
+                cantidad_total: 0,
+                items: [],
+                precio_unitario: det.precio_unitario,
+            });
+        }
+        const entry = calidadesMap.get(nombre)!;
+        entry.cantidad_total += det.cantidad;
+        entry.items.push({
+            item_id: det.item_id || det.id_item_reparto,
+            cantidad: det.cantidad,
+        });
+        if (det.precio_unitario) entry.precio_unitario = det.precio_unitario;
+    });
+
+    const calidadesResumen = Array.from(calidadesMap.values());
+    const totalGeneral = todasLasCalidades.reduce((sum: number, d: any) => {
+        return sum + (d.precio_unitario ? d.cantidad * d.precio_unitario : 0);
+    }, 0);
+
+    // Extraer datos del detalle de carga
+    const fruta = detalleCarga?.frutas?.nombre || '—';
+    const variedad = detalleCarga?.variedades?.nombre || '—';
+    const tipoJaba = detalleCarga?.tipos_jaba?.nombre || '—';
+    const materialJaba = detalleCarga?.tipos_jaba?.tipo_material || '—';
+    const requiereRetorno = detalleCarga?.requiere_retorno_jabas;
+    const instruccionReparto = detalleCarga?.instruccion_reparto || '—';
+    const clienteEmisor = detalleCarga?.clientes?.nombres
+        ? `${detalleCarga.clientes.nombres} ${detalleCarga.clientes.apellidos || ''}`
+        : '—';
+    const cantidadJabas = detalleCarga?.cantidad_jabas || 0;
 
     return (
-        <div className="space-y-6">
-            {/* Información general */}
-            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03] print:shadow-none print:border-0">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
-                    Información de la guía
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Número de Guía</p>
-                        <p className="font-medium text-gray-800 dark:text-white/90">{guia.numero_guia}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Fecha Emisión</p>
-                        <p className="text-gray-800 dark:text-white/90">{formatDate(guia.fecha_emision)}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Repartidor</p>
-                        <p className="text-gray-800 dark:text-white/90">
-                            {guia.usuarios?.nombres || guia.id_repartidor || '—'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Estado</p>
-                        <Badge size="sm" color={ESTADO_COLOR[guia.estado] || 'secondary'}>
-                            {guia.estado}
-                        </Badge>
-                    </div>
-                    <div className="md:col-span-2">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Observaciones</p>
-                        <p className="text-gray-800 dark:text-white/90">{guia.observaciones || '—'}</p>
-                    </div>
-                </div>
-                <div className="flex justify-end gap-2 mt-4 print:hidden">
+        <div className="space-y-6 print:space-y-2">
+            {/* CABECERA */}
+            <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+                <Button variant="outline" size="sm" onClick={handleVolver}>
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Volver
+                </Button>
+                <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={handlePrint}>
+                        <Printer className="w-4 h-4 mr-2" /> Imprimir
+                    </Button>
                     <PDFDownloadLink
-                        document={<GuiaPDF guia={guia} empresa={guia.empresas!} logoUrl="/logo.png" />}
+                        document={<GuiaPDF guia={guia} empresa={guia.empresas} logoUrl="/logo.png" />}
                         fileName={`guia-${guia.numero_guia}.pdf`}
                     >
                         {({ loading }) => (
                             <Button size="sm" variant="outline" disabled={loading}>
-                                {loading ? 'Generando PDF...' : 'Descargar PDF'}
+                                {loading ? 'Generando...' : 'Descargar PDF'}
                             </Button>
                         )}
                     </PDFDownloadLink>
-                    {guia.estado !== 'firmada' && guia.estado !== 'anulada' && (
-                        <Button size="sm" onClick={handleFirmar} startIcon={<Truck className="w-4 h-4" />}>
-                            Firmar guía
+                    {puedeFirmar && (
+                        <Button size="sm" onClick={handleFirmar}>
+                            <Truck className="w-4 h-4 mr-2" /> Firmar guía
                         </Button>
                     )}
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEntregaModalOpen(true)}
-                        disabled={guia.estado === 'anulada'}
-                    >
-                        Registrar Entrega
-                    </Button>
+                    {puedeRegistrarEntrega && !tieneEntregas && (
+                        <Button size="sm" variant="outline" onClick={() => setEntregaModalOpen(true)}>
+                            Registrar Entrega
+                        </Button>
+                    )}
                 </div>
             </div>
 
-            {/* Items de reparto */}
+            {/* INFORMACIÓN GENERAL */}
             <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03] print:shadow-none print:border-0">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">Items de Reparto</h3>
-                {itemReparto ? (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                            <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Cliente Receptor</p>
-                                <p className="font-medium text-gray-800 dark:text-white/90">
-                                    {itemReparto.clientes?.nombres || '—'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Puesto</p>
-                                <p className="font-medium text-gray-800 dark:text-white/90">
-                                    {itemReparto.puestos?.numero_puesto || '—'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Cantidad Asignada</p>
-                                <p className="font-medium text-gray-800 dark:text-white/90">{itemReparto.cantidad_asignada}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Sección</p>
-                                <p className="font-medium text-gray-800 dark:text-white/90">{itemReparto.seccion || '—'}</p>
-                            </div>
-                        </div>
-                        {(itemReparto.items_reparto_detalle?.length ?? 0) > 0 && (
-                            <div>
-                                <h4 className="font-medium text-gray-800 dark:text-white/90 mb-2">Calidades</h4>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="border-b border-gray-200 dark:border-gray-700">
-                                            <tr>
-                                                <th className="text-left py-2 text-gray-600 dark:text-gray-400">Calidad</th>
-                                                <th className="text-left py-2 text-gray-600 dark:text-gray-400">Cantidad</th>
-                                                <th className="text-left py-2 text-gray-600 dark:text-gray-400">Precio Unit.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {itemReparto.items_reparto_detalle!.map((det) => (
-                                                <tr key={det.id_item_reparto_detalle} className="border-b border-gray-100 dark:border-gray-800">
-                                                    <td className="py-2 text-gray-800 dark:text-white/90">
-                                                        {det.detalle_carga_calidades?.calidades?.nombre || '—'}
-                                                    </td>
-                                                    <td className="py-2 text-gray-800 dark:text-white/90">{det.cantidad}</td>
-                                                    <td className="py-2 text-gray-800 dark:text-white/90">
-                                                        {det.precio_unitario ? `S/ ${det.precio_unitario}` : '—'}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white/90">
+                            Guía #{guia.numero_guia}
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                            <Calendar className="w-4 h-4" />
+                            Emitida el {formatDate(guia.fecha_emision)}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Badge size="sm" color={ESTADO_COLOR[guia.estado] || 'secondary'}>
+                            {guia.estado.toUpperCase()}
+                        </Badge>
+                        {porcentajeEntregado > 0 && (
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                {porcentajeEntregado}% entregado
+                            </span>
                         )}
                     </div>
-                ) : (
-                    <p className="text-gray-500 dark:text-gray-400">No hay items de reparto asociados</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <InfoItem icon={User} label="Repartidor" value={guia.usuarios?.nombres || '—'} />
+                    <InfoItem icon={Building2} label="Empresa" value={guia.empresas?.razon_social || '—'} />
+                    <InfoItem icon={Package} label="Items asignados" value={itemsDelPuesto.length} />
+                    <InfoItem icon={Truck} label="Entregado / Rechazado" value={`${totalEntregado} / ${totalRechazado}`} />
+                    <InfoItem icon={MapPin} label="Cliente receptor" value={clientesAgrupados.join(', ') || '—'} />
+                    <InfoItem icon={MapPin} label="Puesto" value={itemReparto?.puestos?.numero_puesto || '—'} />
+                    <InfoItem
+                        icon={Eye}
+                        label="Operación"
+                        value={
+                            operacion?.id_operacion ? (
+                                <button
+                                    onClick={() => router.push(`/dashboard/operaciones-carga/${operacion.id_operacion}`)}
+                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                >
+                                    #{operacion.id_operacion}
+                                </button>
+                            ) : (
+                                '—'
+                            )
+                        }
+                    />
+                    <InfoItem icon={Truck} label="Camión" value={operacion?.camiones?.placa || '—'} />
+                    <InfoItem icon={MapPin} label="Sede Origen" value={operacion?.sedes_operaciones_carga_id_sede_origenTosedes?.nombre || '—'} />
+                    <InfoItem icon={MapPin} label="Sede Destino" value={operacion?.sedes_operaciones_carga_id_sede_destinoTosedes?.nombre || '—'} />
+                    <InfoItem icon={Calendar} label="Fecha de carga" value={operacion?.fecha_carga ? formatDate(operacion.fecha_carga) : '—'} />
+                    <InfoItem icon={Clock} label="Hora de carga" value={operacion?.hora_carga ? operacion.hora_carga.slice(0, 5) : '—'} />
+                </div>
+
+                {/* DETALLE DE LA CARGA */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                        <Package className="w-4 h-4" /> Detalle de la carga
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <InfoItem icon={Apple} label="Fruta" value={fruta} />
+                        <InfoItem icon={Box} label="Variedad" value={variedad} />
+                        <InfoItem icon={Box} label="Tipo de jaba" value={`${tipoJaba} (${materialJaba})`} />
+                        <InfoItem icon={RefreshCw} label="Jabas retornables" value={requiereRetorno ? 'Sí' : 'No'} />
+                        <InfoItem icon={Package} label="Cantidad de jabas" value={cantidadJabas} />
+                        <InfoItem icon={User} label="Cliente emisor" value={clienteEmisor} />
+                        <InfoItem icon={Info} label="Instrucción reparto" value={instruccionReparto} />
+                    </div>
+                </div>
+
+                {guia.observaciones && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Observaciones</p>
+                        <p className="text-gray-800 dark:text-white/90">{guia.observaciones}</p>
+                    </div>
                 )}
             </div>
 
-            {/* Entregas */}
+            {/* TABLA ÚNICA: CALIDADES DEL PUESTO */}
             <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03] print:shadow-none print:border-0">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">Entregas</h3>
-                {(guia.entregas?.length ?? 0) > 0 ? (
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                        <Layers className="inline-block w-5 h-5 mr-2" />
+                        Calidades del Puesto #{itemReparto?.puestos?.numero_puesto || '—'}
+                    </h3>
+                    {itemsDelPuesto.length > 1 && (
+                        <Badge size="sm" color="info">
+                            {itemsDelPuesto.length} items agrupados
+                        </Badge>
+                    )}
+                </div>
+
+                {calidadesResumen.length > 0 ? (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="border-b border-gray-200 dark:border-gray-700">
-                                <tr>
-                                    <th className="text-left py-2 text-gray-600 dark:text-gray-400">Fecha/Hora</th>
-                                    <th className="text-left py-2 text-gray-600 dark:text-gray-400">Cant. Entregada</th>
-                                    <th className="text-left py-2 text-gray-600 dark:text-gray-400">Cant. Rechazada</th>
-                                    <th className="text-left py-2 text-gray-600 dark:text-gray-400">Recibe</th>
-                                    <th className="text-left py-2 text-gray-600 dark:text-gray-400">Firma</th>
-                                    <th className="text-left py-2 text-gray-600 dark:text-gray-400">Acciones</th>
+                        <table className="w-full text-sm border-collapse">
+                            <thead>
+                                <tr className="bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                                    <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300 font-semibold">Calidad</th>
+                                    <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300 font-semibold">Cantidad Total</th>
+                                    <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300 font-semibold">Items asociados</th>
+                                    <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300 font-semibold">Precio Unit.</th>
+                                    <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300 font-semibold">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {guia.entregas!.map((entrega) => (
-                                    <tr key={entrega.id_entrega} className="border-b border-gray-100 dark:border-gray-800">
-                                        <td className="py-2 text-gray-800 dark:text-white/90">
-                                            {formatDate(entrega.fecha_entrega)} {entrega.hora_entrega?.slice(0, 5)}
+                                {calidadesResumen.map((cal: any) => {
+                                    const subtotal = cal.precio_unitario ? cal.cantidad_total * cal.precio_unitario : 0;
+                                    const itemsText = cal.items
+                                        .map((it: any) => `Item #${it.item_id} (${it.cantidad})`)
+                                        .join(', ');
+                                    return (
+                                        <tr key={cal.nombre} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                                            <td className="py-2 px-3 font-medium text-gray-800 dark:text-white/90">
+                                                {cal.nombre}
+                                            </td>
+                                            <td className="py-2 px-3 text-gray-800 dark:text-white/90">{cal.cantidad_total}</td>
+                                            <td className="py-2 px-3 text-gray-800 dark:text-white/90 text-sm">
+                                                <span className="inline-block bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded text-xs font-mono">
+                                                    {itemsText}
+                                                </span>
+                                            </td>
+                                            <td className="py-2 px-3 text-gray-800 dark:text-white/90">
+                                                {cal.precio_unitario ? `S/ ${cal.precio_unitario}` : '—'}
+                                            </td>
+                                            <td className="py-2 px-3 font-medium text-gray-800 dark:text-white/90">
+                                                {subtotal > 0 ? `S/ ${subtotal.toFixed(2)}` : '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {totalGeneral > 0 && (
+                                    <tr className="font-semibold border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30">
+                                        <td colSpan={2} className="py-2 px-3 text-right text-gray-800 dark:text-white/90">
+                                            Total General
                                         </td>
-                                        <td className="py-2 text-gray-800 dark:text-white/90">{entrega.cantidad_entregada}</td>
-                                        <td className="py-2 text-gray-800 dark:text-white/90">{entrega.cantidad_rechazada}</td>
-                                        <td className="py-2 text-gray-800 dark:text-white/90">{entrega.nombre_recibe || '—'}</td>
-                                        <td className="py-2 text-gray-800 dark:text-white/90">
-                                            {entrega.firma_recibido ? '✅ Sí' : '❌ No'}
-                                        </td>
-                                        <td className="py-2">
-                                            <button
-                                                onClick={() => setEditandoEntrega(entrega)}
-                                                className="text-blue-500 hover:text-blue-600 transition-colors print:hidden"
-                                                title="Editar entrega"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
+                                        <td className="py-2 px-3 text-gray-800 dark:text-white/90"></td>
+                                        <td className="py-2 px-3 text-gray-800 dark:text-white/90"></td>
+                                        <td className="py-2 px-3 text-gray-800 dark:text-white/90">
+                                            S/ {totalGeneral.toFixed(2)}
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
                 ) : (
-                    <p className="text-gray-500 dark:text-gray-400">No hay entregas registradas</p>
+                    <p className="text-gray-500 dark:text-gray-400">No hay calidades asignadas para este puesto</p>
                 )}
             </div>
 
-            {/* Modales */}
+            {/* ===== SECCIÓN DE ENTREGA (RESUMEN) ===== */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-white/[0.05] dark:bg-white/[0.03] print:shadow-none print:border-0">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                        📦 Estado de Entrega
+                    </h3>
+                    {!tieneEntregas && puedeRegistrarEntrega && (
+                        <Button size="sm" variant="outline" onClick={() => setEntregaModalOpen(true)}>
+                            Registrar Entrega
+                        </Button>
+                    )}
+                </div>
+
+                {tieneEntregas ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                        <div>
+                            <p className="font-medium text-green-700 dark:text-green-300">Guía entregada</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Entregado el {formatDate(guia.entregas[0].fecha_entrega)}
+                                {guia.entregas[0].hora_entrega && ` a las ${guia.entregas[0].hora_entrega.slice(0, 5)}`}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Recibido por: {guia.entregas[0].nombre_recibe || '—'}
+                                {guia.entregas[0].usuarios?.nombres && ` (Entregador: ${guia.entregas[0].usuarios.nombres})`}
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 flex items-center gap-3">
+                        <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                        <div>
+                            <p className="font-medium text-yellow-700 dark:text-yellow-300">Pendiente de entrega</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Esta guía aún no ha sido entregada
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* MODAL PARA REGISTRAR ENTREGA */}
             <RegistrarEntregaModal
                 open={entregaModalOpen}
                 onOpenChange={setEntregaModalOpen}
                 guia={guia}
                 onSaved={fetchGuia}
             />
+        </div>
+    );
+}
 
-            {editandoEntrega && (
-                <EditarEntregaModal
-                    open={!!editandoEntrega}
-                    onOpenChange={(open) => !open && setEditandoEntrega(null)}
-                    entrega={editandoEntrega}
-                    onSaved={fetchGuia}
-                />
-            )}
-
-
+// Componente auxiliar
+function InfoItem({
+    icon: Icon,
+    label,
+    value,
+}: {
+    icon: React.ElementType;
+    label: string;
+    value: React.ReactNode;
+}) {
+    return (
+        <div className="flex items-start gap-3">
+            <Icon className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
+            <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-white/90 break-words">
+                    {value || '—'}
+                </p>
+            </div>
         </div>
     );
 }
