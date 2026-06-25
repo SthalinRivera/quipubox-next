@@ -7,13 +7,10 @@ RUN npm install
 
 COPY . .
 
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_API_BASE_URL
-
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY   
-ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# 👇 PRUEBA: Definir variables directamente en el build (NO subir .env)
+ENV NEXT_PUBLIC_SUPABASE_URL="https://hqjaasnzamltvoujrstm.supabase.co"
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_nw3Nzzeuz4Kz1xKpD4EwKw_BvsFFPLy"
+ENV NEXT_PUBLIC_API_BASE_URL="https://quipubox-api.vercel.app"
 
 RUN npm run build
 
@@ -25,6 +22,14 @@ COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app ./
+
+# 👇 Crear archivo .env a partir de las variables (para el runtime)
+RUN echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" > .env && \
+    echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> .env && \
+    echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL" >> .env
+
+# 👇 Resolver dominio (evita ENOTFOUND)
+RUN echo "64.29.17.3 quipubox-api.vercel.app" >> /etc/hosts
 
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
