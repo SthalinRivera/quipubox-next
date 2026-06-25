@@ -1,12 +1,14 @@
 // src/lib/supabase/action.ts
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { env } from '../env'
 
 export async function createActionClient() {
     const cookieStore = await cookies()
+
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        env.supabaseUrl,
+        env.supabaseKey,
         {
             cookies: {
                 getAll() { return cookieStore.getAll() },

@@ -1,12 +1,13 @@
-// src/lib/supabase/server.ts
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { env } from '../env'
 
 export async function createClient() {
     const cookieStore = await cookies()
+
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        env.supabaseUrl,
+        env.supabaseKey,
         {
             cookies: {
                 getAll() {
@@ -17,11 +18,9 @@ export async function createClient() {
                         cookiesToSet.forEach(({ name, value, options }) =>
                             cookieStore.set(name, value, options)
                         )
-                    } catch {
-                        // Si se llama desde un Server Component sin contexto de escritura, ignorar
-                    }
-                },
-            },
+                    } catch { }
+                }
+            }
         }
     )
 }
