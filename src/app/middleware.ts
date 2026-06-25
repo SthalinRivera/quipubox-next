@@ -1,28 +1,61 @@
 // src/middleware.ts
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
-const roleRoutes: Record<string, string> = {
-    'encargado_carga': '/dashboard/operaciones-carga/nueva',
-    'repartidor': '/dashboard/guias-operativas',
-    'encargado_retorno': '/dashboard/jabas-cobrar',
-    'chofer': '/dashboard/mis-rutas',
-    'estibador': '/dashboard/cargas-activas',
-    // admin y supervisor no tienen ruta específica
-};
+export async function middleware(request: NextRequest) {
+    let response = NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    });
 
-export function middleware(request: NextRequest) {
-    const userRole = request.cookies.get('user-role')?.value;
-    const pathname = request.nextUrl.pathname;
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll();
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        request.cookies.set(name, value)
+                    );
+                    response = NextResponse.next({
+                        request: {
+                            headers: request.headers,
+                        },
+                    });
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        response.cookies.set(name, value, options)
+                    );
+                },
+            },
+        }
+    );
 
-    // Solo actuar si el usuario va a /dashboard
-    if (pathname === '/dashboard' && userRole && roleRoutes[userRole]) {
-        return NextResponse.redirect(new URL(roleRoutes[userRole], request.url));
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const protectedPaths = ['/dashboard', '/admin', '/operaciones-carga', '/items-reparto', '/guias-operativas', '/entregas'];
+    const isProtected = protectedPaths.some(path => request.nextUrl.pathname.startsWith(path));
+
+    const baseUrl = request.nextUrl.origin; // <--- Obtiene "http://localhost:3000"
+
+    if (isProtected && !session) {
+        const redirectUrl = new URL('/signin', baseUrl);
+        redirectUrl.searchParams.set('redirectedFrom', request.nextUrl.pathname);
+        return NextResponse.redirect(redirectUrl);
     }
 
-    return NextResponse.next();
+    if (session && request.nextUrl.pathname === '/signin') {
+        return NextResponse.redirect(new URL('/dashboard', baseUrl));
+    }
+
+    return response;
 }
 
 export const config = {
-    matcher: '/dashboard', // solo aplica a /dashboard
+    matcher: [
+        '/((?!_next/static|_next/image|favicon.ico|api/proxy).*)',
+    ],
 };

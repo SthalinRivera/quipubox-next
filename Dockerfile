@@ -7,8 +7,7 @@ RUN npm install
 
 COPY . .
 
-# No necesitamos ARG porque las rutas ya son dinámicas (force-dynamic)
-# El build no requiere las variables, así que no las definimos aquí.
+# No necesitamos ARG porque las rutas son dinámicas (force-dynamic)
 
 RUN npm run build
 
@@ -25,27 +24,7 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# Crear un script de entrypoint que resuelve el DNS dinámicamente
-RUN echo '#!/bin/sh' > /entrypoint.sh && \
-    echo 'set -e' >> /entrypoint.sh && \
-    echo '' >> /entrypoint.sh && \
-    echo '# Resolver la IP del backend a partir de NEXT_PUBLIC_API_BASE_URL' >> /entrypoint.sh && \
-    echo 'if [ -n "$NEXT_PUBLIC_API_BASE_URL" ]; then' >> /entrypoint.sh && \
-    echo '  HOST=$(echo "$NEXT_PUBLIC_API_BASE_URL" | sed -e "s|^https\?://||" -e "s|/.*$||")' >> /entrypoint.sh && \
-    echo '  IP=$(getent hosts "$HOST" | awk "{ print \$1 }" | head -n1)' >> /entrypoint.sh && \
-    echo '  if [ -n "$IP" ]; then' >> /entrypoint.sh && \
-    echo '    echo "$IP $HOST" >> /etc/hosts' >> /entrypoint.sh && \
-    echo '    echo "[entrypoint] $HOST -> $IP agregado a /etc/hosts"' >> /entrypoint.sh && \
-    echo '  else' >> /entrypoint.sh && \
-    echo '    echo "[entrypoint] Advertencia: no se pudo resolver $HOST"' >> /entrypoint.sh && \
-    echo '  fi' >> /entrypoint.sh && \
-    echo 'fi' >> /entrypoint.sh && \
-    echo '' >> /entrypoint.sh && \
-    echo '# Ejecutar el comando original (CMD)' >> /entrypoint.sh && \
-    echo 'exec "$@"' >> /entrypoint.sh && \
-    chmod +x /entrypoint.sh
-
 EXPOSE 3000
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]
+# ⭐ SOLUCIÓN DEFINITIVA: agregar la IP al hosts y arrancar
+CMD sh -c 'echo "64.29.17.3 quipubox-api.vercel.app" >> /etc/hosts && npm run start -- -H 0.0.0.0 -p 3000'
