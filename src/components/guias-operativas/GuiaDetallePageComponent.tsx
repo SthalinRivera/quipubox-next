@@ -172,7 +172,18 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
         ? `${detalleCarga.clientes.nombres} ${detalleCarga.clientes.apellidos || ''}`
         : '—';
     const cantidadJabas = detalleCarga?.cantidad_jabas || 0;
-
+    const formatHora = (hora: any): string => {
+        if (!hora) return '—';
+        if (typeof hora === 'string') return hora.slice(0, 5);
+        if (hora instanceof Date) return hora.toTimeString().slice(0, 5);
+        if (typeof hora === 'object' && hora !== null) {
+            // Si es un objeto con método toISOString (ej. Date)
+            if (typeof hora.toISOString === 'function') {
+                return hora.toISOString().slice(11, 16);
+            }
+        }
+        return '—';
+    };
     return (
         <div className="space-y-6 print:space-y-2">
             {/* CABECERA */}
@@ -258,7 +269,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                     <InfoItem icon={MapPin} label="Sede Origen" value={operacion?.sedes_operaciones_carga_id_sede_origenTosedes?.nombre || '—'} />
                     <InfoItem icon={MapPin} label="Sede Destino" value={operacion?.sedes_operaciones_carga_id_sede_destinoTosedes?.nombre || '—'} />
                     <InfoItem icon={Calendar} label="Fecha de carga" value={operacion?.fecha_carga ? formatDate(operacion.fecha_carga) : '—'} />
-                    <InfoItem icon={Clock} label="Hora de carga" value={operacion?.hora_carga ? operacion.hora_carga.slice(0, 5) : '—'} />
+                    <InfoItem icon={Clock} label="Hora de carga" value={formatHora(operacion?.hora_carga)} />
                 </div>
 
                 {/* DETALLE DE LA CARGA */}

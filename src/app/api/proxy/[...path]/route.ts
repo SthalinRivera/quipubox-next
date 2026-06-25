@@ -44,66 +44,91 @@ async function proxyRequest(
   method: string
 ) {
   try {
-    // Get the auth session from Supabase server-side
+    // 1. Autenticación con Supabase
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
-    console.log('Access Token:', session?.access_token);
     if (!session?.access_token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Build the target URL
-    const pathSegments = params.path || [];
-    const targetPath = pathSegments.join('/');
+    // 2. Construir URL destino
+    const targetPath = params.path.join('/');
     const searchParams = request.nextUrl.searchParams.toString();
     const fullUrl = `${API_BASE.replace(/\/$/, '')}/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
+    console.log(`[Proxy] ${method} ${fullUrl}`);
 
-    // Build headers for the proxied request
+    // 3. Detectar Content-Type
+    const contentType = request.headers.get('content-type') || '';
+    const isMultipart = contentType.includes('multipart/form-data');
+
+    // 4. Preparar headers
     const headers: Record<string, string> = {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
     };
+    if (!isMultipart) {
+      headers['Content-Type'] = 'application/json';
+    }
 
-    // Build the proxied request options
     const fetchOptions: RequestInit = {
       method,
       headers,
     };
 
-    // Forward body for non-GET/HEAD methods
+    // 5. Manejar body según el tipo
     if (!['GET', 'HEAD'].includes(method)) {
-      try {
-        const body = await request.text();
-        if (body) {
-          fetchOptions.body = body;
+      if (isMultipart) {
+        // Para FormData, leer como FormData
+        const formData = await request.formData();
+        fetchOptions.body = formData;
+        // No establecer Content-Type; fetch lo generará automáticamente
+        delete headers['Content-Type'];
+      } else {
+        // Para JSON u otros, leer como texto
+        const bodyText = await request.text();
+        if (bodyText) {
+          fetchOptions.body = bodyText;
         }
-      } catch {
-        // No body to forward
       }
     }
 
-    // Make the server-side request (no CORS restrictions!)
+    // 6. Ejecutar la petición al backend
     const response = await fetch(fullUrl, fetchOptions);
 
-    // Get the response body
+    // 7. Leer el cuerpo como texto
     const responseText = await response.text();
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = responseText;
-    }
 
-    return NextResponse.json(responseData, {
-      status: response.status,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    // 8. Intentar parsear como JSON
+    try {
+      const data = JSON.parse(responseText);
+      // Si es JSON válido, devolverlo con el status del backend
+      return NextResponse.json(data, { status: response.status });
+    } catch {
+      // Si no es JSON, devolver un objeto de error estructurado
+      console.warn(`[Proxy] Respuesta no JSON desde ${fullUrl} (status ${response.status}):`, responseText.substring(0, 200));
+
+      // Determinar si es HTML (respuesta de error de NestJS)
+      const isHtml = responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html');
+      const errorMessage = isHtml
+        ? 'El backend devolvió HTML (probablemente un error no manejado)'
+        : 'El backend no devolvió JSON';
+
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          status: response.status,
+          details: responseText.substring(0, 500), // truncar para no saturar
+          isHtml,
+        },
+        { status: response.status >= 400 ? response.status : 500 }
+      );
+    }
   } catch (error: any) {
-    console.error('[API Proxy Error]', error);
+    console.error('[Proxy Error]', error);
     return NextResponse.json(
-      { error: error.message || 'Error interno del proxy' },
+      {
+        error: 'Error interno del proxy',
+        message: error.message || 'Unknown error',
+      },
       { status: 500 }
     );
   }

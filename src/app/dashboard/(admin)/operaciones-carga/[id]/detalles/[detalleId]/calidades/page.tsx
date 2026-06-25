@@ -97,6 +97,9 @@ export default function CalidadesPage() {
             toast.error(`La suma de calidades no puede exceder ${maxCantidad} jabas. Disponibles: ${pendiente}`);
             return;
         }
+        const precio = newCalidad.precio_unitario
+            ? parseFloat(newCalidad.precio_unitario.replace(',', '.'))
+            : null;
         setSubmitting(true);
         try {
             await fetchWithAuth(`detalle-carga/${detalleId}/calidades`, {
@@ -104,7 +107,7 @@ export default function CalidadesPage() {
                 body: {
                     id_calidad: newCalidad.id_calidad,
                     cantidad: newCalidad.cantidad,
-                    precio_unitario: newCalidad.precio_unitario ? parseFloat(newCalidad.precio_unitario) : null,
+                    precio_unitario: precio,
                 },
             });
             toast.success('Calidad agregada');
@@ -203,7 +206,13 @@ export default function CalidadesPage() {
                                     step={0.01}
                                     placeholder="S/ 0.00"
                                     value={newCalidad.precio_unitario}
-                                    onChange={e => setNewCalidad({ ...newCalidad, precio_unitario: e.target.value })}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(',', '.');
+                                        // Solo permitir números y un punto
+                                        if (/^\d*\.?\d*$/.test(raw)) {
+                                            setNewCalidad({ ...newCalidad, precio_unitario: raw });
+                                        }
+                                    }}
                                     className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
