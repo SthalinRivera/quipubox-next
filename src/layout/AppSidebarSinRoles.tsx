@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+export const dynamic = 'force-dynamic';  // ← Agrega esta línea
+
 import {
   BoxCubeIcon,
   CalenderIcon,

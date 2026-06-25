@@ -1,4 +1,6 @@
 import React from "react";
+export const dynamic = 'force-dynamic';  // ← Agrega esta línea
+
 
 export default function SidebarWidget() {
   return (

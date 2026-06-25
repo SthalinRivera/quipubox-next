@@ -1,5 +1,6 @@
 import { useSidebar } from "@/context/SidebarContext";
 import React from "react";
+export const dynamic = 'force-dynamic';  // ← Agrega esta línea
 
 const Backdrop: React.FC = () => {
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();

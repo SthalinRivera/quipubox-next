@@ -19,6 +19,7 @@ import {
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
 import { useAuthStore } from "@/stores/authStore"; // <-- Importa tu store
+export const dynamic = 'force-dynamic';  // ← Agrega esta línea
 
 // --- Definición de tipos y menús (sin cambios, los mismos que tenías) ---
 type NavItem = {
