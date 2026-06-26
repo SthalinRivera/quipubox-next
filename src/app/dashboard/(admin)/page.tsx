@@ -16,6 +16,7 @@ import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
 import StatisticsChart from "@/components/ecommerce/StatisticsChart";
 import RecentOrders from "@/components/ecommerce/RecentOrders";
 import DemographicCard from "@/components/ecommerce/DemographicCard";
+import { SkeletonDashboardContent } from '@/components/ui/skeleton/SkeletonDashboardContent';
 
 // Interfaz para los datos del dashboard (endpoint /dashboard)
 interface DashboardStats {
@@ -81,8 +82,8 @@ export default function DashboardPage() {
 
   if (authLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      <div >
+        <SkeletonDashboardContent />
       </div>
     );
   }
@@ -95,7 +96,7 @@ export default function DashboardPage() {
       <div className="space-y-6">
         {/* Tarjetas de métricas principales */}
         {loadingStats ? (
-          <div className="flex justify-center py-8"><Loader2 className="animate-spin h-8 w-8" /></div>
+          <div>   <SkeletonDashboardContent /></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricCard title="Operaciones hoy" value={stats?.operacionesHoy ?? 0} icon={CalendarCheck} color="blue" />
@@ -117,7 +118,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         {loadingStats ? (
-          <div className="flex justify-center py-8"><Loader2 className="animate-spin h-8 w-8" /></div>
+          <div ><SkeletonDashboardContent /></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricCard title="Operaciones hoy" value={stats?.operacionesHoy ?? 0} icon={CalendarCheck} color="blue" />
@@ -154,7 +155,7 @@ export default function DashboardPage() {
         </div>
 
         {loadingStats ? (
-          <div className="flex justify-center py-8"><Loader2 className="animate-spin h-8 w-8" /></div>
+          <div ><SkeletonDashboardContent /></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricCard title="Cargas activas hoy" value={stats?.operacionesEnCurso ?? 0} icon={ClipboardList} color="blue" />

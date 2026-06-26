@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react'
 import { fetchWithAuth } from '@/lib/api-client'
 import { useAuthStore } from '@/stores/authStore';
 
+let sessionRestorePromise: Promise<any> | null = null;
+
 export const useAuth = () => {
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
@@ -25,39 +27,68 @@ export const useAuth = () => {
         } catch (error) {
             console.error('fetchUser error:', error)
             setUser(null)
+            useAuthStore.getState().clearUser();
             return null
         }
     }
 
     const restoreSession = async () => {
-        setLoading(true)
-
-        if (!supabase) {
-            console.warn('Supabase no está disponible en este entorno')
-            setUser(null)
-            setLoading(false)
-            return
+        if (sessionRestorePromise) {
+            try {
+                const profile = await sessionRestorePromise;
+                setUser(profile);
+            } catch (err) {
+                setUser(null);
+            }
+            setLoading(false);
+            return;
         }
 
-        try {
-            const {
-                data: { session },
-                error,
-            } = await supabase.auth.getSession()
+        setLoading(true);
 
-            if (error) {
-                console.error('Supabase getSession error:', error)
+        sessionRestorePromise = (async () => {
+            if (!supabase) {
+                console.warn('Supabase no está disponible en este entorno')
                 setUser(null)
-            } else if (session?.access_token) {
-                await fetchUser(session.access_token)
-            } else {
-                setUser(null)
+                useAuthStore.getState().clearUser();
+                setLoading(false)
+                return null;
             }
-        } catch (error) {
-            console.error('restoreSession error:', error)
-            setUser(null)
-        } finally {
-            setLoading(false)
+
+            try {
+                const {
+                    data: { session },
+                    error,
+                } = await supabase.auth.getSession()
+
+                if (error) {
+                    console.error('Supabase getSession error:', error)
+                    setUser(null)
+                    useAuthStore.getState().clearUser();
+                    return null;
+                } else if (session?.access_token) {
+                    const profile = await fetchUser(session.access_token)
+                    return profile;
+                } else {
+                    setUser(null)
+                    useAuthStore.getState().clearUser();
+                    return null;
+                }
+            } catch (error) {
+                console.error('restoreSession error:', error)
+                setUser(null)
+                useAuthStore.getState().clearUser();
+                return null;
+            } finally {
+                setLoading(false);
+            }
+        })();
+
+        try {
+            const profile = await sessionRestorePromise;
+            setUser(profile);
+        } catch (err) {
+            setUser(null);
         }
     }
 
@@ -90,9 +121,11 @@ export const useAuth = () => {
     }
 
     const logout = async () => {
+        useAuthStore.getState().setLoggingOut(true);
         if (!supabase) {
             console.error('Supabase no está disponible para logout')
             setUser(null)
+            useAuthStore.getState().clearUser();
             router.push('/signin')
             return
         }
@@ -103,6 +136,8 @@ export const useAuth = () => {
             console.error('logout error:', error)
         } finally {
             setUser(null)
+            sessionRestorePromise = null;
+            useAuthStore.getState().clearUser();
             router.push('/signin')
         }
     }
@@ -116,7 +151,9 @@ export const useAuth = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 if (event === 'SIGNED_IN' && session) {
-                    await fetchUser(session.access_token);
+                    const profilePromise = fetchUser(session.access_token);
+                    sessionRestorePromise = profilePromise;
+                    await profilePromise;
                     // Only redirect to dashboard if we are on the sign‑in or root page
                     if (['/', '/signin', '/auth/callback'].includes(pathname)) {
                         router.push('/dashboard');
@@ -124,9 +161,13 @@ export const useAuth = () => {
                 }
                 if (event === 'SIGNED_OUT') {
                     setUser(null);
+                    sessionRestorePromise = null;
+                    useAuthStore.getState().clearUser();
                 }
                 if (event === 'TOKEN_REFRESHED' && session) {
-                    await fetchUser(session.access_token);
+                    const profilePromise = fetchUser(session.access_token);
+                    sessionRestorePromise = profilePromise;
+                    await profilePromise;
                 }
             }
         )

@@ -6,9 +6,11 @@ interface AuthState {
     user: any | null;
     roles: string[];
     isLoading: boolean;
+    isLoggingOut: boolean;
     setUser: (user: any) => void;
     clearUser: () => void;
     setLoading: (loading: boolean) => void;
+    setLoggingOut: (loggingOut: boolean) => void;
     hasRole: (role: string | string[]) => boolean;
 }
 
@@ -18,6 +20,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             roles: [],
             isLoading: true, // comienza cargando
+            isLoggingOut: false,
 
             setUser: (user) => {
                 const roles = user?.roles?.map((r: any) => r.nombre || r) || [];
@@ -25,15 +28,20 @@ export const useAuthStore = create<AuthState>()(
                     user,
                     roles,
                     isLoading: false,
+                    isLoggingOut: false,
                 });
             },
 
             clearUser: () => {
-                set({ user: null, roles: [], isLoading: false });
+                set({ user: null, roles: [], isLoading: false, isLoggingOut: false });
             },
 
             setLoading: (loading) => {
                 set({ isLoading: loading });
+            },
+
+            setLoggingOut: (loggingOut) => {
+                set({ isLoggingOut: loggingOut });
             },
 
             hasRole: (requiredRoles) => {
@@ -47,7 +55,7 @@ export const useAuthStore = create<AuthState>()(
             partialize: (state) => ({
                 user: state.user,
                 roles: state.roles,
-                // no persistimos isLoading, solo el user y roles
+                // no persistimos isLoading ni isLoggingOut
             }),
         }
     )
