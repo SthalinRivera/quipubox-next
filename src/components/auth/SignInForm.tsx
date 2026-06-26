@@ -101,15 +101,7 @@ export default function SignInForm() {
             </div>
           </div>
 
-          <div className="mb-4">
-            <Link
-              href="/"
-              className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-              <ChevronLeftIcon className="w-4 h-4 mr-1" />
-              Volver al inicio
-            </Link>
-          </div>
+
 
           <div className="flex flex-col justify-center flex-1">
             <div className="mb-8 text-center">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Pencil, Trash2, X } from 'lucide-react'; 
+import { Pencil, Trash2, X } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -13,7 +13,7 @@ import {
 import Badge from '@/components/ui/badge/Badge';
 import { TableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
 import type { Incidencia, Evidencia } from '@/types/incidencia';
-import NextImage from 'next/image'; 
+import NextImage from 'next/image';
 
 interface IncidenciasTableProps {
     data: Incidencia[];
@@ -191,7 +191,7 @@ export default function IncidenciasTable({
                     onClick={closeModal}
                 >
                     <div
-                        className="relative bg-white dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] p-6 overflow-y-auto"
+                        className="relative bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[80vh] p-6 overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button
@@ -205,7 +205,7 @@ export default function IncidenciasTable({
                             Evidencias de la incidencia
                         </h3>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div className="w-full">
                             {selectedEvidencias.map((ev) => (
                                 <div
                                     key={ev.id_evidencia}

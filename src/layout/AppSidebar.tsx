@@ -79,10 +79,11 @@ const fase5: NavItem = {
   name: "Jabas",
   icon: <PieChartIcon />,
   subItems: [
-    { name: "Jabas por cobrar", path: "/dashboard/jabas-cobrar" },
-    { name: "Recuperaciones de jabas", path: "/dashboard/recuperaciones-jabas" },
-    { name: "Jabas por pagar", path: "/dashboard/jabas-pagar" },
-    { name: "Devoluciones al emisor", path: "/dashboard/devoluciones-emisor" },
+    { name: "Jabas", path: "/dashboard/jabas" },
+    // { name: "Jabas por cobrar", path: "/dashboard/jabas-cobrar" },
+    // { name: "Recuperaciones de jabas", path: "/dashboard/recuperaciones-jabas" },
+    // { name: "Jabas por pagar", path: "/dashboard/jabas-pagar" },
+    // { name: "Devoluciones al emisor", path: "/dashboard/devoluciones-emisor" },
   ],
 };
 
@@ -146,6 +147,7 @@ const routePermissions: Record<string, Role[]> = {
   '/dashboard/guias-operativas': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'Supervisor'],
 
   '/dashboard/entregas': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
+  '/dashboard/jabas': ['administrador', 'encargado_retorno', 'Supervisor'],
   '/dashboard/jabas-cobrar': ['administrador', 'encargado_retorno', 'Supervisor'],
   '/dashboard/recuperaciones-jabas': ['administrador', 'encargado_retorno', 'Supervisor'],
   '/dashboard/jabas-pagar': ['administrador', 'encargado_retorno', 'Supervisor'],
