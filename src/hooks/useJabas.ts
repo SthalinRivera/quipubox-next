@@ -41,7 +41,7 @@ export function useJabas() {
     }, [toast]);
 
     // Registrar recuperación (para jabas por cobrar)
-    const registrarRecuperacion = useCallback(async (payload: Omit<RecuperacionJaba, 'id_recuperacion' | 'created_at' | 'saldo_resultante'>) => {
+    const registrarRecuperacion = useCallback(async (payload: Omit<RecuperacionJaba, 'id_recuperacion' | 'created_at' | 'saldo_resultante' | 'id_empresa'>) => {
         setLoading(true);
         try {
             const nueva = await fetchWithAuth<RecuperacionJaba>('jabas/recuperaciones', {
@@ -60,7 +60,7 @@ export function useJabas() {
     }, [toast, fetchPorCobrar]);
 
     // Registrar devolución al emisor (para jabas por pagar)
-    const registrarDevolucion = useCallback(async (payload: Omit<DevolucionEmisor, 'id_devolucion' | 'created_at' | 'saldo_resultante'>) => {
+    const registrarDevolucion = useCallback(async (payload: Omit<DevolucionEmisor, 'id_devolucion' | 'created_at' | 'saldo_resultante' | 'id_empresa'>) => {
         setLoading(true);
         try {
             const nueva = await fetchWithAuth<DevolucionEmisor>('jabas/devoluciones-emisor', {

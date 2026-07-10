@@ -23,10 +23,11 @@ import { useRouter } from "next/navigation";
 
 interface DetallesCargaTableProps {
     operacionId: number;
-    onRefresh?: () => void;  // <--- PROPIEDAD AÑADIDA
+    onRefresh?: () => void;
+    operacionEstado?: string;
 }
 
-export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesCargaTableProps) {
+export default function DetallesCargaTable({ operacionId, onRefresh, operacionEstado }: DetallesCargaTableProps) {
     const { detalles, loading, fetchDetalles, deleteDetalle } = useDetallesCarga(operacionId);
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
@@ -34,6 +35,8 @@ export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesC
     const [expandedDetalleId, setExpandedDetalleId] = useState<number | null>(null);
     const [generating, setGenerating] = useState(false);
     const router = useRouter();
+
+    const isLocked = operacionEstado === 'repartiendo' || operacionEstado === 'cancelada';
 
     useEffect(() => {
         if (operacionId && !isNaN(operacionId)) {
@@ -144,7 +147,7 @@ export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesC
                                 ) : (
                                     detalles.map((det) => {
                                         const itemReparto = (det as any).items_reparto?.[0];
-                                        const guia = itemReparto?.guias_operativas?.[0];
+                                        const guia = (itemReparto as any)?.guia_asociada || (itemReparto as any)?.guias_operativas?.[0];
                                         const numeroGuia = guia?.numero_guia;
                                         const idGuia = guia?.id_guia;
                                         const clienteReceptor = itemReparto?.clientes?.nombres;
@@ -180,20 +183,24 @@ export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesC
                                                     </TableCell>
                                                     <TableCell className="px-5 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <button
-                                                                onClick={() => handleEdit(det)}
-                                                                className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-                                                                title="Editar"
-                                                            >
-                                                                <Pencil className="h-5 w-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(det.id_detalle_carga)}
-                                                                className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-red-400"
-                                                                title="Eliminar"
-                                                            >
-                                                                <Trash2 className="h-5 w-5" />
-                                                            </button>
+                                                            {!isLocked && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleEdit(det)}
+                                                                        className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+                                                                        title="Editar"
+                                                                    >
+                                                                        <Pencil className="h-5 w-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(det.id_detalle_carga)}
+                                                                        className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-red-400"
+                                                                        title="Eliminar"
+                                                                    >
+                                                                        <Trash2 className="h-5 w-5" />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleVerCalidades(det.id_detalle_carga)}
                                                                 className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
@@ -201,22 +208,24 @@ export default function DetallesCargaTable({ operacionId, onRefresh }: DetallesC
                                                             >
                                                                 <Eye className="h-5 w-5" />
                                                             </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setExpandedDetalleId(
-                                                                        expandedDetalleId === det.id_detalle_carga ? null : det.id_detalle_carga
-                                                                    )
-                                                                }
-                                                                className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-                                                                title="Ver calidades"
-                                                            >
-                                                                <Layers className="h-5 w-5" />
-                                                            </button>
+                                                            {!isLocked && (
+                                                                <button
+                                                                    onClick={() =>
+                                                                        setExpandedDetalleId(
+                                                                            expandedDetalleId === det.id_detalle_carga ? null : det.id_detalle_carga
+                                                                        )
+                                                                    }
+                                                                    className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+                                                                    title="Ver calidades"
+                                                                >
+                                                                    <Layers className="h-5 w-5" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
 
-                                                {expandedDetalleId === det.id_detalle_carga && (
+                                                {expandedDetalleId === det.id_detalle_carga && !isLocked && (
                                                     <TableRow>
                                                         <TableCell colSpan={9} className="bg-gray-50 p-0 dark:bg-gray-800/50">
                                                             <div className="p-4">

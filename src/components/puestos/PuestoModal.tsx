@@ -1,4 +1,3 @@
-// components/puestos/PuestoModal.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -11,13 +10,12 @@ import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import Select from '@/components/form/Select';
 import { usePuestos } from '@/hooks/usePuestos';
-import { useEmpresas } from '@/hooks/useEmpresas';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import type { Puesto } from '@/types/puesto';
 
 const puestoSchema = z.object({
-    id_empresa: z.number().min(1, 'Debes seleccionar una empresa'),
     id_lugar: z.number().min(1, 'Debes seleccionar un mercado'),
     numero_puesto: z.string().min(1, 'El número de puesto es obligatorio'),
     referencia: z.string().optional(),
@@ -35,20 +33,18 @@ interface PuestoModalProps {
 
 export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: PuestoModalProps) {
     const { create, update } = usePuestos();
-    const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const { lugares, fetchAll: fetchMercados } = useLugarOperativo();
     const toast = useToast();
+    const user = useAuthStore((s) => s.user);
 
     const {
         control,
         handleSubmit,
         reset,
-        watch,
         formState: { errors, isSubmitting, isValid },
     } = useForm<PuestoFormData>({
         resolver: zodResolver(puestoSchema) as any,
         defaultValues: {
-            id_empresa: 0,
             id_lugar: 0,
             numero_puesto: '',
             referencia: '',
@@ -57,57 +53,41 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
         mode: 'onChange',
     });
 
-    const selectedEmpresaId = watch('id_empresa');
-
     useEffect(() => {
-        if (open) {
-            fetchEmpresas();
-            fetchMercados();
-        }
-    }, [open, fetchEmpresas, fetchMercados]);
+        if (open) fetchMercados();
+    }, [open, fetchMercados]);
 
     useEffect(() => {
         if (open) {
             if (editingPuesto) {
                 reset({
-                    id_empresa: editingPuesto.id_empresa,
                     id_lugar: editingPuesto.id_lugar,
                     numero_puesto: editingPuesto.numero_puesto,
                     referencia: editingPuesto.referencia || '',
                     estado: editingPuesto.estado,
                 });
             } else {
-                reset({
-                    id_empresa: 0,
-                    id_lugar: 0,
-                    numero_puesto: '',
-                    referencia: '',
-                    estado: true,
-                });
+                reset({ id_lugar: 0, numero_puesto: '', referencia: '', estado: true });
             }
         }
     }, [open, editingPuesto, reset]);
 
-    const empresasOptions = empresas.map(emp => ({
-        value: emp.id_empresa.toString(),
-        label: emp.razon_social,
-    }));
-
-    const mercadosFiltrados = lugares.filter(m => m.id_empresa === selectedEmpresaId);
-    const mercadosOptions = mercadosFiltrados.map(m => ({
+    const mercadosOptions = lugares.map(m => ({
         value: m.id_lugar.toString(),
         label: m.nombre,
     }));
 
     const onSubmit = async (data: PuestoFormData) => {
+        if (!user?.id_empresa) {
+            toast.error('No se pudo determinar la empresa del usuario');
+            return;
+        }
         try {
             const payload = {
-                id_empresa: data.id_empresa,
+                id_empresa: user.id_empresa,
                 id_lugar: data.id_lugar,
                 numero_puesto: data.numero_puesto,
-
                 referencia: data.referencia?.trim() === '' ? null : (data.referencia || null),
-
                 estado: data.estado,
             };
             if (editingPuesto) {
@@ -137,27 +117,6 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
                 </p>
 
                 <div className="space-y-4">
-                    {/* Empresa */}
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">
-                            Empresa <span className="text-error-500">*</span>
-                        </Label>
-                        <Controller
-                            name="id_empresa"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    options={empresasOptions}
-                                    placeholder="Seleccionar empresa"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
-                                />
-                            )}
-                        />
-                        {errors.id_empresa && <p className="mt-1 text-xs text-error-500">{errors.id_empresa.message}</p>}
-                    </div>
-
-                    {/* Mercado */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Mercado <span className="text-error-500">*</span>
@@ -171,14 +130,12 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
                                     placeholder="Seleccionar mercado"
                                     value={field.value ? field.value.toString() : ''}
                                     onChange={(val) => field.onChange(Number(val))}
-                                    disabled={!selectedEmpresaId}
                                 />
                             )}
                         />
                         {errors.id_lugar && <p className="mt-1 text-xs text-error-500">{errors.id_lugar.message}</p>}
                     </div>
 
-                    {/* Número de puesto */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Número de puesto <span className="text-error-500">*</span>
@@ -191,13 +148,11 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
                         {errors.numero_puesto && <p className="mt-1 text-xs text-error-500">{errors.numero_puesto.message}</p>}
                     </div>
 
-                    {/* Referencia */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Referencia</Label>
                         <Controller name="referencia" control={control} render={({ field }) => <Input {...field} />} />
                     </div>
 
-                    {/* Estado (checkbox) */}
                     <div className="flex items-center gap-2">
                         <Controller
                             name="estado"

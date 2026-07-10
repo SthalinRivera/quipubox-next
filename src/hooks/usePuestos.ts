@@ -13,9 +13,10 @@ export const usePuestos = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Puesto[]>('puestos');
-            setPuestos(data);
-            return data;
+            const data = await fetchWithAuth<any>('puestos');
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setPuestos(list);
+            return list;
         } catch (err) {
             setError(err);
             throw err;
@@ -27,9 +28,10 @@ export const usePuestos = () => {
     const fetchByMercado = useCallback(async (mercadoId: number) => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Puesto[]>(`puestos/mercado/${mercadoId}`);
-            setPuestos(data);
-            return data;
+            const data = await fetchWithAuth<any>(`puestos/mercado/${mercadoId}`);
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setPuestos(list);
+            return list;
         } catch (err) {
             setError(err);
             throw err;
@@ -41,9 +43,10 @@ export const usePuestos = () => {
     const fetchByCliente = useCallback(async (clienteId: number) => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Puesto[]>(`clientes/${clienteId}/puestos`);
-            setPuestos(data);
-            return data;
+            const data = await fetchWithAuth<any>(`clientes/${clienteId}/puestos`);
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setPuestos(list);
+            return list;
         } catch (err) {
             setError(err);
             throw err;

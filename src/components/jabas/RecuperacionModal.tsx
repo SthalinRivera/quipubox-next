@@ -47,11 +47,10 @@ export function RecuperacionModal({ open, onOpenChange, jaba, onSuccess }: Props
         try {
             await registrarRecuperacion({
                 id_jaba_cobrar: jaba.id_jaba_cobrar,
-                fecha_recuperacion: new Date().toISOString().split('T')[0],
+                fecha_recuperacion: new Date().toISOString(),
                 tipo_recuperacion: tipo,
                 cantidad,
                 observaciones: observaciones || undefined,
-                id_empresa: jaba.id_empresa, // ← asegurar que existe en JabaPorCobrar
             });
             toast.success('Recuperación registrada correctamente');
             onSuccess();
@@ -76,7 +75,10 @@ export function RecuperacionModal({ open, onOpenChange, jaba, onSuccess }: Props
                 {/* Información del cliente */}
                 <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Receptor: <strong>{jaba.clientes?.nombres || 'N/A'}</strong>
+                        Receptor: <strong>
+                            {(jaba as any).entregas?.items_reparto?.clientes?.nombres || jaba.clientes?.nombres || 'N/A'}
+                            {(jaba as any).entregas?.items_reparto?.clientes?.apellidos ? ` ${(jaba as any).entregas.items_reparto.clientes.apellidos}` : jaba.clientes?.apellidos ? ` ${jaba.clientes.apellidos}` : ''}
+                        </strong>
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         Saldo pendiente: <strong>{jaba.saldo_pendiente || 0}</strong> jabas

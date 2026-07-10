@@ -18,7 +18,12 @@ import { useToast } from '@/hooks/useToast';
 import type { JabaPorPagar } from '@/types/jaba';
 import { CheckCircle, RefreshCw, Undo2, XCircle } from 'lucide-react';
 
-export default function JabasPorPagarTable() {
+interface JabasPorPagarTableProps {
+    isReadOnly?: boolean;
+    canAnularCompletar?: boolean;
+}
+
+export default function JabasPorPagarTable({ isReadOnly = false, canAnularCompletar = false }: JabasPorPagarTableProps) {
     const { jabas, loading, fetchAll, registrarDevolucion, cambiarEstado } =
         useJabasPorPagar();
     const toast = useToast();
@@ -60,7 +65,6 @@ export default function JabasPorPagarTable() {
                 await cambiarEstado(jaba.id_jaba_pagar, 'anulado');
                 toast.success('Registro anulado');
             } else if (tipo === 'completar') {
-                // Si tiene saldo pendiente, forzamos completar (solo para admin)
                 await cambiarEstado(jaba.id_jaba_pagar, 'completado');
                 toast.success('Marcado como completado');
             }
@@ -83,7 +87,7 @@ export default function JabasPorPagarTable() {
     if (loading) {
         return (
             <div className="p-4">
-                <TableSkeleton columns={7} rows={5} showActionButton />
+                <TableSkeleton columns={isReadOnly ? 7 : 9} rows={5} showActionButton={!isReadOnly} />
             </div>
         );
     }
@@ -91,7 +95,12 @@ export default function JabasPorPagarTable() {
     return (
         <div className="space-y-4">
             {/* Encabezado con botón de recargar */}
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {isReadOnly
+                        ? 'Vista de solo lectura - Solo puede consultar sus registros'
+                        : 'Gestión de jabas por devolver al emisor'}
+                </p>
                 <Button
                     size="sm"
                     variant="outline"
@@ -103,11 +112,11 @@ export default function JabasPorPagarTable() {
             </div>
 
             {/* Tabla */}
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/5 dark:bg-white/3">
                 <div className="max-w-full overflow-x-auto">
                     <div className="min-w-[800px]">
                         <Table>
-                            <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                            <TableHeader className="border-b border-gray-100 dark:border-white/5">
                                 <TableRow>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         ID
@@ -133,16 +142,18 @@ export default function JabasPorPagarTable() {
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                                         Estado
                                     </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Acciones
-                                    </TableCell>
+                                    {!isReadOnly && (
+                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
+                                            Acciones
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             </TableHeader>
-                            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                            <TableBody className="divide-y divide-gray-100 dark:divide-white/5">
                                 {jabas.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={9}
+                                            colSpan={isReadOnly ? 8 : 9}
                                             className="py-8 text-center text-gray-500 dark:text-gray-400"
                                         >
                                             No hay registros de jabas por pagar.
@@ -165,7 +176,7 @@ export default function JabasPorPagarTable() {
                                                 {new Date(jaba.fecha_origen).toLocaleDateString()}
                                             </TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {jaba.cantidad_debida}
+                                                {jaba.cantidad_original}
                                             </TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                                                 {jaba.cantidad_pagada}
@@ -187,50 +198,54 @@ export default function JabasPorPagarTable() {
                                                     {jaba.estado}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="px-5 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    {/* Botón Devolver (solo si hay saldo pendiente) */}
-                                                    {jaba.saldo_pendiente > 0 &&
-                                                        jaba.estado !== 'anulado' &&
-                                                        jaba.estado !== 'completado' && (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleDevolver(jaba)}
-                                                                startIcon={<Undo2 className="h-4 w-4" />}
-                                                            >
-                                                                Devolver
-                                                            </Button>
-                                                        )}
+                                            {!isReadOnly && (
+                                                <TableCell className="px-5 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        {/* Botón Devolver (solo si hay saldo pendiente) */}
+                                                        {jaba.saldo_pendiente > 0 &&
+                                                            jaba.estado !== 'anulado' &&
+                                                            jaba.estado !== 'completado' && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => handleDevolver(jaba)}
+                                                                    startIcon={<Undo2 className="h-4 w-4" />}
+                                                                >
+                                                                    Devolver
+                                                                </Button>
+                                                            )}
 
-                                                    {/* Botón Anular (si no está anulado ni completado) */}
-                                                    {jaba.estado !== 'anulado' &&
-                                                        jaba.estado !== 'completado' && (
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleConfirmAction(jaba, 'anular')
-                                                                }
-                                                                className="text-gray-500 transition-colors hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
-                                                                title="Anular"
-                                                            >
-                                                                <XCircle className="h-5 w-5" />
-                                                            </button>
-                                                        )}
+                                                        {/* Botón Anular (solo admin) */}
+                                                        {canAnularCompletar &&
+                                                            jaba.estado !== 'anulado' &&
+                                                            jaba.estado !== 'completado' && (
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleConfirmAction(jaba, 'anular')
+                                                                    }
+                                                                    className="text-gray-500 transition-colors hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
+                                                                    title="Anular"
+                                                                >
+                                                                    <XCircle className="h-5 w-5" />
+                                                                </button>
+                                                            )}
 
-                                                    {/* Botón Completar forzado (solo admin) */}
-                                                    {jaba.estado !== 'completado' &&
-                                                        jaba.estado !== 'anulado' && (
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleConfirmAction(jaba, 'completar')
-                                                                }
-                                                                className="text-gray-500 transition-colors hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400"
-                                                                title="Marcar como completado"
-                                                            >
-                                                                <CheckCircle className="h-5 w-5" />
-                                                            </button>
-                                                        )}
-                                                </div>
-                                            </TableCell>
+                                                        {/* Botón Completar forzado (solo admin) */}
+                                                        {canAnularCompletar &&
+                                                            jaba.estado !== 'completado' &&
+                                                            jaba.estado !== 'anulado' && (
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleConfirmAction(jaba, 'completar')
+                                                                    }
+                                                                    className="text-gray-500 transition-colors hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400"
+                                                                    title="Marcar como completado"
+                                                                >
+                                                                    <CheckCircle className="h-5 w-5" />
+                                                                </button>
+                                                            )}
+                                                    </div>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))
                                 )}

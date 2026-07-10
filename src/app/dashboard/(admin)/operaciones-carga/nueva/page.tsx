@@ -11,18 +11,6 @@ import Label from '@/components/form/Label';
 import { format } from 'date-fns';
 import { useCreacionCargaStore } from '@/stores/creacionCargaStore';
 import { Stepper } from '@/components/ui/Stepper';
-import {
-    Truck,
-    MapPin,
-    Calendar,
-    Clock,
-    User,
-    Users,
-    ClipboardList,
-    ArrowRight,
-    X,
-    CheckCircle
-} from 'lucide-react';
 
 interface Sede {
     id_sede: number;
@@ -134,22 +122,21 @@ export default function NuevaOperacionPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="max-w-3xl mx-auto p-4 md:p-5 space-y-5">
             {/* Cabecera */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Nueva operación de carga</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
-                        Complete los datos de la operación. Los campos con <span className="text-red-500">*</span> son obligatorios.
+                    <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Nueva operación de carga</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        Complete los datos. Los campos con <span className="text-red-500">*</span> son obligatorios.
                     </p>
                 </div>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => router.back()}
-                    className="flex items-center gap-1"
+                    className="text-sm"
                 >
-                    <X size={16} />
                     Cancelar
                 </Button>
             </div>
@@ -158,76 +145,69 @@ export default function NuevaOperacionPage() {
             <Stepper />
 
             {/* Formulario */}
-            <div className=" rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Sede origen */}
-                        <div className="space-y-2">
-                            <Label htmlFor="sede_origen" className="flex items-center gap-1 text-sm font-medium">
-                                <MapPin size={16} className="text-blue-500" />
+                        <div className="space-y-1.5">
+                            <Label htmlFor="sede_origen" className="text-sm font-medium">
                                 Sede origen <span className="text-red-500">*</span>
                             </Label>
                             <select
                                 id="sede_origen"
                                 value={form.id_sede_origen}
                                 onChange={e => setForm({ ...form, id_sede_origen: Number(e.target.value) })}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 transition"
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
                                 required
                             >
-                                <option value={0}>-- Seleccione una sede --</option>
+                                <option value={0}>-- Seleccione --</option>
                                 {sedesOrigen.map(s => (
                                     <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
                                 ))}
                             </select>
-
                         </div>
 
                         {/* Sede destino */}
-                        <div className="space-y-2">
-                            <Label htmlFor="sede_destino" className="flex items-center gap-1 text-sm font-medium">
-                                <MapPin size={16} className="text-green-500" />
+                        <div className="space-y-1.5">
+                            <Label htmlFor="sede_destino" className="text-sm font-medium">
                                 Sede destino <span className="text-gray-400 text-xs">(opcional)</span>
                             </Label>
                             <select
                                 id="sede_destino"
                                 value={form.id_sede_destino ?? 0}
                                 onChange={e => setForm({ ...form, id_sede_destino: Number(e.target.value) || null })}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 transition"
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
                             >
                                 <option value={0}>-- Seleccione (opcional) --</option>
                                 {sedesDestino.map(s => (
                                     <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
                                 ))}
                             </select>
-
                         </div>
 
                         {/* Camión */}
-                        <div className="space-y-2">
-                            <Label htmlFor="camion" className="flex items-center gap-1 text-sm font-medium">
-                                <Truck size={16} className="text-purple-500" />
+                        <div className="space-y-1.5">
+                            <Label htmlFor="camion" className="text-sm font-medium">
                                 Camión <span className="text-red-500">*</span>
                             </Label>
                             <select
                                 id="camion"
                                 value={form.id_camion}
                                 onChange={e => setForm({ ...form, id_camion: Number(e.target.value) })}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 transition"
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
                                 required
                             >
-                                <option value={0}>-- Seleccione un camión --</option>
+                                <option value={0}>-- Seleccione --</option>
                                 {camiones.map(c => (
                                     <option key={c.id_camion} value={c.id_camion}>{c.placa}</option>
                                 ))}
                             </select>
-
                         </div>
 
-                        {/* Fecha y Hora (en una misma fila) */}
+                        {/* Fecha y Hora */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                                <Label htmlFor="fecha_carga" className="flex items-center gap-1 text-sm font-medium">
-                                    <Calendar size={16} className="text-orange-500" />
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fecha_carga" className="text-sm font-medium">
                                     Fecha <span className="text-red-500">*</span>
                                 </Label>
                                 <Input
@@ -236,12 +216,11 @@ export default function NuevaOperacionPage() {
                                     value={form.fecha_carga}
                                     onChange={e => setForm({ ...form, fecha_carga: e.target.value })}
                                     required
-                                    className="w-full"
+                                    className="w-full text-sm"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="hora_carga" className="flex items-center gap-1 text-sm font-medium">
-                                    <Clock size={16} className="text-indigo-500" />
+                            <div className="space-y-1.5">
+                                <Label htmlFor="hora_carga" className="text-sm font-medium">
                                     Hora
                                 </Label>
                                 <Input
@@ -249,22 +228,21 @@ export default function NuevaOperacionPage() {
                                     type="time"
                                     value={form.hora_carga}
                                     onChange={e => setForm({ ...form, hora_carga: e.target.value })}
-                                    className="w-full"
+                                    className="w-full text-sm"
                                 />
                             </div>
                         </div>
 
                         {/* Encargado de carga */}
-                        <div className="space-y-2">
-                            <Label htmlFor="encargado" className="flex items-center gap-1 text-sm font-medium">
-                                <User size={16} className="text-cyan-500" />
+                        <div className="space-y-1.5">
+                            <Label htmlFor="encargado" className="text-sm font-medium">
                                 Encargado de carga <span className="text-gray-400 text-xs">(opcional)</span>
                             </Label>
                             <select
                                 id="encargado"
                                 value={form.id_encargado_carga ?? 0}
                                 onChange={e => setForm({ ...form, id_encargado_carga: Number(e.target.value) || null })}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 transition"
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
                             >
                                 <option value={0}>-- Seleccione (opcional) --</option>
                                 {encargados.map(u => (
@@ -273,20 +251,18 @@ export default function NuevaOperacionPage() {
                                     </option>
                                 ))}
                             </select>
-
                         </div>
 
                         {/* Repartidor asignado */}
-                        <div className="space-y-2">
-                            <Label htmlFor="repartidor" className="flex items-center gap-1 text-sm font-medium">
-                                <Users size={16} className="text-pink-500" />
+                        <div className="space-y-1.5">
+                            <Label htmlFor="repartidor" className="text-sm font-medium">
                                 Repartidor asignado <span className="text-gray-400 text-xs">(opcional)</span>
                             </Label>
                             <select
                                 id="repartidor"
                                 value={form.id_repartidor_asignado ?? 0}
                                 onChange={e => setForm({ ...form, id_repartidor_asignado: Number(e.target.value) || null })}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 transition"
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
                             >
                                 <option value={0}>-- Seleccione (opcional) --</option>
                                 {repartidores.map(u => (
@@ -295,58 +271,53 @@ export default function NuevaOperacionPage() {
                                     </option>
                                 ))}
                             </select>
-
                         </div>
 
                         {/* Observaciones (ocupa todo el ancho) */}
-                        <div className="md:col-span-2 space-y-2">
-                            <Label htmlFor="observaciones" className="flex items-center gap-1 text-sm font-medium">
-                                <ClipboardList size={16} className="text-gray-500" />
+                        <div className="md:col-span-2 space-y-1.5">
+                            <Label htmlFor="observaciones" className="text-sm font-medium">
                                 Observaciones <span className="text-gray-400 text-xs">(opcional)</span>
                             </Label>
                             <textarea
                                 id="observaciones"
-                                rows={3}
+                                rows={2}
                                 value={form.observaciones ?? ''}
                                 onChange={e => setForm({ ...form, observaciones: e.target.value || null })}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 transition"
-                                placeholder="Notas adicionales sobre la operación (ej. condiciones especiales, rutas, etc.)"
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
+                                placeholder="Notas adicionales (ej. condiciones especiales, rutas, etc.)"
                             />
                         </div>
                     </div>
 
                     {/* Botones de acción */}
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => router.back()}
-                            className="px-6"
+                            className="px-5 text-sm"
                         >
                             Cancelar
                         </Button>
                         <Button
                             type="submit"
                             disabled={submitting}
-                            className="px-6 flex items-center gap-2"
+                            className="px-5 text-sm"
                         >
                             {submitting ? (
                                 <>
-                                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></span>
                                     Guardando...
                                 </>
                             ) : (
-                                <>
-                                    Crear operación
-                                    <ArrowRight size={16} />
-                                </>
+                                'Crear operación'
                             )}
                         </Button>
                     </div>
                 </form>
             </div>
 
-            {/* Ayuda adicional (opcional) */}
+            {/* Ayuda */}
             <div className="text-center text-xs text-gray-400 dark:text-gray-500">
                 Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
             </div>

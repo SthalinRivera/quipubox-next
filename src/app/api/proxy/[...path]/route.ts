@@ -52,6 +52,7 @@ async function proxyRequest(
     if (!session?.access_token) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    console.log(session?.access_token);
 
     // 2. Construir URL destino
     const targetPath = params.path.join('/');

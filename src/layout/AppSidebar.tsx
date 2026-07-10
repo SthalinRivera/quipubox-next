@@ -93,7 +93,7 @@ const fase6: NavItem = {
   subItems: [
     { name: "Incidencias", path: "/dashboard/incidencias" },
     { name: "Evidencias", path: "/dashboard/evidencias" },
-    { name: "Logs de actividad", path: "/dashboard/logs" },
+    { name: "Logs de actividad", path: "/dashboard/logs-actividad" },
   ],
 };
 
@@ -147,14 +147,14 @@ const routePermissions: Record<string, Role[]> = {
   '/dashboard/guias-operativas': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'Supervisor'],
 
   '/dashboard/entregas': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
-  '/dashboard/jabas': ['administrador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/jabas-cobrar': ['administrador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/recuperaciones-jabas': ['administrador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/jabas-pagar': ['administrador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/devoluciones-emisor': ['administrador', 'encargado_retorno', 'Supervisor'],
+  '/dashboard/jabas': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
+  '/dashboard/jabas-cobrar': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
+  '/dashboard/recuperaciones-jabas': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
+  '/dashboard/jabas-pagar': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
+  '/dashboard/devoluciones-emisor': ['administrador', 'encargado_retorno', 'Supervisor','encargado_carga'],
   '/dashboard/incidencias': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
   '/dashboard/evidencias': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/logs': ['administrador', 'Supervisor'],
+  '/dashboard/logs-actividad': ['administrador', 'Supervisor'],
   // Opcional: dashboard, calendar y profile a quién se lo muestras? A todos los autenticados.
   '/dashboard': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
   '/dashboard/calendar': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],

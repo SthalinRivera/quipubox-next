@@ -161,7 +161,6 @@ export default function PuestosTable() {
               <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                 <TableRow>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Empresa</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Mercado</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Número</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Referencia</TableCell>
@@ -172,7 +171,7 @@ export default function PuestosTable() {
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {filteredPuestos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
                       No hay puestos registrados.
                     </TableCell>
                   </TableRow>
@@ -180,7 +179,6 @@ export default function PuestosTable() {
                   filteredPuestos.map((puesto) => (
                     <TableRow key={puesto.id_puesto}>
                       <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{puesto.id_puesto}</TableCell>
-                      <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{puesto.empresas?.razon_social || '—'}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{puesto.lugares_operativos?.nombre || '—'}</TableCell>
                       <TableCell className="px-5 py-4 font-medium text-gray-800 dark:text-white/90">{puesto.numero_puesto}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{puesto.referencia || '—'}</TableCell>

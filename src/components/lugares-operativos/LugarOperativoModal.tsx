@@ -1,4 +1,3 @@
-// components/lugares-operativos/LugarOperativoModal.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -11,14 +10,13 @@ import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import Select from '@/components/form/Select';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
-import { useEmpresas } from '@/hooks/useEmpresas';
 import { useSedes } from '@/hooks/useSedes';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import { TipoLugar, TIPOS_LUGAR } from '@/types/enums';
 import type { LugarOperativo } from '@/types/lugarOperativo';
 
 const lugarOperativoSchema = z.object({
-    id_empresa: z.number().min(1, 'Debes seleccionar una empresa'),
     id_sede: z.number().min(1, 'Debes seleccionar una sede'),
     nombre: z.string().min(1, 'El nombre es obligatorio'),
     direccion_referencia: z.string().optional(),
@@ -38,20 +36,18 @@ interface LugarOperativoModalProps {
 
 export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSaved }: LugarOperativoModalProps) {
     const { create, update } = useLugarOperativo();
-    const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const { sedes, fetchAll: fetchSedes } = useSedes();
     const toast = useToast();
+    const user = useAuthStore((s) => s.user);
 
     const {
         control,
         handleSubmit,
         reset,
-        watch,
         formState: { errors, isSubmitting, isValid },
     } = useForm<LugarOperativoFormData>({
         resolver: zodResolver(lugarOperativoSchema) as any,
         defaultValues: {
-            id_empresa: 0,
             id_sede: 0,
             nombre: '',
             direccion_referencia: '',
@@ -62,22 +58,14 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
         mode: 'onChange',
     });
 
-    const selectedEmpresaId = watch('id_empresa');
-
-    // Cargar datos iniciales
     useEffect(() => {
-        if (open) {
-            fetchEmpresas();
-            if (selectedEmpresaId) fetchSedes();
-        }
-    }, [open, fetchEmpresas, fetchSedes, selectedEmpresaId]);
+        if (open) fetchSedes();
+    }, [open, fetchSedes]);
 
-    // Resetear formulario al abrir/cerrar o cambiar editingMercado
     useEffect(() => {
         if (open) {
             if (editingMercado) {
                 reset({
-                    id_empresa: editingMercado.id_empresa,
                     id_sede: editingMercado.id_sede,
                     nombre: editingMercado.nombre,
                     direccion_referencia: editingMercado.direccion_referencia || '',
@@ -86,27 +74,12 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                     estado: editingMercado.estado,
                 });
             } else {
-                reset({
-                    id_empresa: 0,
-                    id_sede: 0,
-                    nombre: '',
-                    direccion_referencia: '',
-                    observaciones: '',
-                    tipo_lugar: TipoLugar.MERCADO,
-                    estado: true,
-                });
+                reset({ id_sede: 0, nombre: '', direccion_referencia: '', observaciones: '', tipo_lugar: TipoLugar.MERCADO, estado: true });
             }
         }
     }, [open, editingMercado, reset]);
 
-    const empresasOptions = empresas.map(emp => ({
-        value: emp.id_empresa.toString(),
-        label: emp.razon_social,
-    }));
-
-    // Filtrar sedes según empresa seleccionada
-    const sedesFiltradas = sedes.filter(s => s.id_empresa === selectedEmpresaId);
-    const sedesOptions = sedesFiltradas.map(s => ({
+    const sedesOptions = sedes.map(s => ({
         value: s.id_sede.toString(),
         label: s.nombre,
     }));
@@ -117,9 +90,13 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
     }));
 
     const onSubmit = async (data: LugarOperativoFormData) => {
+        if (!user?.id_empresa) {
+            toast.error('No se pudo determinar la empresa del usuario');
+            return;
+        }
         try {
             const payload = {
-                id_empresa: data.id_empresa,
+                id_empresa: user.id_empresa,
                 id_sede: data.id_sede,
                 nombre: data.nombre,
                 direccion_referencia: data.direccion_referencia?.trim() === '' ? null : (data.direccion_referencia || null),
@@ -153,28 +130,9 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                         : 'Completa la información para crear un nuevo lugar operativo'}
                 </p>
 
-                <div className="space-y-4">
-                    {/* Empresa */}
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">
-                            Empresa <span className="text-error-500">*</span>
-                        </Label>
-                        <Controller
-                            name="id_empresa"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    options={empresasOptions}
-                                    placeholder="Seleccionar empresa"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
-                                />
-                            )}
-                        />
-                        {errors.id_empresa && <p className="mt-1 text-xs text-error-500">{errors.id_empresa.message}</p>}
-                    </div>
 
-                    {/* Sede */}
+
+                <div className="space-y-4">
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Sede <span className="text-error-500">*</span>
@@ -188,14 +146,12 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                                     placeholder="Seleccionar sede"
                                     value={field.value ? field.value.toString() : ''}
                                     onChange={(val) => field.onChange(Number(val))}
-                                    disabled={!selectedEmpresaId}
                                 />
                             )}
                         />
                         {errors.id_sede && <p className="mt-1 text-xs text-error-500">{errors.id_sede.message}</p>}
                     </div>
 
-                    {/* Nombre */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Nombre <span className="text-error-500">*</span>
@@ -208,7 +164,6 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                         {errors.nombre && <p className="mt-1 text-xs text-error-500">{errors.nombre.message}</p>}
                     </div>
 
-                    {/* Tipo de lugar */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Tipo de lugar <span className="text-error-500">*</span>
@@ -227,19 +182,16 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                         />
                     </div>
 
-                    {/* Dirección / Referencia */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Dirección / Referencia</Label>
                         <Controller name="direccion_referencia" control={control} render={({ field }) => <Input {...field} />} />
                     </div>
 
-                    {/* Observaciones */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Observaciones</Label>
                         <Controller name="observaciones" control={control} render={({ field }) => <Input {...field} />} />
                     </div>
 
-                    {/* Estado (checkbox) */}
                     <div className="flex items-center gap-2">
                         <Controller
                             name="estado"

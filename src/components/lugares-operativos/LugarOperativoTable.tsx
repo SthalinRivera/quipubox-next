@@ -106,7 +106,6 @@ export default function LugarOperativoTable() {
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Empresa</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Sede</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Tipo</TableCell>
@@ -118,7 +117,7 @@ export default function LugarOperativoTable() {
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                                 {filteredItems.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                             No hay lugares operativos registrados.
                                         </TableCell>
                                     </TableRow>
@@ -126,7 +125,6 @@ export default function LugarOperativoTable() {
                                     filteredItems.map((item) => (
                                         <TableRow key={item.id_lugar}>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.id_lugar}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.empresas?.razon_social || '—'}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.sedes?.nombre || '—'}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">

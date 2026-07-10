@@ -1,4 +1,3 @@
-// components/camiones/CamionModal.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -9,14 +8,12 @@ import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
-import Select from '@/components/form/Select';
 import { useCamiones } from '@/hooks/useCamiones';
-import { useEmpresas } from '@/hooks/useEmpresas';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import type { Camion } from '@/types/camion';
 
 const camionSchema = z.object({
-    id_empresa: z.number().min(1, 'Debes seleccionar una empresa'),
     placa: z.string().min(1, 'La placa es obligatoria'),
     descripcion: z.string().optional(),
     observaciones: z.string().optional(),
@@ -34,8 +31,8 @@ interface CamionModalProps {
 
 export function CamionModal({ open, onOpenChange, editingCamion, onSaved }: CamionModalProps) {
     const { create, update } = useCamiones();
-    const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const toast = useToast();
+    const user = useAuthStore((s) => s.user);
 
     const {
         control,
@@ -45,7 +42,6 @@ export function CamionModal({ open, onOpenChange, editingCamion, onSaved }: Cami
     } = useForm<CamionFormData>({
         resolver: zodResolver(camionSchema) as any,
         defaultValues: {
-            id_empresa: 0,
             placa: '',
             descripcion: '',
             observaciones: '',
@@ -55,34 +51,28 @@ export function CamionModal({ open, onOpenChange, editingCamion, onSaved }: Cami
     });
 
     useEffect(() => {
-        if (open) fetchEmpresas();
-    }, [open, fetchEmpresas]);
-
-    useEffect(() => {
         if (open) {
             if (editingCamion) {
                 reset({
-                    id_empresa: editingCamion.id_empresa,
                     placa: editingCamion.placa,
                     descripcion: editingCamion.descripcion || '',
                     observaciones: editingCamion.observaciones || '',
                     estado: editingCamion.estado,
                 });
             } else {
-                reset({ id_empresa: 0, placa: '', descripcion: '', observaciones: '', estado: true });
+                reset({ placa: '', descripcion: '', observaciones: '', estado: true });
             }
         }
     }, [open, editingCamion, reset]);
 
-    const empresasOptions = empresas.map(emp => ({
-        value: emp.id_empresa.toString(),
-        label: emp.razon_social,
-    }));
-
     const onSubmit = async (data: CamionFormData) => {
+        if (!user?.id_empresa) {
+            toast.error('No se pudo determinar la empresa del usuario');
+            return;
+        }
         try {
             const payload = {
-                id_empresa: data.id_empresa,
+                id_empresa: user.id_empresa,
                 placa: data.placa,
                 descripcion: data.descripcion || undefined,
                 observaciones: data.observaciones || undefined,
@@ -114,28 +104,9 @@ export function CamionModal({ open, onOpenChange, editingCamion, onSaved }: Cami
                         : 'Completa la información para crear un nuevo camión'}
                 </p>
 
-                <div className="space-y-4">
-                    {/* Empresa */}
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">
-                            Empresa <span className="text-error-500">*</span>
-                        </Label>
-                        <Controller
-                            name="id_empresa"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    options={empresasOptions}
-                                    placeholder="Seleccionar empresa"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
-                                />
-                            )}
-                        />
-                        {errors.id_empresa && <p className="mt-1 text-xs text-error-500">{errors.id_empresa.message}</p>}
-                    </div>
 
-                    {/* Placa */}
+
+                <div className="space-y-4">
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Placa <span className="text-error-500">*</span>
@@ -148,19 +119,16 @@ export function CamionModal({ open, onOpenChange, editingCamion, onSaved }: Cami
                         {errors.placa && <p className="mt-1 text-xs text-error-500">{errors.placa.message}</p>}
                     </div>
 
-                    {/* Descripción */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Descripción</Label>
                         <Controller name="descripcion" control={control} render={({ field }) => <Input {...field} />} />
                     </div>
 
-                    {/* Observaciones */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Observaciones</Label>
                         <Controller name="observaciones" control={control} render={({ field }) => <Input {...field} />} />
                     </div>
 
-                    {/* Estado (checkbox) */}
                     <div className="flex items-center gap-2">
                         <Controller
                             name="estado"

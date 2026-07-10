@@ -1,4 +1,3 @@
-// hooks/useJabasPorPagar.ts
 'use client';
 
 import { useCallback, useState } from 'react';
@@ -11,12 +10,12 @@ export const useJabasPorPagar = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<any>(null);
 
-    // Obtener todos los registros
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<JabaPorPagar[]>('jabas/por-pagar');
-            setJabas(data);
+            const data = await fetchWithAuth<any>('jabas/por-pagar');
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setJabas(list);
         } catch (err) {
             setError(err);
         } finally {
@@ -24,7 +23,6 @@ export const useJabasPorPagar = () => {
         }
     }, [setJabas]);
 
-    // Registrar una devolución (crea un movimiento en devoluciones_jabas_emisor)
     const registrarDevolucion = useCallback(async (payload: {
         id_jaba_pagar: number;
         cantidad: number;
@@ -37,22 +35,13 @@ export const useJabasPorPagar = () => {
                 method: 'POST',
                 body: payload,
             });
-            // Actualizar el estado local: podríamos recibir el registro actualizado o refetch
-            // Lo más sencillo es refetch, pero para mejor UX actualizamos el saldo local
-            // Asumimos que el endpoint devuelve la jaba actualizada:
-            if (result?.jabaActualizada) {
-                updateJaba(payload.id_jaba_pagar, result.jabaActualizada);
-            } else {
-                // Si no, hacemos fetchAll
-                await fetchAll();
-            }
+            await fetchAll();
             return result;
         } catch (err) {
             throw err;
         }
-    }, [updateJaba, fetchAll]);
+    }, [fetchAll]);
 
-    // Cambiar estado (anular, completar, etc.)
     const cambiarEstado = useCallback(async (id: number, nuevoEstado: string) => {
         try {
             const updated = await fetchWithAuth<JabaPorPagar>(`jabas/por-pagar/${id}/estado`, {
@@ -66,15 +55,5 @@ export const useJabasPorPagar = () => {
         }
     }, [updateJaba]);
 
-    // Opcional: eliminar (si se permite)
-    const remove = useCallback(async (id: number) => {
-        try {
-            await fetchWithAuth(`jabas/por-pagar/${id}`, { method: 'DELETE' });
-            removeJaba(id);
-        } catch (err) {
-            throw err;
-        }
-    }, [removeJaba]);
-
-    return { jabas, loading, error, fetchAll, registrarDevolucion, cambiarEstado, remove };
+    return { jabas, loading, error, fetchAll, registrarDevolucion, cambiarEstado };
 };

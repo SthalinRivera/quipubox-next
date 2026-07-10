@@ -55,10 +55,9 @@ export function DevolucionJabaModal({
             await registrarDevolucion({
                 id_jaba_pagar: jaba.id_jaba_pagar,
                 cantidad,
-                tipo_devolucion: tipoDevolucion, // ✅ ahora coincide con el tipo esperado
-                fecha_devolucion: new Date().toISOString().split('T')[0],
+                tipo_devolucion: tipoDevolucion,
+                fecha_devolucion: new Date().toISOString(),
                 observaciones: observaciones || undefined,
-                id_empresa: jaba.id_empresa, // ✅ agregamos id_empresa (requerido)
             });
             toast.success('Devolución registrada correctamente');
             onSaved();

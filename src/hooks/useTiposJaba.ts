@@ -13,8 +13,9 @@ export const useTiposJaba = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<TipoJaba[]>('tipos-jaba');
-            setTiposJaba(data);
+            const data = await fetchWithAuth<any>('tipos-jaba');
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setTiposJaba(list);
         } catch (err) {
             setError(err);
         } finally {

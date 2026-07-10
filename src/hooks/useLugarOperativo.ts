@@ -13,9 +13,10 @@ export const useLugarOperativo = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<LugarOperativo[]>('lugares-operativos');
-            setLugares(data);
-            return data;
+            const data = await fetchWithAuth<any>('lugares-operativos');
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setLugares(list);
+            return list;
         } catch (err) {
             setError(err);
             throw err;

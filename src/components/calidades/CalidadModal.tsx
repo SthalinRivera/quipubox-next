@@ -1,4 +1,3 @@
-// components/calidades/CalidadModal.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -9,14 +8,12 @@ import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
-import Select from '@/components/form/Select';
 import { useCalidades } from '@/hooks/useCalidades';
-import { useEmpresas } from '@/hooks/useEmpresas';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import type { Calidad } from '@/types/calidad';
 
 const calidadSchema = z.object({
-    id_empresa: z.number().min(1, 'Debes seleccionar una empresa'),
     nombre: z.string().min(1, 'El nombre es obligatorio'),
     descripcion: z.string().optional(),
     estado: z.boolean().default(true),
@@ -33,8 +30,8 @@ interface CalidadModalProps {
 
 export function CalidadModal({ isOpen, onClose, editingCalidad, onSaved }: CalidadModalProps) {
     const { create, update } = useCalidades();
-    const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const toast = useToast();
+    const user = useAuthStore((s) => s.user);
 
     const {
         control,
@@ -43,38 +40,32 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSaved }: Calid
         formState: { errors, isSubmitting, isValid },
     } = useForm<CalidadFormData>({
         resolver: zodResolver(calidadSchema) as any,
-        defaultValues: { id_empresa: 0, nombre: '', descripcion: '', estado: true },
+        defaultValues: { nombre: '', descripcion: '', estado: true },
         mode: 'onChange',
     });
-
-    useEffect(() => {
-        if (isOpen) fetchEmpresas();
-    }, [isOpen, fetchEmpresas]);
 
     useEffect(() => {
         if (isOpen) {
             if (editingCalidad) {
                 reset({
-                    id_empresa: editingCalidad.id_empresa,
                     nombre: editingCalidad.nombre,
                     descripcion: editingCalidad.descripcion || '',
                     estado: editingCalidad.estado,
                 });
             } else {
-                reset({ id_empresa: 0, nombre: '', descripcion: '', estado: true });
+                reset({ nombre: '', descripcion: '', estado: true });
             }
         }
     }, [isOpen, editingCalidad, reset]);
 
-    const empresasOptions = empresas.map(emp => ({
-        value: emp.id_empresa.toString(),
-        label: emp.razon_social,
-    }));
-
     const onSubmit = async (data: CalidadFormData) => {
+        if (!user?.id_empresa) {
+            toast.error('No se pudo determinar la empresa del usuario');
+            return;
+        }
         try {
             const payload = {
-                id_empresa: data.id_empresa,
+                id_empresa: user.id_empresa,
                 nombre: data.nombre,
                 descripcion: data.descripcion?.trim() === '' ? null : (data.descripcion || null),
                 estado: data.estado,
@@ -106,26 +97,6 @@ export function CalidadModal({ isOpen, onClose, editingCalidad, onSaved }: Calid
                 </p>
 
                 <div className="space-y-4">
-                    {/* Empresa */}
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">
-                            Empresa <span className="text-error-500">*</span>
-                        </Label>
-                        <Controller
-                            name="id_empresa"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    options={empresasOptions}
-                                    placeholder="Seleccionar empresa"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
-                                />
-                            )}
-                        />
-                        {errors.id_empresa && <p className="mt-1 text-xs text-error-500">{errors.id_empresa.message}</p>}
-                    </div>
-
                     {/* Nombre */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">

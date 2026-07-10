@@ -10,12 +10,11 @@ import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import Select from '@/components/form/Select';
 import { useTiposJaba } from '@/hooks/useTiposJaba';
-import { useEmpresas } from '@/hooks/useEmpresas';
 import { useToast } from '@/hooks/useToast';
+import { useAuthStore } from '@/stores/authStore';
 import type { TipoJaba } from '@/types/tipoJaba';
 
 const tipoJabaSchema = z.object({
-    id_empresa: z.number().min(1, 'Debes seleccionar una empresa'),
     nombre: z.string().min(1, 'El nombre es obligatorio'),
     tipo_material: z.enum(['madera', 'plastico']).optional(),
     descripcion: z.string().optional(),
@@ -33,8 +32,8 @@ interface TipoJabaModalProps {
 
 export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: TipoJabaModalProps) {
     const { create, update } = useTiposJaba();
-    const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
     const toast = useToast();
+    const user = useAuthStore((s) => s.user);
 
     const {
         control,
@@ -44,7 +43,6 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
     } = useForm<TipoJabaFormData>({
         resolver: zodResolver(tipoJabaSchema) as any,
         defaultValues: {
-            id_empresa: 0,
             nombre: '',
             tipo_material: undefined,
             descripcion: '',
@@ -54,35 +52,19 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
     });
 
     useEffect(() => {
-        if (open) fetchEmpresas();
-    }, [open, fetchEmpresas]);
-
-    useEffect(() => {
         if (open) {
             if (editingTipo) {
                 reset({
-                    id_empresa: editingTipo.id_empresa,
                     nombre: editingTipo.nombre,
                     tipo_material: editingTipo.tipo_material as 'madera' | 'plastico' | undefined,
                     descripcion: editingTipo.descripcion || '',
                     estado: editingTipo.estado,
                 });
             } else {
-                reset({
-                    id_empresa: 0,
-                    nombre: '',
-                    tipo_material: undefined,
-                    descripcion: '',
-                    estado: true,
-                });
+                reset({ nombre: '', tipo_material: undefined, descripcion: '', estado: true });
             }
         }
     }, [open, editingTipo, reset]);
-
-    const empresasOptions = empresas.map(emp => ({
-        value: emp.id_empresa.toString(),
-        label: emp.razon_social,
-    }));
 
     const materialOptions = [
         { value: 'madera', label: 'Madera' },
@@ -90,9 +72,13 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
     ];
 
     const onSubmit = async (data: TipoJabaFormData) => {
+        if (!user?.id_empresa) {
+            toast.error('No se pudo determinar la empresa del usuario');
+            return;
+        }
         try {
             const payload = {
-                id_empresa: data.id_empresa,
+                id_empresa: user.id_empresa,
                 nombre: data.nombre,
                 tipo_material: data.tipo_material,
                 descripcion: data.descripcion?.trim() === '' ? null : (data.descripcion || null),
@@ -125,27 +111,6 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                 </p>
 
                 <div className="space-y-4">
-                    {/* Empresa */}
-                    <div>
-                        <Label className="text-gray-700 dark:text-gray-300">
-                            Empresa <span className="text-error-500">*</span>
-                        </Label>
-                        <Controller
-                            name="id_empresa"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    options={empresasOptions}
-                                    placeholder="Seleccionar empresa"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
-                                />
-                            )}
-                        />
-                        {errors.id_empresa && <p className="mt-1 text-xs text-error-500">{errors.id_empresa.message}</p>}
-                    </div>
-
-                    {/* Nombre */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
                             Nombre <span className="text-error-500">*</span>
@@ -158,7 +123,6 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                         {errors.nombre && <p className="mt-1 text-xs text-error-500">{errors.nombre.message}</p>}
                     </div>
 
-                    {/* Tipo de material */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Tipo de material</Label>
                         <Controller
@@ -175,7 +139,6 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                         />
                     </div>
 
-                    {/* Descripción */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">Descripción</Label>
                         <Controller
@@ -185,7 +148,6 @@ export function TipoJabaModal({ open, onOpenChange, editingTipo, onSaved }: Tipo
                         />
                     </div>
 
-                    {/* Estado (checkbox) */}
                     <div className="flex items-center gap-2">
                         <Controller
                             name="estado"

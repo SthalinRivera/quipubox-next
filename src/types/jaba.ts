@@ -1,11 +1,11 @@
 export interface JabaPorPagar {
     id_jaba_pagar: number;
     id_empresa: number;
-    id_detalle_carga: number;
+    id_entrega?: number | null;
     id_cliente_emisor: number;
     id_tipo_jaba: number;
     fecha_origen: string;
-    cantidad_debida: number;
+    cantidad_original: number;
     cantidad_pagada: number;
     saldo_pendiente: number;
     estado: 'pendiente' | 'parcial' | 'completado' | 'observado' | 'anulado';
@@ -19,12 +19,9 @@ export interface JabaPorCobrar {
     id_jaba_cobrar: number;
     id_empresa: number;
     id_entrega: number;
-    id_item_reparto?: number;
-    id_cliente_receptor: number;
-    id_puesto?: number;
     id_tipo_jaba: number;
     fecha_origen: string;
-    cantidad_debida: number;
+    cantidad_original: number;
     cantidad_recuperada: number;
     saldo_pendiente: number;
     estado: 'pendiente' | 'parcial' | 'completado' | 'observado' | 'anulado';

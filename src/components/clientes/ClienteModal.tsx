@@ -51,9 +51,9 @@ interface PuestoAsignado {
 const SECCIONES = ['A', 'B', 'C'];
 const seccionOptions = SECCIONES.map(s => ({ value: s, label: `Sección ${s}` }));
 const tipoRelacionOptions = [
-    { value: 'emisor', label: '📤 Emisor' },
-    { value: 'receptor', label: '📥 Receptor' },
-    { value: 'ambos', label: '🔄 Ambos' },
+    { value: 'emisor', label: 'Emisor' },
+    { value: 'receptor', label: 'Receptor' },
+    { value: 'ambos', label: 'Ambos' },
 ];
 
 interface Props {
@@ -418,7 +418,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                                 )}
                             </div>
                             <div className="border-t pt-4 dark:border-gray-700">
-                                <Label className="mb-2 block">➕ Agregar nueva sede</Label>
+                                <Label className="mb-2 block">Agregar nueva sede</Label>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <Select
                                         options={sedesDisponibles.map(s => ({ value: s.id_sede.toString(), label: s.nombre }))}
@@ -440,7 +440,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                     {step === 3 && (
                         <div className="space-y-5">
                             <div>
-                                <Label className="text-base font-semibold">🏬 Puestos asignados</Label>
+                                <Label className="text-base font-semibold">Puestos asignados</Label>
                                 {cargandoPuestos ? (
                                     <p className="text-sm text-gray-500">Cargando...</p>
                                 ) : (
@@ -470,7 +470,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                                 </div>
                             ) : (
                                 <div className="border-t pt-4 dark:border-gray-700">
-                                    <Label className="mb-2 block">➕ Asignar nuevo puesto</Label>
+                                    <Label className="mb-2 block">Asignar nuevo puesto</Label>
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                         <Select
                                             options={sedesAsignadasOpciones}
@@ -500,7 +500,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                                         size="sm"
                                         onClick={agregarPuesto}
                                         className="mt-2 w-full"
-                                        disabled={!selectedSedeId || !selectedMercadoId || !selectedPuestoId || !selectedSeccion}
+                                        disabled={!selectedSedeId || !selectedMercadoId || !selectedPuestoId}
                                     >
                                         <Plus className="w-4 h-4 mr-1" /> Agregar puesto
                                     </Button>

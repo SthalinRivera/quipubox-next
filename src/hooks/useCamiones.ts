@@ -13,8 +13,9 @@ export const useCamiones = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Camion[]>('camiones');
-            setCamiones(data);
+            const data = await fetchWithAuth<any>('camiones');
+            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            setCamiones(list);
         } catch (err) {
             setError(err);
         } finally {

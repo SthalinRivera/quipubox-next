@@ -168,7 +168,7 @@ export default function NuevoDetallePage() {
                 method: 'POST',
                 body: payload,
             });
-            toast.success('Detalle creado');
+            toast.success(form.es_reparto ? 'Detalle creado' : 'Detalle creado — vaya a Items de Reparto para generar la guía');
             if (form.es_reparto) {
                 router.push(`/dashboard/operaciones-carga/${operacionId}/detalles/${newDetalle.id_detalle_carga}/calidades`);
             } else {

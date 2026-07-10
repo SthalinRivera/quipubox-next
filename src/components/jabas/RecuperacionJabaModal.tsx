@@ -52,9 +52,8 @@ export function RecuperacionJabaModal({
                 id_jaba_cobrar: jaba.id_jaba_cobrar,
                 cantidad,
                 tipo_recuperacion: tipoRecuperacion,
-                fecha_recuperacion: new Date().toISOString().split('T')[0],
+                fecha_recuperacion: new Date().toISOString(),
                 observaciones: observaciones || undefined,
-                id_empresa: jaba.id_empresa, // ✅ propiedad agregada
             });
             toast.success('Recuperación registrada correctamente');
             onSaved();
@@ -75,7 +74,7 @@ export function RecuperacionJabaModal({
 
                 <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Receptor: <strong>{jaba?.clientes?.nombres || 'N/A'}</strong>
+                        Receptor: <strong>{(jaba as any)?.entregas?.items_reparto?.clientes?.nombres || 'N/A'}</strong>
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         Saldo pendiente: <strong>{jaba?.saldo_pendiente || 0}</strong> jabas

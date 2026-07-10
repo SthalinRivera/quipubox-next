@@ -37,7 +37,7 @@ export default function ItemsRepartoPage() {
         fetchPendientes();
     }, [fetchItems, fetchPendientes]);
 
-    const handleAsignar = (detalle: any) => {
+    const handleRepartir = (detalle: any) => {
         setSelectedDetalle(detalle);
         openModal();
     };
@@ -49,13 +49,12 @@ export default function ItemsRepartoPage() {
         fetchPendientes();
     };
 
-    const handleGenerarGuia = async (item: any) => {
-        const operacionId = item.detalle_carga?.id_operacion;
+    const handleGenerarGuiaPorPuesto = async (operacionId: number) => {
         if (!operacionId) {
             toast.error('No se puede generar guía: falta operación');
             return;
         }
-        setGenerating(item.id_item_reparto);
+        setGenerating(operacionId);
         try {
             await fetchWithAuth(`operaciones-carga/${operacionId}/generar-guias`, { method: 'POST' });
             toast.success('Guías generadas correctamente');
@@ -78,12 +77,16 @@ export default function ItemsRepartoPage() {
         );
     });
 
-    const itemsAgrupadosPorPuesto = items.reduce((acc, item) => {
-        const key = item.id_puesto;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(item);
+    const itemsPorOperacionYPuesto = items.reduce((acc, item) => {
+        const itemAny = item as any;
+        const op = itemAny.detalle_carga?.operaciones_carga;
+        const opId = op?.id_operacion ?? 'sin-operacion';
+        if (!acc[opId]) acc[opId] = { operacion: op, puestos: {} };
+        const puestoId = item.id_puesto;
+        if (!acc[opId].puestos[puestoId]) acc[opId].puestos[puestoId] = [];
+        acc[opId].puestos[puestoId].push(item);
         return acc;
-    }, {} as Record<number, typeof items>);
+    }, {} as Record<string, { operacion: any; puestos: Record<number, typeof items> }>);
 
     if (loading && items.length === 0 && pendientes.length === 0) {
         return (
@@ -124,7 +127,7 @@ export default function ItemsRepartoPage() {
                         `}
                     >
                         <ClipboardList className="w-4 h-4" />
-                        Pendientes de Asignación
+                        Pendientes de Reparto
                         {pendientes.length > 0 && (
                             <span className="ml-1 bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 text-xs font-medium px-2 py-0.5 rounded-full">
                                 {pendientes.length}
@@ -142,7 +145,7 @@ export default function ItemsRepartoPage() {
                         `}
                     >
                         <CheckCircle className="w-4 h-4" />
-                        Items Asignados
+                        Items Repartidos
                         {items.length > 0 && (
                             <span className="ml-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs font-medium px-2 py-0.5 rounded-full">
                                 {items.length}
@@ -222,10 +225,10 @@ export default function ItemsRepartoPage() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => handleAsignar(det)}
+                                                        onClick={() => handleRepartir(det)}
                                                         className="text-brand-600 border-brand-200 hover:bg-brand-50 dark:text-brand-400 dark:border-brand-800 dark:hover:bg-brand-900/20"
                                                     >
-                                                        <Plus className="w-4 h-4 mr-1" /> Asignar
+                                                        <Plus className="w-4 h-4 mr-1" /> Repartir
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -240,105 +243,108 @@ export default function ItemsRepartoPage() {
 
             {/* TAB ASIGNADOS */}
             {activeTab === 'asignados' && (
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-                    <div className="max-w-full overflow-x-auto">
-                        <div className="min-w-[700px]">
-                            <Table>
-                                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                                    <TableRow>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Puesto</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID Item</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Cliente Receptor</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Cantidad</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Operación</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Camión</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Sede Origen</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Guía</TableCell>
-                                        <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Acciones</TableCell>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                                    {Object.keys(itemsAgrupadosPorPuesto).length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                                                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                                                No hay items asignados
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        Object.entries(itemsAgrupadosPorPuesto).map(([puestoId, itemsGrupo]) => {
-                                            const primerItem = itemsGrupo[0] as any;
-                                            const puestoInfo = primerItem?.puestos;
-                                            const lugarNombre = puestoInfo?.lugares_operativos?.nombre || '';
-
-                                            return (
-                                                <React.Fragment key={puestoId}>
-                                                    {itemsGrupo.map((item, index) => {
-                                                        const itemAny = item as any;
-                                                        const op = itemAny.detalle_carga?.operaciones_carga;
-                                                        const guia = itemAny.guia_asociada;
-                                                        const tieneGuia = !!guia;
-                                                        const isFirst = index === 0;
-
-                                                        return (
-                                                            <TableRow key={item.id_item_reparto}>
-                                                                {isFirst && (
-                                                                    <TableCell
-                                                                        rowSpan={itemsGrupo.length} // ✅ Ahora es válido
-                                                                        className="px-5 py-4 align-top border-r border-gray-100 dark:border-white/[0.05] text-gray-800 dark:text-white/90"
-                                                                    >
-                                                                        <div className="font-medium">{puestoInfo?.numero_puesto || '—'}</div>
-                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{lugarNombre}</div>
-                                                                    </TableCell>
-                                                                )}
-                                                                <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.id_item_reparto}</TableCell>
-                                                                <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                                    {item.clientes ? `${item.clientes.nombres} ${item.clientes.apellidos || ''}` : '—'}
-                                                                </TableCell>
-                                                                <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.cantidad_asignada}</TableCell>
-                                                                <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">#{op?.id_operacion || 'N/A'}</TableCell>
-                                                                <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{op?.camiones?.placa || 'N/A'}</TableCell>
-                                                                <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                                                                    {op?.sedes_operaciones_carga_id_sede_origenTosedes?.nombre || 'N/A'}
-                                                                </TableCell>
-                                                                <TableCell className="px-5 py-4">
-                                                                    {tieneGuia ? (
-                                                                        <Link
-                                                                            href={`/dashboard/guias-operativas/${guia.id_guia}`}
-                                                                            className="text-brand-600 hover:underline dark:text-brand-400 font-medium"
-                                                                        >
-                                                                            {guia.numero_guia}
-                                                                        </Link>
-                                                                    ) : (
-                                                                        <span className="text-gray-400 dark:text-gray-500">Sin guía</span>
-                                                                    )}
-                                                                </TableCell>
-                                                                <TableCell className="px-5 py-4">
-                                                                    <div className="flex items-center gap-3">
-
-                                                                        {!tieneGuia && (
-                                                                            <button
-                                                                                onClick={() => handleGenerarGuia(item)}
-                                                                                disabled={generating === item.id_item_reparto}
-                                                                                className="text-gray-500 transition-colors hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                title="Generar guía"
-                                                                            >
-                                                                                <FileText className="h-5 w-5" />
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        );
-                                                    })}
-                                                </React.Fragment>
-                                            );
-                                        })
-                                    )}
-                                </TableBody>
-                            </Table>
+                    <div className="space-y-8">
+                    {Object.keys(itemsPorOperacionYPuesto).length === 0 ? (
+                        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+                            <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                                No hay items asignados
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        Object.entries(itemsPorOperacionYPuesto).map(([opId, { operacion, puestos }]) => (
+                            <div key={opId} className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+                                {/* Encabezado de Operación */}
+                                <div className="flex flex-wrap items-center gap-4 px-5 py-4 bg-gray-50 dark:bg-white/[0.04] border-b border-gray-200 dark:border-white/[0.05]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            Operación #{operacion?.id_operacion || opId}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                        <span className="flex items-center gap-1">
+                                            Camión: <span className="font-medium text-gray-700 dark:text-gray-300">{operacion?.camiones?.placa || 'N/A'}</span>
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            Origen: <span className="font-medium text-gray-700 dark:text-gray-300">{operacion?.sedes_operaciones_carga_id_sede_origenTosedes?.nombre || 'N/A'}</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="max-w-full overflow-x-auto">
+                                    <div className="min-w-[700px]">
+                                        <Table>
+                                            <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                                                <TableRow>
+                                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Puesto</TableCell>
+                                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Cliente Receptor</TableCell>
+                                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Cantidades</TableCell>
+                                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Guía</TableCell>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                                                {Object.entries(puestos).map(([puestoId, itemsGrupo]) => {
+                                                    const primerItem = itemsGrupo[0] as any;
+                                                    const puestoInfo = primerItem?.puestos;
+                                                    const lugarNombre = puestoInfo?.lugares_operativos?.nombre || '';
+                                                    const itemConGuia = itemsGrupo.find((item: any) => (item as any).guia_asociada);
+                                                    const tieneGuia = !!itemConGuia;
+                                                    const guia = (itemConGuia as any)?.guia_asociada;
+                                                    const operacionId = operacion?.id_operacion;
+
+                                                    return (
+                                                        <TableRow key={puestoId}>
+                                                            <TableCell className="px-5 py-4">
+                                                                <div className="font-medium text-gray-900 dark:text-white">{puestoInfo?.numero_puesto || '—'}</div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400">{lugarNombre}</div>
+                                                            </TableCell>
+                                                            <TableCell className="px-5 py-4">
+                                                                <div className="space-y-1">
+                                                                    {itemsGrupo.map((item: any) => (
+                                                                        <div key={item.id_item_reparto} className="text-sm text-gray-700 dark:text-gray-300">
+                                                                            {item.clientes ? `${item.clientes.nombres} ${item.clientes.apellidos || ''}` : '—'}
+                                                                            <span className="text-gray-400 dark:text-gray-500 ml-1">
+                                                                                ({item.cantidad_asignada} jabas)
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="px-5 py-4">
+                                                                <div className="text-sm text-gray-700 dark:text-gray-300">
+                                                                    {itemsGrupo.reduce((sum: number, item: any) => sum + (item.cantidad_asignada || 0), 0)} jabas totales
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="px-5 py-4">
+                                                                {tieneGuia ? (
+                                                                    <Link
+                                                                        href={`/dashboard/guias-operativas/${guia.id_guia}`}
+                                                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                    >
+                                                                        <FileText className="w-4 h-4" />
+                                                                        {guia.numero_guia}
+                                                                    </Link>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleGenerarGuiaPorPuesto(operacionId)}
+                                                                        disabled={generating === operacionId}
+                                                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                                                                    >
+                                                                        <FileText className="w-4 h-4" />
+                                                                        {generating === operacionId ? 'Generando...' : 'Generar guía'}
+                                                                    </button>
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
 

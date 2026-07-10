@@ -1,4 +1,3 @@
-// hooks/useJabasPorCobrar.ts
 import { useCallback, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
 import { useJabasPorCobrarStore } from '@/stores/jabasPorCobrarStore';
@@ -14,12 +13,9 @@ export const useJabasPorCobrar = () => {
         setError(null);
         try {
             const data = await fetchWithAuth<any>('jabas/por-cobrar');
-            console.log('🔍 Respuesta de jabas/por-cobrar:', data); // <-- LOG
-            // Si la respuesta viene envuelta en { data: [...] } o { items: [...] }
             const list = Array.isArray(data) ? data : data?.data || data?.items || [];
             setJabas(list);
         } catch (err: any) {
-            console.error('❌ Error en fetchAll:', err);
             setError(err);
             setJabas([]);
         } finally {
@@ -33,11 +29,9 @@ export const useJabasPorCobrar = () => {
                 method: 'POST',
                 body: payload,
             });
-            // Después de crear, refrescar la lista (o actualizar localmente)
             await fetchAll();
             return result;
         } catch (err) {
-            console.error('❌ Error en registrarRecuperacion:', err);
             throw err;
         }
     }, [fetchAll]);
@@ -51,11 +45,9 @@ export const useJabasPorCobrar = () => {
                     body: { estado: nuevoEstado },
                 }
             );
-            // Actualizar localmente
             updateJaba(id, updated);
             return updated;
         } catch (err) {
-            console.error('❌ Error en cambiarEstado:', err);
             throw err;
         }
     }, [updateJaba]);

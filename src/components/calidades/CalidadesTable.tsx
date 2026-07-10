@@ -1,4 +1,3 @@
-// components/calidades/CalidadesTable.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -19,6 +18,7 @@ import { PencilIcon, PlusIcon, SearchIcon } from '@/icons';
 import type { Calidad } from '@/types/calidad';
 import { Power, Play } from 'lucide-react';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
+
 export default function CalidadesTable() {
     const { calidades, loading, fetchAll, toggleEstado } = useCalidades();
     const toast = useToast();
@@ -28,7 +28,6 @@ export default function CalidadesTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ calidad: Calidad; nuevoEstado: boolean } | null>(null);
 
-    // Carga inicial
     useEffect(() => {
         fetchAll();
     }, [fetchAll]);
@@ -63,14 +62,13 @@ export default function CalidadesTable() {
     };
 
     const handleSaved = () => {
-        // Solo cierra el modal – el estado local ya se actualizó en el hook
         setIsModalOpen(false);
     };
 
     if (loading) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
+                <TableSkeleton columns={5} rows={5} showActionButton={true} />;
             </div>
         );
     }
@@ -101,12 +99,11 @@ export default function CalidadesTable() {
             {/* Tabla */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
                 <div className="max-w-full overflow-x-auto">
-                    <div className="min-w-[700px]">
+                    <div className="min-w-[600px]">
                         <Table>
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Empresa</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Descripción</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Estado</TableCell>
@@ -116,7 +113,7 @@ export default function CalidadesTable() {
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                                 {filteredCalidades.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <TableCell colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                             No hay calidades registradas.
                                         </TableCell>
                                     </TableRow>
@@ -124,9 +121,6 @@ export default function CalidadesTable() {
                                     filteredCalidades.map((calidad) => (
                                         <TableRow key={calidad.id_calidad}>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{calidad.id_calidad}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {calidad.empresas?.razon_social || '—'}
-                                            </TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{calidad.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{calidad.descripcion || '—'}</TableCell>
                                             <TableCell className="px-5 py-4">

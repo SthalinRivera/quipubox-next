@@ -100,7 +100,6 @@ export default function TiposJabaTable() {
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Empresa</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Material</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Descripción</TableCell>
@@ -111,7 +110,7 @@ export default function TiposJabaTable() {
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                                 {filteredTipos.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                        <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
                                             No hay tipos de jaba registrados.
                                         </TableCell>
                                     </TableRow>
@@ -119,7 +118,6 @@ export default function TiposJabaTable() {
                                     filteredTipos.map((tipo) => (
                                         <TableRow key={tipo.id_tipo_jaba}>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{tipo.id_tipo_jaba}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{tipo.empresas?.razon_social || '—'}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{tipo.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{tipo.tipo_material || '—'}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{tipo.descripcion || '—'}</TableCell>
