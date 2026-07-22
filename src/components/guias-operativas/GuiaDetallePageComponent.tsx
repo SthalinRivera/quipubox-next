@@ -9,8 +9,9 @@ import Button from '@/components/ui/button/Button';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { formatDate } from '@/utils/date';
 import { RegistrarEntregaModal } from '@/components/entregas/RegistrarEntregaModal';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { PDFViewer } from '@react-pdf/renderer';
 import { GuiaPDF } from './GuiaPDF';
+import { Modal } from '@/components/ui/modal';
 
 type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark';
 
@@ -33,6 +34,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
     const [guia, setGuia] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [entregaModalOpen, setEntregaModalOpen] = useState(false);
+    const [showPdfModal, setShowPdfModal] = useState(false);
 
     const fetchGuia = async () => {
         try {
@@ -152,19 +154,15 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
     const formatHora = (hora: any): string => {
         if (!hora) return '—';
         if (typeof hora === 'string') {
-            // Si contiene "T", es un datetime completo tipo ISO
             if (hora.includes('T')) {
                 const timePart = hora.split('T')[1];
                 return timePart ? timePart.slice(0, 5) : '—';
             }
-            // Si empieza con dígitos y tiene guión, podría ser "1970-01-01..." sin T
             if (/^\d{4}-/.test(hora)) {
-                // Intentar extraer hora de un formato como "1970-01-01 14:30:00"
                 const parts = hora.split(' ');
                 if (parts.length > 1) return parts[1].slice(0, 5);
                 return '—';
             }
-            // Si es solo hora "14:30:00" o "14:30"
             return hora.slice(0, 5);
         }
         if (hora instanceof Date) return hora.toTimeString().slice(0, 5);
@@ -183,17 +181,10 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                     <ArrowLeft className="w-4 h-4 mr-2" /> Volver
                 </Button>
                 <div className="flex flex-wrap gap-2">
-                    <PDFDownloadLink
-                        document={<GuiaPDF guia={guia} empresa={guia.empresas} logoUrl="/logo.png" />}
-                        fileName={`guia-${guia.numero_guia}.pdf`}
-                    >
-                        {({ loading }) => (
-                            <Button size="sm" variant="outline" disabled={loading}>
-                                <Printer className="w-4 h-4 mr-2" />
-                                {loading ? 'Generando...' : 'Imprimir'}
-                            </Button>
-                        )}
-                    </PDFDownloadLink>
+                    <Button size="sm" variant="outline" onClick={() => setShowPdfModal(true)}>
+                        <Printer className="w-4 h-4 mr-2" />
+                        Imprimir
+                    </Button>
                     {puedeFirmar && (
                         <Button size="sm" onClick={handleFirmar}>
                             Firmar guía
@@ -393,6 +384,22 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                 guia={guia}
                 onSaved={fetchGuia}
             />
+
+            <Modal isOpen={showPdfModal} onClose={() => setShowPdfModal(false)} className="max-w-[320px] p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-medium text-gray-800 dark:text-white/90">
+                        Guía #{guia.numero_guia}
+                    </h4>
+                    <Button size="sm" variant="outline" onClick={() => setShowPdfModal(false)}>
+                        Cerrar
+                    </Button>
+                </div>
+                <div className="flex justify-center bg-gray-100 dark:bg-gray-800 p-3">
+                    <PDFViewer width={226} height={550} showToolbar={false}>
+                        <GuiaPDF guia={guia} empresa={guia.empresas} logoUrl="/logo.png" />
+                    </PDFViewer>
+                </div>
+            </Modal>
         </div>
     );
 }

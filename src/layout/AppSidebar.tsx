@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -18,10 +18,8 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
-import { useAuthStore } from "@/stores/authStore"; // <-- Importa tu store
-export const dynamic = 'force-dynamic';  // ← Agrega esta línea
+import { useAuthStore } from "@/stores/authStore";
 
-// --- Definición de tipos y menús (sin cambios, los mismos que tenías) ---
 type NavItem = {
   name: string;
   icon: React.ReactNode;
@@ -29,151 +27,37 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const fase1: NavItem = {
-  name: "Base del sistema",
-  icon: <GridIcon />,
-  subItems: [
-    { name: "Empresas", path: "/dashboard/empresas" },
-    { name: "Sedes", path: "/dashboard/sedes" },
-    { name: "Roles de usuarios", path: "/dashboard/roles" },
-    { name: "Usuarios", path: "/dashboard/usuarios" },
-    { name: "Clientes", path: "/dashboard/clientes" },
-    { name: "Frutas", path: "/dashboard/frutas" },
-    { name: "Variedades", path: "/dashboard/variedades" },
-    { name: "Calidades", path: "/dashboard/calidades" },
-    { name: "Tipos de jaba", path: "/dashboard/tipos-jaba" },
-    { name: "Camiones", path: "/dashboard/camiones" },
-  ],
+// Mapeo de rutas a iconos
+const iconMap: Record<string, React.ReactNode> = {
+  '/dashboard/empresas': <GridIcon />,
+  '/dashboard/sedes': <ListIcon />,
+  '/dashboard/roles': <UserCircleIcon />,
+  '/dashboard/usuarios': <UserCircleIcon />,
+  '/dashboard/clientes': <UserCircleIcon />,
+  '/dashboard/frutas': <GridIcon />,
+  '/dashboard/variedades': <GridIcon />,
+  '/dashboard/calidades': <GridIcon />,
+  '/dashboard/tipos-jaba': <BoxCubeIcon />,
+  '/dashboard/camiones': <BoxCubeIcon />,
+  '/dashboard/lugares-operativos': <ListIcon />,
+  '/dashboard/puestos': <ListIcon />,
+  '/dashboard/clientes-puestos': <ListIcon />,
+  '/dashboard/operaciones-carga': <TableIcon />,
+  '/dashboard/operaciones-carga/nueva': <TableIcon />,
+  '/dashboard/items-reparto': <BoxCubeIcon />,
+  '/dashboard/guias-operativas': <BoxCubeIcon />,
+  '/dashboard/entregas': <BoxCubeIcon />,
+  '/dashboard/jabas': <PieChartIcon />,
+  '/dashboard/incidencias': <PlugInIcon />,
+  '/dashboard/evidencias': <PlugInIcon />,
+  '/dashboard/logs-actividad': <PlugInIcon />,
+  '/dashboard/configuracion': <PlugInIcon />,
 };
 
-const fase2: NavItem = {
-  name: "Ubicaciones",
-  icon: <ListIcon />,
-  subItems: [
-    { name: "Lugar Operativo", path: "/dashboard/lugares-operativos" },
-    { name: "Puestos", path: "/dashboard/puestos" },
-    { name: "Clientes-Puestos", path: "/dashboard/clientes-puestos" },
-  ],
-};
-
-const fase3: NavItem = {
-  name: "Operación principal",
-  icon: <TableIcon />,
-  subItems: [
-    { name: "Operaciones de carga", path: "/dashboard/operaciones-carga" },
-    { name: "Crear Nueva", path: "/dashboard/operaciones-carga/nueva" },
-  ],
-};
-
-const fase4: NavItem = {
-  name: "Reparto y entrega",
-  icon: <BoxCubeIcon />,
-  subItems: [
-    { name: "Itens Reparto", path: "/dashboard/items-reparto" },
-    { name: "Guías operativas", path: "/dashboard/guias-operativas" },
-    { name: "Entregas", path: "/dashboard/entregas" },
-  ],
-};
-
-const fase5: NavItem = {
-  name: "Jabas",
-  icon: <PieChartIcon />,
-  subItems: [
-    { name: "Jabas", path: "/dashboard/jabas" },
-    // { name: "Jabas por cobrar", path: "/dashboard/jabas-cobrar" },
-    // { name: "Recuperaciones de jabas", path: "/dashboard/recuperaciones-jabas" },
-    // { name: "Jabas por pagar", path: "/dashboard/jabas-pagar" },
-    // { name: "Devoluciones al emisor", path: "/dashboard/devoluciones-emisor" },
-  ],
-};
-
-const fase6: NavItem = {
-  name: "Control",
-  icon: <PlugInIcon />,
-  subItems: [
-    { name: "Incidencias", path: "/dashboard/incidencias" },
-    { name: "Evidencias", path: "/dashboard/evidencias" },
-    { name: "Logs de actividad", path: "/dashboard/logs-actividad" },
-  ],
-};
-
-const mainNavItems: NavItem[] = [
-  {
-    name: "Dashboard",
-    icon: <GridIcon />,
-    path: "/dashboard",
-  },
-  fase1,
-  fase2,
-  fase3,
-  fase4,
-  fase5,
-  fase6,
-];
-
-const othersItems: NavItem[] = [
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/dashboard/calendar",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/dashboard/profile",
-  },
-];
-
-// --- Configuración de permisos por ruta ---
-type Role = 'administrador' | 'encargado_carga' | 'repartidor' | 'chofer' | 'estibador' | 'encargado_retorno' | 'Supervisor';
-
-const routePermissions: Record<string, Role[]> = {
-  '/dashboard/empresas': ['administrador'],
-  '/dashboard/sedes': ['administrador', 'Supervisor'],
-  '/dashboard/roles': ['administrador'],
-  '/dashboard/usuarios': ['administrador'],
-  '/dashboard/clientes': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/frutas': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/variedades': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/calidades': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/tipos-jaba': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/camiones': ['administrador', 'encargado_carga', 'chofer', 'Supervisor'],
-  '/dashboard/lugares-operativos': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/puestos': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/clientes-puestos': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/operaciones-carga': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/operaciones-carga/nueva': ['administrador', 'encargado_carga', 'Supervisor'],
-  '/dashboard/items-reparto': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
-  '/dashboard/guias-operativas': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'Supervisor'],
-
-  '/dashboard/entregas': ['administrador', 'encargado_carga', 'repartidor', 'Supervisor'],
-  '/dashboard/jabas': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
-  '/dashboard/jabas-cobrar': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
-  '/dashboard/recuperaciones-jabas': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
-  '/dashboard/jabas-pagar': ['administrador', 'encargado_retorno', 'Supervisor', 'encargado_carga'],
-  '/dashboard/devoluciones-emisor': ['administrador', 'encargado_retorno', 'Supervisor','encargado_carga'],
-  '/dashboard/incidencias': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/evidencias': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/logs-actividad': ['administrador', 'Supervisor'],
-  // Opcional: dashboard, calendar y profile a quién se lo muestras? A todos los autenticados.
-  '/dashboard': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/calendar': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
-  '/dashboard/profile': ['administrador', 'encargado_carga', 'repartidor', 'chofer', 'estibador', 'encargado_retorno', 'Supervisor'],
-};
-
-// ============================================================
-// COMPONENTE PRINCIPAL
-// ============================================================
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
-  const { hasRole } = useAuthStore(); // <-- obtener función de verificación
-
-  const isPathAllowed = (path: string) => {
-    const allowedRoles = routePermissions[path];
-    if (!allowedRoles) return false; // si no está definido, no mostrar (puedes cambiarlo a true si quieres que sea público)
-    return hasRole(allowedRoles);
-  };
+  const { hasRole, hasModulo, modulos } = useAuthStore();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -184,7 +68,96 @@ const AppSidebar: React.FC = () => {
 
   const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
-  // Abrir automáticamente el submenú si la ruta actual coincide con algún subItem
+  // Construir menú dinámicamente desde los módulos del usuario
+  const { mainNavItems, othersItems } = useMemo(() => {
+    // Agrupar módulos por categoría
+    const categoriasMap = new Map<string, { nombre: string; orden: number; modulos: typeof modulos }>();
+
+    for (const modulo of modulos) {
+      if (!modulo.estado) continue;
+      const catNombre = modulo.categoria.nombre;
+      const catOrden = modulo.categoria.orden || 0;
+      if (!categoriasMap.has(catNombre)) {
+        categoriasMap.set(catNombre, { nombre: catNombre, orden: catOrden, modulos: [] });
+      }
+      categoriasMap.get(catNombre)!.modulos.push(modulo);
+    }
+
+    // Iconos por defecto para categorías
+    const defaultIcons: React.ReactNode[] = [
+      <GridIcon />, <ListIcon />, <TableIcon />, <BoxCubeIcon />,
+      <PieChartIcon />, <PlugInIcon />, <UserCircleIcon />,
+    ];
+
+    // Construir nav items
+    const navItems: NavItem[] = [
+      {
+        name: "Dashboard",
+        icon: <GridIcon />,
+        path: "/dashboard",
+      },
+    ];
+
+    // Ordenar categorías por su campo 'orden' y agregar al menú
+    const sortedCategorias = Array.from(categoriasMap.values())
+      .sort((a, b) => a.orden - b.orden);
+
+    sortedCategorias.forEach((cat, idx) => {
+      const subItems = cat.modulos
+        .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+        .map((m) => ({
+          name: m.nombre,
+          path: m.ruta,
+        }));
+
+      if (subItems.length > 0) {
+        navItems.push({
+          name: cat.nombre,
+          icon: defaultIcons[idx % defaultIcons.length],
+          subItems,
+        });
+      }
+    });
+
+    // Agregar configuración solo para administradores
+    if (hasRole('administrador')) {
+      navItems.push({
+        name: "Configuración",
+        icon: <PlugInIcon />,
+        subItems: [
+          { name: "Categorías", path: "/dashboard/configuracion/categorias" },
+          { name: "Módulos", path: "/dashboard/configuracion/modulos" },
+          { name: "Permisos de roles", path: "/dashboard/configuracion/permisos" },
+        ],
+      });
+    }
+
+    const otherItems: NavItem[] = [
+      {
+        icon: <CalenderIcon />,
+        name: "Calendar",
+        path: "/dashboard/calendar",
+      },
+      {
+        icon: <UserCircleIcon />,
+        name: "User Profile",
+        path: "/dashboard/profile",
+      },
+    ];
+
+    return { mainNavItems: navItems, othersItems: otherItems };
+  }, [modulos, hasRole]);
+
+  // Verificar si una ruta está permitida
+  const isPathAllowed = (path: string) => {
+    // Dashboard y rutas base siempre permitidas
+    if (path === '/dashboard' || path === '/dashboard/calendar' || path === '/dashboard/profile') {
+      return true;
+    }
+    // Verificar si el usuario tiene el módulo
+    return hasModulo(path);
+  };
+
   useEffect(() => {
     let submenuMatched = false;
     const checkItems = (items: NavItem[], type: "main" | "others") => {
@@ -205,7 +178,7 @@ const AppSidebar: React.FC = () => {
     checkItems(mainNavItems, "main");
     checkItems(othersItems, "others");
     if (!submenuMatched) setOpenSubmenu(null);
-  }, [pathname, isActive]);
+  }, [pathname, isActive, mainNavItems, othersItems]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -225,9 +198,7 @@ const AppSidebar: React.FC = () => {
     );
   };
 
-  // Render de items con filtro de permisos
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => {
-    // Filtrar items que no tengan ningún subitem permitido (o el path principal si no es permitido)
     const filteredItems = navItems.filter(item => {
       if (item.subItems) {
         return item.subItems.some(sub => isPathAllowed(sub.path));
@@ -236,12 +207,12 @@ const AppSidebar: React.FC = () => {
       }
       return false;
     });
+
     const [mounted, setMounted] = useState(false);
     useEffect(() => {
       setMounted(true);
     }, []);
     if (!mounted) {
-      // Devuelve un placeholder vacío o un esqueleto para evitar hidratación
       return <aside className="fixed mt-16 ... w-[290px]" />;
     }
 
