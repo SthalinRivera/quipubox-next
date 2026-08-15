@@ -5,7 +5,7 @@ import FrutasTable from '@/components/frutas/FrutasTable';
 export default function FrutasPage() {
     return (
         <div>
-            <PageBreadcrumb pageTitle="Frutas (API real)" />
+            <PageBreadcrumb pageTitle="Frutas" />
             <div className="space-y-6">
                 <ComponentCard title="Listado de frutas desde backend">
                     <FrutasTable />

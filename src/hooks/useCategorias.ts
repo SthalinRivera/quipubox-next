@@ -55,6 +55,19 @@ export const useCategorias = () => {
         return actualizado;
     }, []);
 
+    const reorder = useCallback(async (items: { id_categoria: number; orden: number }[]) => {
+        setMutating(true);
+        try {
+            const data = await fetchWithAuth<Categoria[]>('categorias/reorder', {
+                method: 'PATCH',
+                body: { items },
+            });
+            setCategorias(data);
+        } finally {
+            setMutating(false);
+        }
+    }, []);
+
     const remove = useCallback(async (id: number) => {
         setMutating(true);
         try {
@@ -65,5 +78,5 @@ export const useCategorias = () => {
         }
     }, []);
 
-    return { categorias, loading, mutating, fetchAll, create, update, toggleEstado, remove };
+    return { categorias, loading, mutating, fetchAll, create, update, toggleEstado, reorder, remove };
 };
