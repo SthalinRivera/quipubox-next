@@ -2,21 +2,25 @@ import LandingPage from "@/components/landing/LandingPage";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "QuiPuBox — Gestión Logística y Distribución de Frutas | SaaS",
+  title: "QuipuBox — Gestión Logística, Transporte y Distribución de Frutas | SaaS",
   description:
-    "Plataforma SaaS para gestión logística, distribución y comercialización de frutas. Controla clientes, cargas, entregas, jabas, camiones y reportes en un solo lugar.",
+    "Sistema SaaS para gestionar el transporte y distribución de frutas. Controla cargas, guías, entregas, jabas, camiones, incidencias y reportes. Web + App móvil.",
   keywords: [
+    "gestión logística de frutas",
+    "transporte de frutas",
     "distribución de frutas",
-    "logística de frutas",
+    "control de cargas",
+    "guías de transporte",
     "gestión de jabas",
     "SaaS logística",
+    "app móvil repartidores",
     "control de entregas",
-    "plataforma de distribución",
+    "trazabilidad de cargas",
   ],
   openGraph: {
-    title: "QuiPuBox — Gestión Logística y Distribución de Frutas",
+    title: "QuipuBox — Gestión Logística, Transporte y Distribución de Frutas",
     description:
-      "La plataforma SaaS que centraliza clientes, sedes, frutas, camiones, cargas, entregas, jabas y reportes en un solo lugar.",
+      "La plataforma para gestionar el transporte y distribución de frutas. Sistema web y app móvil para empresas comercializadoras, distribuidoras y transportistas.",
     type: "website",
   },
 };

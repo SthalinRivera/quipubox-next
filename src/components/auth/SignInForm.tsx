@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
-import { ChevronLeftIcon } from '@/icons';
+import { ChevronLeftIcon } from '@/icons'; // Asegúrate de importar Home si lo tienes
 
 export default function SignInForm() {
   const { loginWithGoogle, loading } = useAuth();
@@ -33,11 +33,23 @@ export default function SignInForm() {
   }, [searchParams, toast]);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#17BEC0]/10 via-white to-[#17BEC0]/20 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+
+      {/* Botón para regresar al inicio */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white/80 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm backdrop-blur-sm transition hover:border-[#17BEC0] hover:text-[#17BEC0] dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-[#17BEC0] dark:hover:text-[#17BEC0]"
+        >
+          <ChevronLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+          Volver al inicio
+        </Link>
+      </div>
+
       <div className="flex w-full max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Columna izquierda - Branding (solo escritorio) */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 to-brand-800 dark:from-brand-700 dark:to-brand-900 p-8 flex-col justify-between relative overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#17BEC0] to-[#0e8e90] dark:from-[#0e8e90] dark:to-[#0a6a6c] p-8 flex-col justify-between relative overflow-hidden">
           {/* Patrón de fondo decorativo */}
           <div className="absolute inset-0 opacity-10">
             <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
@@ -86,7 +98,7 @@ export default function SignInForm() {
           {/* Logo móvil - visible solo en pantallas pequeñas */}
           <div className="lg:hidden flex items-center justify-center mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-[#17BEC0]/10 dark:bg-[#17BEC0]/20 rounded-xl flex items-center justify-center">
                 <Image
                   src="/images/logo/logo-icon.svg"
                   alt="QuipoBox"
@@ -100,8 +112,6 @@ export default function SignInForm() {
               </span>
             </div>
           </div>
-
-
 
           <div className="flex flex-col justify-center flex-1">
             <div className="mb-8 text-center">
@@ -149,12 +159,12 @@ export default function SignInForm() {
 
             <div className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
               Al iniciar sesión, aceptas nuestros{" "}
-              <Link href="/terms" className="underline hover:text-brand-500">
+              <Link href="/terms" className="underline transition hover:text-[#17BEC0]">
                 Términos
               </Link>{" "}
               y{" "}
-              <Link href="/privacy" className="underline hover:text-brand-500">
-                Política de privacidad
+              <Link href="/privacy" className="underline transition hover:text-[#17BEC0]">
+                Política de privacidads
               </Link>
             </div>
           </div>

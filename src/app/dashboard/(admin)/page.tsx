@@ -8,17 +8,10 @@ import { Loader2, PlusCircle, Package, Truck, ClipboardList, AlertTriangle, Cale
 import Link from 'next/link';
 import Button from '@/components/ui/button/Button';
 import ComponentCard from '@/components/common/ComponentCard';
-
-// Componentes del dashboard completo (solo para admin y supervisor)
-import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
-import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
-import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
-import StatisticsChart from "@/components/ecommerce/StatisticsChart";
-import RecentOrders from "@/components/ecommerce/RecentOrders";
-import DemographicCard from "@/components/ecommerce/DemographicCard";
 import { SkeletonDashboardContent } from '@/components/ui/skeleton/SkeletonDashboardContent';
+import { useDashboardGraficas, PeriodoType } from '@/hooks/useDashboardGraficas';
+import { OperacionesChart, JabasChart, GuiasChart, EntregasChart, IncidenciasChart } from '@/components/dashboard-charts';
 
-// Interfaz para los datos del dashboard (endpoint /dashboard)
 interface DashboardStats {
   operacionesHoy: number;
   operacionesEnCurso: number;
@@ -29,15 +22,14 @@ interface DashboardStats {
   entregasHoy: number;
 }
 
-// Definir prioridad de roles
 const rolePriority: Record<string, number> = {
-  'administrador': 100,
-  'Supervisor': 80,
-  'encargado_carga': 60,
-  'encargado_retorno': 50,
-  'repartidor': 40,
-  'chofer': 30,
-  'estibador': 20,
+  administrador: 100,
+  Supervisor: 80,
+  encargado_carga: 60,
+  encargado_retorno: 50,
+  repartidor: 40,
+  chofer: 30,
+  estibador: 20,
 };
 
 function getPrimaryRole(roles: string[]): string | null {
@@ -47,11 +39,38 @@ function getPrimaryRole(roles: string[]): string | null {
   );
 }
 
+function PeriodoSelector({ value, onChange }: { value: PeriodoType; onChange: (v: PeriodoType) => void }) {
+  const opciones: { label: string; value: PeriodoType }[] = [
+    { label: 'Últimos 30 días', value: 'dia' },
+    { label: 'Último año', value: 'mes' },
+    { label: 'Últimos 5 años', value: 'anio' },
+  ];
+  return (
+    <div className="flex gap-2">
+      {opciones.map((op) => (
+        <button
+          key={op.value}
+          onClick={() => onChange(op.value)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            value === op.value
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+        >
+          {op.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { roles, isLoading: authLoading } = useAuthStore();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [periodo, setPeriodo] = useState<PeriodoType>('mes');
+  const { data: graficasData, loading: loadingGraficas, fetchGraficas } = useDashboardGraficas();
 
   useEffect(() => {
     if (!authLoading && roles.length === 0) {
@@ -61,7 +80,6 @@ export default function DashboardPage() {
 
   const primaryRole = getPrimaryRole(roles);
 
-  // Cargar estadísticas del dashboard desde el backend
   useEffect(() => {
     const fetchStats = async () => {
       setLoadingStats(true);
@@ -74,15 +92,20 @@ export default function DashboardPage() {
         setLoadingStats(false);
       }
     };
-    // Solo cargar si el usuario tiene un rol que requiera ver el dashboard
     if (primaryRole && ['administrador', 'Supervisor', 'encargado_carga'].includes(primaryRole)) {
       fetchStats();
     }
   }, [primaryRole]);
 
+  useEffect(() => {
+    if (primaryRole && ['administrador', 'Supervisor'].includes(primaryRole)) {
+      fetchGraficas(periodo);
+    }
+  }, [primaryRole, periodo, fetchGraficas]);
+
   if (authLoading) {
     return (
-      <div >
+      <div>
         <SkeletonDashboardContent />
       </div>
     );
@@ -94,9 +117,10 @@ export default function DashboardPage() {
   if (primaryRole === 'administrador') {
     return (
       <div className="space-y-6">
-        {/* Tarjetas de métricas principales */}
         {loadingStats ? (
-          <div>   <SkeletonDashboardContent /></div>
+          <div>
+            <SkeletonDashboardContent />
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricCard title="Operaciones hoy" value={stats?.operacionesHoy ?? 0} icon={CalendarCheck} color="blue" />
@@ -107,18 +131,53 @@ export default function DashboardPage() {
             <MetricCard title="Entregas hoy" value={stats?.entregasHoy ?? 0} icon={ClipboardList} color="teal" />
           </div>
         )}
+
+        {/* Selector de período */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Gráficas del Dashboard</h2>
+          <PeriodoSelector value={periodo} onChange={setPeriodo} />
+        </div>
+
+        {/* Gráficas de operaciones y jabas */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <OperacionesChart data={graficasData?.operaciones_por_fecha || []} loading={loadingGraficas} />
+          <JabasChart data={graficasData?.jabas_por_fecha || []} loading={loadingGraficas} />
+        </div>
+
+        {/* Gráficas de guías operativas */}
+        <GuiasChart
+          porEstado={graficasData?.guias_por_estado || []}
+          porFecha={graficasData?.guias_por_fecha || []}
+          loading={loadingGraficas}
+        />
+
+        {/* Gráficas de entregas */}
+        <EntregasChart
+          porFecha={graficasData?.entregas_por_fecha || []}
+          jabasEntregadas={graficasData?.jabas_entregadas_por_fecha || []}
+          loading={loadingGraficas}
+        />
+
+        {/* Gráficas de incidencias */}
+        <IncidenciasChart
+          porTipo={graficasData?.incidencias_por_tipo || []}
+          porFecha={graficasData?.incidencias_por_fecha || []}
+          loading={loadingGraficas}
+        />
       </div>
     );
   }
 
   // ============================================================
-  // 2. SUPERVISOR (dashboard similar al admin, solo con algunas tarjetas)
+  // 2. SUPERVISOR
   // ============================================================
   if (primaryRole === 'Supervisor') {
     return (
       <div className="space-y-6">
         {loadingStats ? (
-          <div ><SkeletonDashboardContent /></div>
+          <div>
+            <SkeletonDashboardContent />
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricCard title="Operaciones hoy" value={stats?.operacionesHoy ?? 0} icon={CalendarCheck} color="blue" />
@@ -127,14 +186,39 @@ export default function DashboardPage() {
             <MetricCard title="Alertas pendientes" value={stats?.alertasPendientes ?? 0} icon={AlertTriangle} color="red" />
           </div>
         )}
-        <div className="grid grid-cols-12 gap-4 md:gap-6">
-          <div className="col-span-12 xl:col-span-7">
-            <StatisticsChart />
-          </div>
-          <div className="col-span-12 xl:col-span-5">
-            <RecentOrders />
-          </div>
+
+        {/* Selector de período */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Gráficas del Dashboard</h2>
+          <PeriodoSelector value={periodo} onChange={setPeriodo} />
         </div>
+
+        {/* Gráficas de operaciones y jabas */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <OperacionesChart data={graficasData?.operaciones_por_fecha || []} loading={loadingGraficas} />
+          <JabasChart data={graficasData?.jabas_por_fecha || []} loading={loadingGraficas} />
+        </div>
+
+        {/* Gráficas de guías operativas */}
+        <GuiasChart
+          porEstado={graficasData?.guias_por_estado || []}
+          porFecha={graficasData?.guias_por_fecha || []}
+          loading={loadingGraficas}
+        />
+
+        {/* Gráficas de entregas */}
+        <EntregasChart
+          porFecha={graficasData?.entregas_por_fecha || []}
+          jabasEntregadas={graficasData?.jabas_entregadas_por_fecha || []}
+          loading={loadingGraficas}
+        />
+
+        {/* Gráficas de incidencias */}
+        <IncidenciasChart
+          porTipo={graficasData?.incidencias_por_tipo || []}
+          porFecha={graficasData?.incidencias_por_fecha || []}
+          loading={loadingGraficas}
+        />
       </div>
     );
   }
@@ -155,7 +239,9 @@ export default function DashboardPage() {
         </div>
 
         {loadingStats ? (
-          <div ><SkeletonDashboardContent /></div>
+          <div>
+            <SkeletonDashboardContent />
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <MetricCard title="Cargas activas hoy" value={stats?.operacionesEnCurso ?? 0} icon={ClipboardList} color="blue" />
@@ -168,11 +254,15 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <ComponentCard title="Últimas cargas">
             <p className="text-gray-500">Consulta las operaciones recientes</p>
-            <Link href="/dashboard/operaciones-carga" className="text-blue-600 text-sm block mt-2">Ver todas las operaciones →</Link>
+            <Link href="/dashboard/operaciones-carga" className="text-blue-600 text-sm block mt-2">
+              Ver todas las operaciones →
+            </Link>
           </ComponentCard>
           <ComponentCard title="Guía rápida">
             <p className="text-gray-500">¿Cómo registrar una carga?</p>
-            <Button variant="outline" size="sm" className="mt-2">Ver tutorial</Button>
+            <Button variant="outline" size="sm" className="mt-2">
+              Ver tutorial
+            </Button>
           </ComponentCard>
         </div>
       </div>
@@ -180,7 +270,7 @@ export default function DashboardPage() {
   }
 
   // ============================================================
-  // 4. OTROS ROLES (repartidor, chofer, estibador, encargado_retorno, etc.)
+  // 4. OTROS ROLES
   // ============================================================
   return (
     <div className="text-center py-12">
@@ -197,15 +287,24 @@ export default function DashboardPage() {
   );
 }
 
-// Componente auxiliar para las tarjetas de métricas
-function MetricCard({ title, value, icon: Icon, color }: { title: string; value: number; icon: any; color: string }) {
+function MetricCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}: {
+  title: string;
+  value: number;
+  icon: any;
+  color: string;
+}) {
   const colorClasses = {
-    blue: "border-l-blue-500 text-blue-500",
-    green: "border-l-green-500 text-green-500",
-    orange: "border-l-orange-500 text-orange-500",
-    red: "border-l-red-500 text-red-500",
-    purple: "border-l-purple-500 text-purple-500",
-    teal: "border-l-teal-500 text-teal-500",
+    blue: 'border-l-blue-500 text-blue-500',
+    green: 'border-l-green-500 text-green-500',
+    orange: 'border-l-orange-500 text-orange-500',
+    red: 'border-l-red-500 text-red-500',
+    purple: 'border-l-purple-500 text-purple-500',
+    teal: 'border-l-teal-500 text-teal-500',
   };
   return (
     <ComponentCard title={title} className={`border-l-4 ${colorClasses[color as keyof typeof colorClasses]}`}>

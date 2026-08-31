@@ -1,15 +1,15 @@
 "use client";
 
 const stats = [
-  { value: "500+", label: "Empresas activas" },
-  { value: "2M+", label: "Entregas registradas" },
+  { value: "3+", label: "Empresas activas" },
+  { value: "1M+", label: "Entregas registradas" },
   { value: "50M+", label: "Jabas controladas" },
   { value: "99.9%", label: "Uptime garantizado" },
 ];
 
 export default function LandingStats() {
   return (
-    <section className="bg-brand-500 py-16">
+    <section className="bg-[#13a3a5] py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
           {stats.map((stat) => (

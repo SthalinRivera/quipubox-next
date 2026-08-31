@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Send } from "lucide-react";
 
 const productLinks = [
   { label: "Funcionalidades", href: "#funcionalidades" },
@@ -12,21 +12,18 @@ const productLinks = [
 
 const companyLinks = [
   { label: "Sobre nosotros", href: "#" },
-  { label: "Blog", href: "#" },
-  { label: "Carreras", href: "#" },
-  { label: "Contacto", href: "#contacto" },
+
 ];
 
 const supportLinks = [
   { label: "Centro de ayuda", href: "#" },
-  { label: "Documentación", href: "#" },
-  { label: "Estado del sistema", href: "#" },
-  { label: "API", href: "#" },
+
+
 ];
 
 export default function LandingFooter() {
   return (
-    <footer className="border-t border-gray-200 bg-white dark:border-white/10 dark:bg-gray-950">
+    <footer className="border-t border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-gray-950">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 py-12 sm:py-16 lg:grid-cols-5">
           {/* Brand */}
@@ -48,28 +45,36 @@ export default function LandingFooter() {
               />
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-              La plataforma SaaS líder en gestión logística y distribución de
-              frutas. Simplifica tu operación, reduce costos y aumenta tus
-              ingresos.
+              La plataforma SaaS para gestionar el transporte y distribución de
+              frutas. Sistema web y app móvil para empresas comercializadoras,
+              distribuidoras y transportistas.
             </p>
-            <div className="mt-6 space-y-2">
+
+            {/* Contacto con iconos en turquesa */}
+            <div className="mt-6 space-y-3">
               <a
                 href="mailto:hola@quipubox.com"
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="group flex items-center gap-3 text-sm text-gray-500 transition hover:text-[#17BEC0] dark:text-gray-400 dark:hover:text-[#17BEC0]"
               >
-                <Mail className="h-4 w-4" />
-                hola@quipubox.com
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#17BEC0]/10 text-[#17BEC0] transition group-hover:bg-[#17BEC0] group-hover:text-white">
+                  <Mail className="h-4 w-4" />
+                </span>
+                Soporte@quipubox.com
               </a>
               <a
                 href="tel:+51999999999"
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="group flex items-center gap-3 text-sm text-gray-500 transition hover:text-[#17BEC0] dark:text-gray-400 dark:hover:text-[#17BEC0]"
               >
-                <Phone className="h-4 w-4" />
-                +51 999 999 999
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#17BEC0]/10 text-[#17BEC0] transition group-hover:bg-[#17BEC0] group-hover:text-white">
+                  <Phone className="h-4 w-4" />
+                </span>
+                +51 698 532 415
               </a>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <MapPin className="h-4 w-4" />
-                Lima, Perú
+              <div className="group flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#17BEC0]/10 text-[#17BEC0]">
+                  <MapPin className="h-4 w-4" />
+                </span>
+                Imperial, Cañete, Lima, Perú
               </div>
             </div>
           </div>
@@ -79,12 +84,14 @@ export default function LandingFooter() {
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
               Producto
             </h4>
+            {/* Línea decorativa turquesa */}
+            <div className="mt-2 h-0.5 w-8 rounded-full bg-[#17BEC0]" />
             <ul className="mt-4 space-y-2.5">
               {productLinks.map((link) => (
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    className="text-sm text-gray-500 transition hover:text-[#17BEC0] dark:text-gray-400 dark:hover:text-[#17BEC0]"
                   >
                     {link.label}
                   </a>
@@ -96,12 +103,13 @@ export default function LandingFooter() {
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
               Empresa
             </h4>
+            <div className="mt-2 h-0.5 w-8 rounded-full bg-[#17BEC0]" />
             <ul className="mt-4 space-y-2.5">
               {companyLinks.map((link) => (
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    className="text-sm text-gray-500 transition hover:text-[#17BEC0] dark:text-gray-400 dark:hover:text-[#17BEC0]"
                   >
                     {link.label}
                   </a>
@@ -113,32 +121,35 @@ export default function LandingFooter() {
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
               Soporte
             </h4>
+            <div className="mt-2 h-0.5 w-8 rounded-full bg-[#17BEC0]" />
             <ul className="mt-4 space-y-2.5">
               {supportLinks.map((link) => (
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    className="text-sm text-gray-500 transition hover:text-[#17BEC0] dark:text-gray-400 dark:hover:text-[#17BEC0]"
                   >
                     {link.label}
                   </a>
                 </li>
               ))}
             </ul>
+
+
           </div>
         </div>
 
         {/* Bottom */}
-        <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-100 py-6 sm:flex-row dark:border-white/10">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-200 py-6 sm:flex-row dark:border-white/10">
           <p className="text-xs text-gray-400">
             &copy; {new Date().getFullYear()} QuiPuBox. Todos los derechos
             reservados.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <a href="#" className="text-xs text-gray-400 transition hover:text-[#17BEC0] dark:hover:text-[#17BEC0]">
               Política de privacidad
             </a>
-            <a href="#" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <a href="#" className="text-xs text-gray-400 transition hover:text-[#17BEC0] dark:hover:text-[#17BEC0]">
               Términos de uso
             </a>
           </div>

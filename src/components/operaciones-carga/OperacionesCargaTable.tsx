@@ -20,6 +20,7 @@ import { OperacionCargaModal } from "./OperacionCargaModal";
 import type { OperacionCarga } from "@/types/operacionCarga";
 import Label from "@/components/form/Label";
 import DatePicker from "@/components/form/date-picker"; // Ajusta la ruta
+import { useRouter } from "next/navigation";
 
 const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
     pendiente: "warning",
@@ -30,6 +31,7 @@ const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
 
 export default function OperacionesCargaTable() {
     const { operaciones, loading, fetchAll, remove, changeState } = useOperacionesCarga();
+    const router = useRouter();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedOperacion, setSelectedOperacion] = useState<OperacionCarga | null>(null);
@@ -111,7 +113,10 @@ export default function OperacionesCargaTable() {
                         />
                     </div>
                 </div>
-                <Button onClick={handleCreate} startIcon={<Plus className="h-4 w-4" />}>
+                <Button
+                    onClick={() => router.push("/dashboard/operaciones-carga/nueva")}
+                    startIcon={<Plus className="h-4 w-4" />}
+                >
                     Nueva Operación
                 </Button>
             </div>

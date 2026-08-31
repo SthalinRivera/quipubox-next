@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MessageCircle } from "lucide-react";
 
 const faqs = [
   {
-    q: "¿Necesito conocimientos técnicos para usar QuiPuBox?",
-    a: "No. QuiPuBox está diseñado para ser intuitivo. Tu equipo puede empezar a usarlo el mismo día de la implementación. Además, ofrecemos capacitación incluida.",
+    q: "¿Necesito conocimientos técnicos para usar QuipuBox?",
+    a: "No. QuipuBox está diseñado para ser intuitivo. Tu equipo puede empezar a usarlo el mismo día de la implementación. Además, ofrecemos capacitación incluida.",
   },
   {
     q: "¿Puedo probar la plataforma antes de contratar?",
@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     q: "¿Ofrecen integración con otros sistemas?",
-    a: "El plan Empresa incluye acceso a nuestra API REST para integrar QuiPuBox con tu ERP, sistema de facturación u otras herramientas.",
+    a: "El plan Empresa incluye acceso a nuestra API REST para integrar QuipuBox con tu ERP, sistema de facturación u otras herramientas.",
   },
   {
     q: "¿Qué soporte ofrecen?",
@@ -45,7 +45,8 @@ export default function LandingFAQ() {
     <section id="faq" className="bg-white py-20 sm:py-28 dark:bg-gray-950">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-brand-500">
+          {/* Etiqueta en turquesa */}
+          <p className="text-sm font-semibold uppercase tracking-wider text-[#17BEC0]">
             Preguntas frecuentes
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
@@ -56,29 +57,60 @@ export default function LandingFAQ() {
           </p>
         </div>
 
-        <div className="mx-auto mt-12 max-w-3xl divide-y divide-gray-200 dark:divide-white/10">
-          {faqs.map((faq, i) => (
-            <div key={i} className="py-4">
-              <button
-                onClick={() => setOpen(open === i ? null : i)}
-                className="flex w-full items-start justify-between gap-4 text-left"
-              >
-                <span className="text-base font-medium text-gray-900 dark:text-white">
-                  {faq.q}
-                </span>
-                <ChevronDown
-                  className={`mt-1 h-5 w-5 flex-shrink-0 text-gray-400 transition-transform duration-200 ${
-                    open === i ? "rotate-180" : ""
+        <div className="mx-auto mt-12 max-w-3xl space-y-3">
+          {faqs.map((faq, i) => {
+            const isOpen = open === i;
+            return (
+              <div
+                key={i}
+                className={`overflow-hidden rounded-xl border transition-all duration-300 ${isOpen
+                  ? "border-[#17BEC0]/40 bg-[#17BEC0]/5 shadow-sm shadow-[#17BEC0]/5 dark:border-[#17BEC0]/30 dark:bg-[#17BEC0]/5"
+                  : "border-gray-200 bg-white hover:border-[#17BEC0]/30 dark:border-white/10 dark:bg-gray-900 dark:hover:border-[#17BEC0]/20"
                   }`}
-                />
-              </button>
-              {open === i && (
-                <p className="mt-3 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-                  {faq.a}
-                </p>
-              )}
-            </div>
-          ))}
+              >
+                <button
+                  onClick={() => setOpen(isOpen ? null : i)}
+                  className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left sm:px-6"
+                >
+                  <span
+                    className={`text-base font-medium transition-colors ${isOpen
+                      ? "text-[#17BEC0]"
+                      : "text-gray-900 dark:text-white"
+                      }`}
+                  >
+                    {faq.q}
+                  </span>
+                  <ChevronDown
+                    className={`mt-1 h-5 w-5 flex-shrink-0 transition-all duration-300 ${isOpen
+                      ? "rotate-180 text-[#17BEC0]"
+                      : "text-gray-400"
+                      }`}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-5 pb-5 sm:px-6">
+                    <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                      {faq.a}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Enlace de soporte adicional */}
+        <div className="mx-auto mt-10 flex max-w-3xl items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center dark:border-white/10 dark:bg-white/5">
+          <MessageCircle className="h-5 w-5 text-[#17BEC0]" />
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            ¿No encuentras tu respuesta?{" "}
+            <a
+              href="#contacto"
+              className="font-semibold text-[#17BEC0] transition hover:text-[#13a3a5]"
+            >
+              Contáctanos
+            </a>
+          </p>
         </div>
       </div>
     </section>

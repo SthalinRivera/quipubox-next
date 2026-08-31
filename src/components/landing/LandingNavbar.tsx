@@ -7,7 +7,6 @@ import { Menu, X, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 
 const navLinks = [
-  { label: "Funcionalidades", href: "#funcionalidades" },
   { label: "Beneficios", href: "#beneficios" },
   { label: "Planes", href: "#planes" },
   { label: "Cómo funciona", href: "#como-funciona" },
@@ -25,7 +24,7 @@ export default function LandingNavbar() {
           <Link href="/" className="flex-shrink-0">
             <Image
               src="/images/logo/logo.svg"
-              alt="QuiPuBox"
+              alt="QuipuBox"
               width={150}
               height={40}
               className="h-8 w-auto dark:hidden"
@@ -33,7 +32,7 @@ export default function LandingNavbar() {
             />
             <Image
               src="/images/logo/logo-dark.svg"
-              alt="QuiPuBox"
+              alt="QuipuBox"
               width={150}
               height={40}
               className="hidden h-8 w-auto dark:block"
@@ -69,12 +68,13 @@ export default function LandingNavbar() {
             >
               Iniciar sesión
             </Link>
-            <a
+            {/* Botón principal cambiado a turquesa */}
+            {/* <a
               href="#contacto"
-              className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-600"
+              className="inline-flex items-center justify-center rounded-lg bg-[#17BEC0] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#13a3a5]"
             >
               Solicitar demo
-            </a>
+            </a> */}
           </div>
 
           {/* Mobile toggle */}
@@ -117,9 +117,10 @@ export default function LandingNavbar() {
               >
                 Iniciar sesión
               </Link>
+              {/* Botón móvil cambiado a turquesa */}
               <a
                 href="#contacto"
-                className="rounded-lg bg-brand-500 px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-600"
+                className="rounded-lg bg-[#17BEC0] px-3 py-2.5 text-center text-sm font-medium text-white transition hover:bg-[#13a3a5]"
               >
                 Solicitar demo
               </a>

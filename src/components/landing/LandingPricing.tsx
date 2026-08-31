@@ -1,196 +1,168 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Star } from "lucide-react";
+import { Check, Shield, Smartphone, Globe, Headphones, Wrench } from "lucide-react";
 import Link from "next/link";
-
-type BillingCycle = "monthly" | "quarterly";
 
 const plans = [
   {
-    name: "Esencial",
-    description: "Lo esencial para comenzar a digitalizar tu operación",
-    monthlyPrice: 149,
-    quarterlyPrice: 129,
+    name: "Profesional",
+    price: 49.90,
+    description: "Ideal para distribuidoras y comercializadoras",
+    popular: true,
     features: [
-      "Gestión de clientes y sedes",
-      "Catálogo de frutas, variedades y calidades",
-      "Control básico de jabas",
-      "Registro de cargas",
-      "Registro de entregas",
-      "Dashboard general",
-      "Hasta 3 usuarios",
-      "Soporte por correo",
+      "Sistema web + app móvil",
+      "Gestión de clientes, sedes y rutas",
+      "Control de cargas, entregas y jabas",
+      "Facturación electrónica integrada",
+      "Tickets y guías de remisión automáticas",
+      "Reportes en tiempo real",
+      "Hasta 10 usuarios",
+      "Soporte por chat y correo",
     ],
     cta: "Comenzar ahora",
-    popular: false,
-  },
-  {
-    name: "Profesional",
-    description: "Para empresas que necesitan control total de su distribución",
-    monthlyPrice: 299,
-    quarterlyPrice: 259,
-    features: [
-      "Todo lo del plan Esencial",
-      "Repartos avanzados con rutas",
-      "Guías operativas automáticas",
-      "Gestión de camiones y flota",
-      "Incidencias con seguimiento",
-      "Evidencias fotográficas",
-      "Recuperación y devolución de jabas",
-      "Roles y permisos de usuario",
-      "Reportes avanzados exportables",
-      "Hasta 10 usuarios",
-      "Soporte prioritario",
-    ],
-    cta: "Solicitar demo",
-    popular: true,
+    badge: "Más vendido",
   },
   {
     name: "Empresa",
-    description: "Solución completa para grandes operaciones multisede",
-    monthlyPrice: 499,
-    quarterlyPrice: 439,
+    price: 69.90,
+    description: "Para grandes operaciones y franquicias",
+    popular: false,
     features: [
       "Todo lo del plan Profesional",
       "Múltiples sedes y almacenes",
-      "Mayor capacidad de datos",
-      "Personalización de reportes",
+      "Personalización del sistema",
+      "Módulos a medida",
       "Integraciones API",
-      "Capacitación para tu equipo",
-      "Soporte prioritario 24/7",
-      "Gerente de cuenta dedicado",
+      "Capacitación y onboarding",
       "Usuarios ilimitados",
-      "Acuerdos de nivel de servicio",
+      "Soporte prioritario 24/7",
     ],
     cta: "Contactar ventas",
-    popular: false,
+    badge: "Personalizable",
   },
 ];
 
 export default function LandingPricing() {
-  const [billing, setBilling] = useState<BillingCycle>("monthly");
-
   return (
-    <section id="planes" className="bg-white py-20 sm:py-28 dark:bg-gray-950">
+    <section id="planes" className="bg-white py-16 sm:py-20 dark:bg-gray-950">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-brand-500">
+          {/* Etiqueta en turquesa */}
+          <p className="text-sm font-semibold uppercase tracking-wider text-[#17BEC0]">
             Planes y precios
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
-            Elige el plan perfecto para tu empresa
+            Simple. Sin sorpresas.
           </h2>
           <p className="mt-4 text-lg text-gray-500 dark:text-gray-400">
-            Sin contratos a largo plazo. Cancela cuando quieras. Prueba gratis
-            por 14 días.
+            Prueba gratis por 14 días · Sin tarjeta · Cancela cuando quieras
           </p>
-
-          {/* Billing toggle */}
-          <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-white/10 dark:bg-white/5">
-            <button
-              onClick={() => setBilling("monthly")}
-              className={`rounded-full px-5 py-2 text-sm font-medium transition ${
-                billing === "monthly"
-                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            >
-              Mensual
-            </button>
-            <button
-              onClick={() => setBilling("quarterly")}
-              className={`rounded-full px-5 py-2 text-sm font-medium transition ${
-                billing === "quarterly"
-                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            >
-              Trimestral
-              <span className="ml-1.5 inline-flex items-center rounded-full bg-success-50 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-400">
-                -13%
-              </span>
-            </button>
-          </div>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-6xl gap-8 lg:grid-cols-3">
-          {plans.map((plan) => {
-            const price =
-              billing === "monthly" ? plan.monthlyPrice : plan.quarterlyPrice;
-            const savings =
-              (plan.monthlyPrice - plan.quarterlyPrice) * 3;
-
-            return (
-              <div
-                key={plan.name}
-                className={`relative flex flex-col rounded-2xl border-2 p-8 transition ${
-                  plan.popular
-                    ? "border-brand-500 shadow-xl shadow-brand-500/10 dark:shadow-brand-500/5"
-                    : "border-gray-200 dark:border-white/10"
+        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-2">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`relative flex flex-col rounded-2xl border-2 p-6 transition hover:shadow-xl sm:p-8 ${plan.popular
+                ? "border-[#17BEC0] shadow-lg shadow-[#17BEC0]/10"
+                : "border-gray-200 dark:border-white/10"
                 }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg">
-                      <Star className="h-3.5 w-3.5" />
-                      Más elegido
-                    </span>
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {plan.name}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {plan.description}
-                  </p>
+            >
+              {plan.badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span
+                    className={`inline-block rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-lg ${plan.popular
+                      ? "bg-[#17BEC0] text-white"
+                      : "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                      }`}
+                  >
+                    {plan.badge}
+                  </span>
                 </div>
+              )}
 
-                <div className="mt-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm text-gray-400">S/</span>
-                    <span className="text-5xl font-bold text-gray-900 dark:text-white">
-                      {price}
-                    </span>
-                    <span className="text-sm text-gray-400">/mes</span>
-                  </div>
-                  {billing === "quarterly" && (
-                    <p className="mt-1 text-sm text-success-600 dark:text-success-400">
-                      Ahorras S/{savings} por trimestre
-                    </p>
-                  )}
+              <div className="mt-2">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {plan.name}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {plan.description}
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                    S/ {plan.price}
+                  </span>
+                  <span className="text-sm text-gray-400">/mes</span>
                 </div>
+                <p className="text-xs text-gray-400">+ IGV · Sin permanencia</p>
+              </div>
 
-                <ul className="mt-8 flex-1 space-y-3">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3">
-                      <Check
-                        className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                          plan.popular ? "text-brand-500" : "text-success-500"
-                        }`}
-                      />
+              <ul className="mt-6 flex-1 space-y-2.5">
+                {plan.features.map((feature) => {
+                  const iconMap: Record<string, React.ReactNode> = {
+                    "Sistema web + app móvil": (
+                      <>
+                        <Globe className="h-4 w-4" />
+                        <Smartphone className="h-4 w-4 -ml-1" />
+                      </>
+                    ),
+                    "Soporte por chat y correo": <Headphones className="h-4 w-4" />,
+                    "Soporte prioritario 24/7": <Shield className="h-4 w-4" />,
+                    "Personalización del sistema": <Wrench className="h-4 w-4" />,
+                  };
+
+                  const icon =
+                    iconMap[feature] ||
+                    (feature.includes("Soporte") ? (
+                      <Headphones className="h-4 w-4" />
+                    ) : feature.includes("Personalización") ? (
+                      <Wrench className="h-4 w-4" />
+                    ) : null);
+
+                  return (
+                    <li key={feature} className="flex items-start gap-2.5">
+                      {/* Check e iconos en turquesa */}
+                      <span className="mt-0.5 text-[#17BEC0]">
+                        {icon || <Check className="h-4 w-4" />}
+                      </span>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
                         {feature}
                       </span>
                     </li>
-                  ))}
-                </ul>
+                  );
+                })}
+              </ul>
 
-                <Link
-                  href={plan.name === "Esencial" ? "/signin" : "#contacto"}
-                  className={`mt-8 block w-full rounded-xl py-3 text-center text-sm font-semibold transition ${
-                    plan.popular
-                      ? "bg-brand-500 text-white shadow-lg shadow-brand-500/25 hover:bg-brand-600"
-                      : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+              <Link
+                href={plan.name === "Profesional" ? "/signin" : "#contacto"}
+                className={`mt-6 block w-full rounded-xl py-3 text-center text-sm font-semibold transition ${plan.popular
+                  ? "bg-[#17BEC0] text-white shadow-lg shadow-[#17BEC0]/25 hover:bg-[#13a3a5]"
+                  : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
                   }`}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
-            );
-          })}
+              >
+                {plan.cta}
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        {/* Badges de servicio */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400">
+          <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 dark:bg-white/5">
+            <Globe className="h-3.5 w-3.5" /> Web
+          </span>
+          <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 dark:bg-white/5">
+            <Smartphone className="h-3.5 w-3.5" /> App móvil
+          </span>
+          <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 dark:bg-white/5">
+            <Headphones className="h-3.5 w-3.5" /> Soporte incluido
+          </span>
+          <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 dark:bg-white/5">
+            <Shield className="h-3.5 w-3.5" /> Facturación y guías
+          </span>
         </div>
       </div>
     </section>
