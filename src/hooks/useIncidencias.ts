@@ -14,12 +14,23 @@ export const useIncidencias = () => {
     const [error, setError] = useState<any>(null);
 
     // Obtener todas las incidencias
-    const fetchAll = useCallback(async () => {
+    const fetchAll = useCallback(async (params?: {
+        estado?: string;
+        fecha_desde?: string;
+        fecha_hasta?: string;
+        tipo_incidencia?: string;
+    }) => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchWithAuth<Incidencia[]>('incidencias');
-            // Nota: las evidencias vienen incluidas porque el backend las agrupa
+            let url = 'incidencias';
+            const query = new URLSearchParams();
+            if (params?.estado) query.append('estado', params.estado);
+            if (params?.fecha_desde) query.append('fecha_desde', params.fecha_desde);
+            if (params?.fecha_hasta) query.append('fecha_hasta', params.fecha_hasta);
+            if (params?.tipo_incidencia) query.append('tipo_incidencia', params.tipo_incidencia);
+            if (query.toString()) url += `?${query}`;
+            const data = await fetchWithAuth<Incidencia[]>(url);
             setIncidencias(data);
         } catch (err) {
             setError(err);

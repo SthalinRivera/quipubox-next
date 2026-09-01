@@ -83,10 +83,8 @@ const fase5: NavItem = {
   name: "Jabas",
   icon: <PieChartIcon />,
   subItems: [
-    { name: "Jabas por cobrar", path: "/dashboard/jabas-cobrar" },
-    { name: "Recuperaciones de jabas", path: "/dashboard/recuperaciones-jabas" },
-    { name: "Jabas por pagar", path: "/dashboard/jabas-pagar" },
-    { name: "Devoluciones al emisor", path: "/dashboard/devoluciones-emisor" },
+    { name: "Jabas por cobrar", path: "/dashboard/jabas-por-cobrar" },
+    { name: "Jabas por pagar", path: "/dashboard/jabas-por-pagar" },
   ],
 };
 

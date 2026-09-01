@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useEntregas } from "@/hooks/useEntregas";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -12,13 +12,21 @@ import {
 } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
-import { Pencil, Plus, CheckCircle } from "lucide-react";
+import { Pencil, Plus, CheckCircle, Filter, X, Package, Truck, Clock, AlertTriangle, CheckSquare } from "lucide-react";
 import { EntregaModal } from "./EntregaModal";
 import type { Entrega } from "@/types/entrega";
-import Label from "@/components/form/Label";
-import DatePicker from "@/components/form/date-picker";
+import DatePicker from "@/components/ui/date-picker/DatePicker";
 
-const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
+const ESTADOS = [
+    { value: "", label: "Todos" },
+    { value: "pendiente", label: "Pendiente" },
+    { value: "entregado_parcial", label: "Entregado Parcial" },
+    { value: "entregado_total", label: "Entregado Total" },
+    { value: "rechazado", label: "Rechazado" },
+    { value: "observado", label: "Observado" },
+];
+
+const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info" | "light"> = {
     pendiente: "warning",
     entregado_parcial: "info",
     entregado_total: "success",
@@ -26,22 +34,53 @@ const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
     observado: "info",
 };
 
+const ESTADO_ICON: Record<string, any> = {
+    pendiente: Clock,
+    entregado_parcial: Package,
+    entregado_total: CheckSquare,
+    rechazado: AlertTriangle,
+    observado: AlertTriangle,
+};
+
 export default function EntregasTable() {
     const { entregas, loading, fetchEntregas, changeState, firmarEntrega } = useEntregas();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
-    const [filtroGuia, setFiltroGuia] = useState("");
-    const [filtroItem, setFiltroItem] = useState("");
+
+    const [filtroEstado, setFiltroEstado] = useState("");
     const [filtroFecha, setFiltroFecha] = useState("");
 
     useEffect(() => {
         fetchEntregas({
-            id_guia: filtroGuia ? parseInt(filtroGuia) : undefined,
-            id_item_reparto: filtroItem ? parseInt(filtroItem) : undefined,
             fecha_entrega: filtroFecha || undefined,
+            estado_entrega: filtroEstado || undefined,
         });
-    }, [filtroGuia, filtroItem, filtroFecha, fetchEntregas]);
+    }, [filtroFecha, filtroEstado, fetchEntregas]);
+
+    // Resumen por estado
+    const resumen = useMemo(() => {
+        const counts: Record<string, number> = {
+            pendiente: 0,
+            entregado_parcial: 0,
+            entregado_total: 0,
+            rechazado: 0,
+            observado: 0,
+        };
+        entregas.forEach(e => {
+            if (counts[e.estado_entrega] !== undefined) {
+                counts[e.estado_entrega]++;
+            }
+        });
+        return counts;
+    }, [entregas]);
+
+    const hasFilters = filtroEstado || filtroFecha;
+
+    const clearFilters = () => {
+        setFiltroEstado("");
+        setFiltroFecha("");
+    };
 
     const handleEdit = (entrega: Entrega) => {
         setSelectedEntrega(entrega);
@@ -53,8 +92,8 @@ export default function EntregasTable() {
         setModalOpen(true);
     };
 
-    const handleFirmar = async (id: number, nombre?: string) => {
-        const nombreRecibe = nombre || prompt("Nombre de quien recibe:");
+    const handleFirmar = async (id: number) => {
+        const nombreRecibe = prompt("Nombre de quien recibe:");
         if (nombreRecibe !== null) {
             try {
                 await firmarEntrega(id, nombreRecibe);
@@ -65,134 +104,174 @@ export default function EntregasTable() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                Cargando entregas...
-            </div>
-        );
-    }
+    const handleQuickState = async (id: number, estado: string) => {
+        try {
+            await changeState(id, estado);
+            toast.success(`Estado cambiado a ${estado.replace('_', ' ')}`);
+        } catch (err: any) {
+            toast.error(err.message);
+        }
+    };
 
     return (
         <div className="space-y-4">
-            {/* Filtros y botón nueva entrega */}
-            <div className="flex flex-wrap items-end justify-between gap-4">
-                <div className="flex flex-wrap gap-4">
-                    <div className="w-40">
-                        <Label className="text-gray-700 dark:text-gray-300">Guía ID</Label>
-                        <input
-                            type="number"
-                            value={filtroGuia}
-                            onChange={(e) => setFiltroGuia(e.target.value)}
-                            placeholder="ID guía"
-                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-brand-800"
-                        />
-                    </div>
-                    <div className="w-40">
-                        <Label className="text-gray-700 dark:text-gray-300">Item Reparto</Label>
-                        <input
-                            type="number"
-                            value={filtroItem}
-                            onChange={(e) => setFiltroItem(e.target.value)}
-                            placeholder="ID item"
-                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-brand-800"
-                        />
-                    </div>
-                    <div className="w-48">
-                        <Label className="text-gray-700 dark:text-gray-300">Fecha Entrega</Label>
-
-                        <DatePicker
-                            id="fecha-filtro"
-                            placeholder="dd/mm/aaaa"
-                            onChange={(_, dateString) => setFiltroFecha(dateString || "")}
-                        />
-                    </div>
-                </div>
-                <Button onClick={handleCreate} startIcon={<Plus className="h-4 w-4" />}>
-                    Nueva Entrega
-                </Button>
+            {/* Tarjetas de resumen */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {ESTADOS.slice(1).map(({ value, label }) => {
+                    const Icon = ESTADO_ICON[value] || Package;
+                    const isActive = filtroEstado === value;
+                    return (
+                        <button
+                            key={value}
+                            onClick={() => setFiltroEstado(isActive ? "" : value)}
+                            className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                                isActive
+                                    ? "border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20"
+                                    : "border-gray-200 bg-white hover:border-gray-300 dark:border-white/[0.05] dark:bg-white/[0.03] dark:hover:border-white/[0.1]"
+                            }`}
+                        >
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                                isActive ? "bg-blue-100 dark:bg-blue-800/30" : "bg-gray-100 dark:bg-white/5"
+                            }`}>
+                                <Icon className={`h-5 w-5 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`} />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-lg font-bold text-gray-800 dark:text-white/90">{resumen[value]}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Tabla con estilos consistentes */}
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-                <div className="max-w-full overflow-x-auto">
-                    <div className="min-w-[800px]">
+            {/* Filtros */}
+            <div className="rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+                <div className="flex flex-wrap items-end justify-between gap-4 px-6 py-4 border-b border-gray-100 dark:border-white/[0.05]">
+                    <div className="flex flex-wrap items-end gap-3">
+                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                            <Filter className="h-4 w-4" />
+                            <span className="text-sm font-medium">Filtros</span>
+                        </div>
+
+                        <div className="w-48">
+                            <DatePicker
+                                label="Fecha"
+                                value={filtroFecha}
+                                onChange={(v) => setFiltroFecha(v)}
+                            />
+                        </div>
+
+                        {hasFilters && (
+                            <Button size="sm" variant="outline" onClick={clearFilters}>
+                                <X className="h-3 w-3 mr-1" /> Limpiar
+                            </Button>
+                        )}
+                    </div>
+
+                    <Button size="sm" onClick={handleCreate} startIcon={<Plus className="h-4 w-4" />}>
+                        Nueva Entrega
+                    </Button>
+                </div>
+
+                {/* Tabla */}
+                <div className="overflow-x-auto">
+                    <div className="min-w-[900px]">
                         <Table>
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        ID
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Guía
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Item Reparto
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Fecha/Hora
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Cant. Entregada
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Estado
-                                    </TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                                        Acciones
-                                    </TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Guía</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cliente</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Fecha / Hora</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase text-center">Cant.</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase text-center">Rechaz.</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Entregador</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Estado</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</TableCell>
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                                {entregas.length === 0 ? (
+                                {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                                            No hay entregas registradas.
+                                        <TableCell colSpan={8} className="py-12 text-center">
+                                            <div className="flex justify-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : entregas.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="py-12 text-center text-gray-500 dark:text-gray-400">
+                                            No hay entregas registradas
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     entregas.map((entrega) => (
-                                        <TableRow key={entrega.id_entrega}>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {entrega.id_entrega}
+                                        <TableRow key={entrega.id_entrega} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                                            <TableCell className="px-5 py-3">
+                                                <span className="font-medium text-gray-800 dark:text-white/90">
+                                                    #{entrega.guias_operativas?.numero_guia || entrega.id_guia}
+                                                </span>
                                             </TableCell>
-                                            <TableCell className="px-5 py-4 font-medium text-gray-800 dark:text-white/90">
-                                                {entrega.guias_operativas?.numero_guia || entrega.id_guia}
+                                            <TableCell className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                                {(entrega as any).items_reparto?.clientes?.nombres || '—'}
+                                                {(entrega as any).items_reparto?.clientes?.apellidos ? ` ${(entrega as any).items_reparto.clientes.apellidos}` : ''}
                                             </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {entrega.id_item_reparto}
+                                            <TableCell className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                                <div>{new Date(entrega.fecha_entrega).toLocaleDateString('es-PE')}</div>
+                                                {entrega.hora_entrega && (
+                                                    <div className="text-xs text-gray-400">{entrega.hora_entrega.slice(0, 5)}</div>
+                                                )}
                                             </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                {new Date(entrega.fecha_entrega).toLocaleDateString()}
-                                                {entrega.hora_entrega && ` ${entrega.hora_entrega.slice(0, 5)}`}
-                                            </TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
+                                            <TableCell className="px-5 py-3 text-sm text-center font-medium text-gray-800 dark:text-white/90">
                                                 {entrega.cantidad_entregada}
                                             </TableCell>
-                                            <TableCell className="px-5 py-4">
-                                                <Badge size="sm" color={ESTADO_COLOR[entrega.estado_entrega] || "secondary"}>
-                                                    {entrega.estado_entrega}
-                                                </Badge>
+                                            <TableCell className="px-5 py-3 text-sm text-center">
+                                                {entrega.cantidad_rechazada && entrega.cantidad_rechazada > 0 ? (
+                                                    <span className="text-red-600 dark:text-red-400 font-medium">{entrega.cantidad_rechazada}</span>
+                                                ) : (
+                                                    <span className="text-gray-300 dark:text-gray-600">—</span>
+                                                )}
                                             </TableCell>
-                                            <TableCell className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
+                                            <TableCell className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                                {entrega.usuarios?.nombres || '—'}
+                                            </TableCell>
+                                            <TableCell className="px-5 py-3">
+                                                <Badge size="sm" color={ESTADO_COLOR[entrega.estado_entrega] || "light"}>
+                                                    {entrega.estado_entrega.replace('_', ' ')}
+                                                </Badge>
+                                                {entrega.firma_recibido && (
+                                                    <span className="ml-1 text-xs text-green-600 dark:text-green-400">✓ firmado</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-5 py-3">
+                                                <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => handleEdit(entrega)}
-                                                        className="text-gray-500 transition-colors hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+                                                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
                                                         title="Editar"
                                                     >
-                                                        <Pencil className="h-5 w-5" />
+                                                        <Pencil className="h-4 w-4" />
                                                     </button>
-                                                    {!entrega.firma_recibido && entrega.estado_entrega !== "entregado_total" && (
+
+                                                    {entrega.estado_entrega === "pendiente" && (
                                                         <button
-                                                            onClick={() => handleFirmar(entrega.id_entrega)}
-                                                            className="text-gray-500 transition-colors hover:text-success-500 dark:text-gray-400 dark:hover:text-success-400"
-                                                            title="Firmar"
+                                                            onClick={() => handleQuickState(entrega.id_entrega, "entregado_total")}
+                                                            className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 transition-colors"
+                                                            title="Marcar entregado"
                                                         >
-                                                            <CheckCircle className="h-5 w-5" />
+                                                            <CheckSquare className="h-4 w-4" />
                                                         </button>
                                                     )}
 
+                                                    {!entrega.firma_recibido && entrega.estado_entrega !== "entregado_total" && (
+                                                        <button
+                                                            onClick={() => handleFirmar(entrega.id_entrega)}
+                                                            className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 transition-colors"
+                                                            title="Firmar recibido"
+                                                        >
+                                                            <CheckCircle className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -202,6 +281,16 @@ export default function EntregasTable() {
                         </Table>
                     </div>
                 </div>
+
+                {/* Footer */}
+                {entregas.length > 0 && (
+                    <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 dark:border-white/[0.05]">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {entregas.length} entrega{entregas.length !== 1 ? 's' : ''}
+                            {hasFilters ? ' (filtrado)' : ''}
+                        </p>
+                    </div>
+                )}
             </div>
 
             <EntregaModal

@@ -6,7 +6,12 @@ export const useEntregas = () => {
     const [entregas, setEntregas] = useState<Entrega[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const fetchEntregas = useCallback(async (params?: { id_guia?: number; id_item_reparto?: number; fecha_entrega?: string }) => {
+    const fetchEntregas = useCallback(async (params?: {
+        id_guia?: number;
+        id_item_reparto?: number;
+        fecha_entrega?: string;
+        estado_entrega?: string;
+    }) => {
         setLoading(true);
         try {
             let url = 'entregas';
@@ -14,6 +19,7 @@ export const useEntregas = () => {
             if (params?.id_guia) query.append('id_guia', params.id_guia.toString());
             if (params?.id_item_reparto) query.append('id_item_reparto', params.id_item_reparto.toString());
             if (params?.fecha_entrega) query.append('fecha_entrega', params.fecha_entrega);
+            if (params?.estado_entrega) query.append('estado_entrega', params.estado_entrega);
             if (query.toString()) url += `?${query}`;
             const data = await fetchWithAuth<Entrega[]>(url);
             setEntregas(Array.isArray(data) ? data : []);

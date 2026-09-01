@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Download } from 'lucide-react';
 import { formatDate } from '@/utils/date';
 import { RegistrarEntregaModal } from '@/components/entregas/RegistrarEntregaModal';
-import { PDFViewer } from '@react-pdf/renderer';
+import { PDFViewer, pdf } from '@react-pdf/renderer';
 import { GuiaPDF } from './GuiaPDF';
 import { Modal } from '@/components/ui/modal';
+import { saveAs } from 'file-saver';
 
 type BadgeColor = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark';
 
@@ -75,6 +76,18 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
             router.back();
         }
     };
+
+    const handleDownloadPdf = useCallback(async () => {
+        if (!guia) return;
+        try {
+            const blob = await pdf(
+                <GuiaPDF guia={guia} empresa={guia.empresas} logoUrl="/logo.png" />
+            ).toBlob();
+            saveAs(blob, `guia-${guia.numero_guia}.pdf`);
+        } catch (error) {
+            toast.error('Error al generar el PDF');
+        }
+    }, [guia, toast]);
 
     if (loading) {
         return (
@@ -385,17 +398,23 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                 onSaved={fetchGuia}
             />
 
-            <Modal isOpen={showPdfModal} onClose={() => setShowPdfModal(false)} className="max-w-[320px] p-0">
+            <Modal isOpen={showPdfModal} onClose={() => setShowPdfModal(false)} className="max-w-md w-full p-0">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                     <h4 className="text-sm font-medium text-gray-800 dark:text-white/90">
                         Guía #{guia.numero_guia}
                     </h4>
-                    <Button size="sm" variant="outline" onClick={() => setShowPdfModal(false)}>
-                        Cerrar
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
+                            <Download className="w-4 h-4 mr-1" />
+                            Descargar
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowPdfModal(false)}>
+                            Cerrar
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex justify-center bg-gray-100 dark:bg-gray-800 p-3">
-                    <PDFViewer width={226} height={550} showToolbar={false}>
+                <div className="flex justify-center bg-gray-100 dark:bg-gray-800 p-4" style={{ height: '85vh' }}>
+                    <PDFViewer width="100%" height="100%" showToolbar={true}>
                         <GuiaPDF guia={guia} empresa={guia.empresas} logoUrl="/logo.png" />
                     </PDFViewer>
                 </div>

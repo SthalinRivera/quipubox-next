@@ -148,28 +148,6 @@ const AppSidebar: React.FC = () => {
       }
     });
 
-    if (hasRole('administrador') || hasRole('Supervisor')) {
-      navItems.push({
-        name: "Reportes",
-        icon: <BarChart3 />,
-        subItems: [
-          { name: "Reportes Operativos", path: "/dashboard/reportes" },
-        ],
-      });
-    }
-
-    if (hasRole('administrador')) {
-      navItems.push({
-        name: "Configuración",
-        icon: <Settings />,
-        subItems: [
-          { name: "Categorías", path: "/dashboard/configuracion/categorias" },
-          { name: "Módulos", path: "/dashboard/configuracion/modulos" },
-          { name: "Permisos de roles", path: "/dashboard/configuracion/permisos" },
-        ],
-      });
-    }
-
     const otherItems: NavItem[] = [
       { icon: <Calendar />, name: "Calendar", path: "/dashboard/calendar" },
       { icon: <User />, name: "User Profile", path: "/dashboard/profile" },
@@ -180,7 +158,6 @@ const AppSidebar: React.FC = () => {
 
   const isPathAllowed = (path: string) => {
     if (path === '/dashboard' || path === '/dashboard/calendar' || path === '/dashboard/profile') return true;
-    if (path === '/dashboard/reportes' && (hasRole('administrador') || hasRole('Supervisor'))) return true;
     return hasModulo(path);
   };
 
