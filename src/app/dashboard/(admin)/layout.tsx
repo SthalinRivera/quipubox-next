@@ -1,19 +1,28 @@
-"use client";
+'use client';
 
-import { useSidebar } from "@/context/SidebarContext";
-import AppHeader from "@/layout/AppHeader";
-import AppSidebar from "@/layout/AppSidebar";
-import Backdrop from "@/layout/Backdrop";
-import React, { useEffect, useState } from "react";
-import { useAuthStore } from "@/stores/authStore";
-import { DashboardSkeleton } from "@/components/common/DashboardSkeleton";
-import { useAuth } from "@/hooks/useAuth";
+import { usePathname } from 'next/navigation';
+import operationStyles from './operations.module.css';
+import { useSidebar } from '@/context/SidebarContext';
+import AppHeader from '@/layout/AppHeader';
+import AppSidebar from '@/layout/AppSidebar';
+import Backdrop from '@/layout/Backdrop';
+import React, { useEffect, useState } from 'react';
+import { useAuthStore } from '@/stores/authStore';
+import { DashboardSkeleton } from '@/components/common/DashboardSkeleton';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isOperations = [
+    '/dashboard/operaciones-carga',
+    '/dashboard/items-reparto',
+    '/dashboard/entregas',
+    '/dashboard/guias-operativas',
+  ].some((route) => pathname === route || pathname.startsWith(route + '/'));
   useAuth(); // <-- Iniciar la restauración de sesión desde el layout para evitar el deadlock
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const { isLoading: authLoading, isLoggingOut } = useAuthStore();
@@ -30,10 +39,10 @@ export default function AdminLayout({
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
-    ? "ml-0"
+    ? 'ml-0'
     : isExpanded || isHovered
-      ? "lg:ml-[290px]"
-      : "lg:ml-[90px]";
+      ? 'lg:ml-[290px]'
+      : 'lg:ml-[90px]';
 
   return (
     <div className="min-h-screen xl:flex relative">
@@ -47,7 +56,11 @@ export default function AdminLayout({
         {/* Header */}
         <AppHeader />
         {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
+        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          <div className={isOperations ? operationStyles.workspace : undefined}>
+            {children}
+          </div>
+        </div>
       </div>
 
       {/* Capa premium difuminada al cerrar sesión */}
@@ -70,4 +83,3 @@ export default function AdminLayout({
     </div>
   );
 }
-

@@ -4,7 +4,7 @@ import { GuiaOperativa, CreateGuiaOperativaDto } from '@/types/guiaOperativa';
 
 export const useGuiasOperativas = () => {
     const [guias, setGuias] = useState<GuiaOperativa[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const fetchGuias = useCallback(async (params?: { estado?: string; fecha_emision?: string }) => {
         setLoading(true);

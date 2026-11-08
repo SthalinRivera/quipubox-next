@@ -1,5 +1,7 @@
 'use client';
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/api-client';
@@ -89,13 +91,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
         }
     }, [guia, toast]);
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center min-h-[300px]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-        );
-    }
+    if (loading) return <OperationSkeleton variant="document" heading={true} />;
 
     if (!guia) {
         return (
@@ -120,12 +116,12 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
     const porcentajeEntregado = totalAsignado > 0 ? Math.min(100, Math.round((totalEntregado / totalAsignado) * 100)) : 0;
 
     const puedeFirmar = guia.estado !== 'firmada' && guia.estado !== 'anulada';
-    const puedeRegistrarEntrega = guia.estado !== 'anulada';
+    const puedeRegistrarEntrega = guia.estado !== 'anulada' && totalEntregado < totalAsignado;
 
     // Datos virtuales
-    const itemsDelPuesto = itemReparto?._items_del_puesto || [];
-    const todasLasCalidades = itemReparto?._todas_las_calidades || [];
-    const clientesAgrupados = itemReparto?._clientes_agrupados || [];
+    const itemsDelPuesto = itemReparto ? [itemReparto] : [];
+    const todasLasCalidades = itemReparto?.items_reparto_detalle || [];
+    const clientesAgrupados = itemReparto?.clientes?.nombres ? [itemReparto.clientes.nombres] : [];
 
     // Agrupar calidades por nombre y guardar los items asociados
     const calidadesMap = new Map<string, { nombre: string; cantidad_total: number; items: any[]; precio_unitario: any }>();
@@ -163,7 +159,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
     const clienteEmisor = detalleCarga?.clientes?.nombres
         ? `${detalleCarga.clientes.nombres} ${detalleCarga.clientes.apellidos || ''}`
         : '—';
-    const cantidadJabas = detalleCarga?.cantidad_jabas || 0;
+    const cantidadJabas = itemReparto?.cantidad_asignada || 0;
     const formatHora = (hora: any): string => {
         if (!hora) return '—';
         if (typeof hora === 'string') {
@@ -203,8 +199,8 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                             Firmar guía
                         </Button>
                     )}
-                    {puedeRegistrarEntrega && !tieneEntregas && (
-                        <Button size="sm" variant="outline" onClick={() => setEntregaModalOpen(true)}>
+                    {puedeRegistrarEntrega && (
+                        <Button size="sm" variant="outline" onClick={() => router.push('/dashboard/operaciones-carga/' + operacion.id_operacion + '#entregar')}>
                             Registrar Entrega
                         </Button>
                     )}
@@ -355,8 +351,8 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Entrega
                     </h3>
-                    {!tieneEntregas && puedeRegistrarEntrega && (
-                        <Button size="sm" variant="outline" onClick={() => setEntregaModalOpen(true)}>
+                    {puedeRegistrarEntrega && (
+                        <Button size="sm" variant="outline" onClick={() => router.push('/dashboard/operaciones-carga/' + operacion.id_operacion + '#entregar')}>
                             Registrar Entrega
                         </Button>
                     )}

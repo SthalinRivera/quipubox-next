@@ -1,5 +1,7 @@
-// app/dashboard/operaciones-carga/nueva/page.tsx
 'use client';
+// app/dashboard/operaciones-carga/nueva/page.tsx
+import { NuevaOperacionSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,9 +10,11 @@ import { fetchWithAuth } from '@/lib/api-client';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
+import DatePicker from '@/components/ui/date-picker/DatePicker';
 import { format } from 'date-fns';
 import { useCreacionCargaStore } from '@/stores/creacionCargaStore';
 import { Stepper } from '@/components/ui/Stepper';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Sede {
     id_sede: number;
@@ -89,6 +93,7 @@ export default function NuevaOperacionPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submitting) return;
         if (form.id_sede_origen === 0 || form.id_camion === 0 || !form.fecha_carga) {
             toast.error('Por favor, complete los campos obligatorios (Sede origen, Camión y Fecha).');
             return;
@@ -103,52 +108,39 @@ export default function NuevaOperacionPage() {
             setOperacion(nueva.id_operacion, form);
             setCurrentStep(2);
             router.push(`/dashboard/operaciones-carga/${nueva.id_operacion}`);
-        } catch (err: any) {
-            toast.error(err.message || 'Error al guardar la operación. Verifique los datos.');
+        } catch (err: unknown) {
+            toast.error((err instanceof Error ? err.message : null) || 'Error al guardar la operación. Verifique los datos.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (loadingData) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
-                    <p className="mt-4 text-gray-600 dark:text-gray-300">Cargando datos necesarios...</p>
-                </div>
-            </div>
-        );
-    }
+    if (loadingData) return <NuevaOperacionSkeleton />;
 
     return (
-        <div className="max-w-3xl mx-auto p-4 md:p-5 space-y-5">
-            {/* Cabecera */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Nueva operación de carga</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        Complete los datos. Los campos con <span className="text-red-500">*</span> son obligatorios.
-                    </p>
+        <div className="mx-auto max-w-full space-y-4 pb-6">
+            <div>
+                <button type="button" onClick={() => router.push("/dashboard/operaciones-carga") } className="mb-2 inline-flex items-center gap-2 rounded-lg text-sm font-medium text-gray-500 transition hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500 dark:text-gray-400">
+                    <ArrowLeft size={16} aria-hidden="true" /> Volver a operaciones
+                </button>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight text-gray-900  dark:text-white">Nueva carga</h1>
+                    </div>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.back()}
-                    className="text-sm"
-                >
-                    Cancelar
-                </Button>
             </div>
 
-            {/* Stepper */}
-            <Stepper />
+            <div className="">
+                <Stepper />
+            </div>
 
-            {/* Formulario */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Sede origen */}
+            <form onSubmit={handleSubmit}>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+                    <div className="grid divide-y divide-gray-100 md:grid-cols-2 dark:divide-gray-800">
+                        <section className="p-4">
+                            <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Ruta</h2>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {/* Sede origen */}
                         <div className="space-y-1.5">
                             <Label htmlFor="sede_origen" className="text-sm font-medium">
                                 Sede origen <span className="text-red-500">*</span>
@@ -157,17 +149,16 @@ export default function NuevaOperacionPage() {
                                 id="sede_origen"
                                 value={form.id_sede_origen}
                                 onChange={e => setForm({ ...form, id_sede_origen: Number(e.target.value) })}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
+                                className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 required
                             >
-                                <option value={0}>-- Seleccione --</option>
+                                <option value={0}>Selecciona una opción</option>
                                 {sedesOrigen.map(s => (
                                     <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
                                 ))}
                             </select>
                         </div>
-
-                        {/* Sede destino */}
+                                {/* Sede destino */}
                         <div className="space-y-1.5">
                             <Label htmlFor="sede_destino" className="text-sm font-medium">
                                 Sede destino <span className="text-gray-400 text-xs">(opcional)</span>
@@ -176,16 +167,20 @@ export default function NuevaOperacionPage() {
                                 id="sede_destino"
                                 value={form.id_sede_destino ?? 0}
                                 onChange={e => setForm({ ...form, id_sede_destino: Number(e.target.value) || null })}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
+                                className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
-                                <option value={0}>-- Seleccione (opcional) --</option>
+                                <option value={0}>Sin asignar</option>
                                 {sedesDestino.map(s => (
                                     <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
                                 ))}
                             </select>
                         </div>
-
-                        {/* Camión */}
+                            </div>
+                        </section>
+                        <section className="p-4 md:border-t-0! md:border-l md:border-gray-100 dark:md:border-gray-800">
+                            <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Camión y fecha</h2>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {/* Camión */}
                         <div className="space-y-1.5">
                             <Label htmlFor="camion" className="text-sm font-medium">
                                 Camión <span className="text-red-500">*</span>
@@ -194,29 +189,22 @@ export default function NuevaOperacionPage() {
                                 id="camion"
                                 value={form.id_camion}
                                 onChange={e => setForm({ ...form, id_camion: Number(e.target.value) })}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
+                                className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 required
                             >
-                                <option value={0}>-- Seleccione --</option>
+                                <option value={0}>Selecciona una opción</option>
                                 {camiones.map(c => (
                                     <option key={c.id_camion} value={c.id_camion}>{c.placa}</option>
                                 ))}
                             </select>
                         </div>
-
-                        {/* Fecha y Hora */}
+                                {/* Fecha y Hora */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label htmlFor="fecha_carga" className="text-sm font-medium">
-                                    Fecha <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    id="fecha_carga"
-                                    type="date"
+                                <DatePicker
+                                    label="Fecha *"
                                     value={form.fecha_carga}
-                                    onChange={e => setForm({ ...form, fecha_carga: e.target.value })}
-                                    required
-                                    className="w-full text-sm"
+                                    onChange={fecha_carga => setForm({ ...form, fecha_carga })}
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -232,8 +220,12 @@ export default function NuevaOperacionPage() {
                                 />
                             </div>
                         </div>
-
-                        {/* Encargado de carga */}
+                            </div>
+                        </section>
+                        <section className="p-4 md:col-span-2">
+                            <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Responsables</h2>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {/* Encargado de carga */}
                         <div className="space-y-1.5">
                             <Label htmlFor="encargado" className="text-sm font-medium">
                                 Encargado de carga <span className="text-gray-400 text-xs">(opcional)</span>
@@ -242,9 +234,9 @@ export default function NuevaOperacionPage() {
                                 id="encargado"
                                 value={form.id_encargado_carga ?? 0}
                                 onChange={e => setForm({ ...form, id_encargado_carga: Number(e.target.value) || null })}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
+                                className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
-                                <option value={0}>-- Seleccione (opcional) --</option>
+                                <option value={0}>Sin asignar</option>
                                 {encargados.map(u => (
                                     <option key={u.id_usuario} value={u.id_usuario}>
                                         {u.nombres} {u.apellidos || ''}
@@ -252,8 +244,7 @@ export default function NuevaOperacionPage() {
                                 ))}
                             </select>
                         </div>
-
-                        {/* Repartidor asignado */}
+                                {/* Repartidor asignado */}
                         <div className="space-y-1.5">
                             <Label htmlFor="repartidor" className="text-sm font-medium">
                                 Repartidor asignado <span className="text-gray-400 text-xs">(opcional)</span>
@@ -262,9 +253,9 @@ export default function NuevaOperacionPage() {
                                 id="repartidor"
                                 value={form.id_repartidor_asignado ?? 0}
                                 onChange={e => setForm({ ...form, id_repartidor_asignado: Number(e.target.value) || null })}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
+                                className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
-                                <option value={0}>-- Seleccione (opcional) --</option>
+                                <option value={0}>Sin asignar</option>
                                 {repartidores.map(u => (
                                     <option key={u.id_usuario} value={u.id_usuario}>
                                         {u.nombres} {u.apellidos || ''}
@@ -272,8 +263,7 @@ export default function NuevaOperacionPage() {
                                 ))}
                             </select>
                         </div>
-
-                        {/* Observaciones (ocupa todo el ancho) */}
+                                {/* Observaciones (ocupa todo el ancho) */}
                         <div className="md:col-span-2 space-y-1.5">
                             <Label htmlFor="observaciones" className="text-sm font-medium">
                                 Observaciones <span className="text-gray-400 text-xs">(opcional)</span>
@@ -283,44 +273,27 @@ export default function NuevaOperacionPage() {
                                 rows={2}
                                 value={form.observaciones ?? ''}
                                 onChange={e => setForm({ ...form, observaciones: e.target.value || null })}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-900 dark:text-white"
-                                placeholder="Notas adicionales (ej. condiciones especiales, rutas, etc.)"
+                                className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                placeholder="Indicaciones adicionales"
                             />
                         </div>
+                            </div>
+                        </section>
                     </div>
 
-                    {/* Botones de acción */}
-                    <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => router.back()}
-                            className="px-5 text-sm"
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={submitting}
-                            className="px-5 text-sm"
-                        >
-                            {submitting ? (
-                                <>
-                                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></span>
-                                    Guardando...
-                                </>
-                            ) : (
-                                'Crear operación'
-                            )}
+
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400"><span className="font-semibold text-red-500">*</span> Obligatorio</p>
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                        <Button type="button" variant="outline" onClick={() => router.push("/dashboard/operaciones-carga") } disabled={submitting}>Cancelar</Button>
+                        <Button type="submit" disabled={submitting}>
+                            {submitting ? <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />Guardando...</> : <>Crear carga <ArrowRight size={16} aria-hidden="true" /></>}
                         </Button>
                     </div>
-                </form>
-            </div>
-
-            {/* Ayuda */}
-            <div className="text-center text-xs text-gray-400 dark:text-gray-500">
-                Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
-            </div>
+                </div>
+            </form>
         </div>
     );
 }

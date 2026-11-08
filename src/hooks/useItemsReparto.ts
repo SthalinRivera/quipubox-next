@@ -73,7 +73,7 @@ export const useItemsReparto = () => {
     // --- Clientes (con manejo de estructura { data: [...] }) ---
     const getClientes = useCallback(async () => {
         try {
-            const response = await fetchWithAuth<any>('clientes');
+            const response = await fetchWithAuth<any>('clientes/all');
             const data = response?.data || response;
             const clientesArray = Array.isArray(data) ? data : [];
             setClientes(clientesArray);
@@ -81,7 +81,7 @@ export const useItemsReparto = () => {
         } catch (error) {
             console.error('Error en getClientes:', error);
             setClientes([]);
-            return [];
+            throw error;
         }
     }, []);
 
@@ -95,7 +95,7 @@ export const useItemsReparto = () => {
         } catch (error) {
             console.error('Error en getPuestos:', error);
             setPuestos([]);
-            return [];
+            throw error;
         }
     }, []);
 
@@ -115,7 +115,7 @@ export const useItemsReparto = () => {
         try {
             const result = await fetchWithAuth<any[]>('items-reparto/from-calidades-multiple', {
                 method: 'POST',
-                body: JSON.stringify(payload),
+                body: payload,
             });
             toast.success('Calidad asignada correctamente');
             await fetchItems();
@@ -148,6 +148,7 @@ export const useItemsReparto = () => {
             optionsLoadedRef.current = true;
         } catch (error) {
             console.error('Error cargando opciones:', error);
+            throw error;
         }
     }, [getClientes, getPuestos]);
     const generarGuias = useCallback(async (operacionId: number) => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 import { useState, useEffect, useRef } from "react";
 import { useOperacionesCarga } from "@/hooks/useOperacionesCarga";
 import { useToast } from "@/hooks/useToast";
@@ -7,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
+import DatePicker from "@/components/ui/date-picker/DatePicker";
 import type { OperacionCarga, CreateOperacionCargaDTO } from "@/types/operacionCarga";
 import { fetchWithAuth } from "@/lib/api-client";
 import { format } from "date-fns"; // npm install date-fns (o usar new Date().toISOString().slice(0,10))
@@ -219,9 +222,7 @@ export function OperacionCargaModal({
                 </p>
 
                 {loadingData ? (
-                    <div className="py-8 text-center text-gray-500 dark:text-gray-400">
-                        Cargando datos necesarios...
-                    </div>
+                    <OperationSkeleton variant="compact" heading={false} />
                 ) : (
                     <form onSubmit={handleSubmit} className="mt-6">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -257,16 +258,10 @@ export function OperacionCargaModal({
 
                             {/* Fecha (con valor por defecto, pero editable) */}
                             <div className="space-y-2">
-                                <Label htmlFor="fecha_carga" className="text-gray-700 dark:text-gray-300">
-                                    Fecha * (por defecto hoy)
-                                </Label>
-                                <Input
-                                    id="fecha_carga"
-                                    type="date"
+                                <DatePicker
+                                    label="Fecha * (por defecto hoy)"
                                     value={form.fecha_carga}
-                                    onChange={(e) => setForm({ ...form, fecha_carga: e.target.value })}
-                                    required
-                                    className="border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                    onChange={(fecha_carga) => setForm({ ...form, fecha_carga })}
                                 />
                             </div>
 

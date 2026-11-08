@@ -1,5 +1,7 @@
 "use client";
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 import { useState, useEffect } from "react";
 import { useDetallesCarga } from "@/hooks/useDetallesCarga";
 import { useToast } from "@/hooks/useToast";
@@ -24,7 +26,7 @@ export function CalidadesTable({ detalleId, maxCantidad }: CalidadesTableProps) 
     const { fetchCalidades, addCalidad, updateCalidad, deleteCalidad } = useDetallesCarga(0);
     const toast = useToast();
     const [calidades, setCalidades] = useState<DetalleCalidad[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedCalidad, setSelectedCalidad] = useState<DetalleCalidad | null>(null);
     const [totalCantidad, setTotalCantidad] = useState(0);
@@ -84,13 +86,7 @@ export function CalidadesTable({ detalleId, maxCantidad }: CalidadesTableProps) 
     const porcentaje = (totalCantidad / maxCantidad) * 100;
     const excede = totalCantidad > maxCantidad;
 
-    if (loading) {
-        return (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                Cargando calidades...
-            </div>
-        );
-    }
+    if (loading) return <OperationSkeleton variant="list" heading={false} />;
 
     return (
         <div className="space-y-3">

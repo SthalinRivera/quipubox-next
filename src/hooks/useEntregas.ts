@@ -4,7 +4,7 @@ import { Entrega, CreateEntregaDto } from '@/types/entrega';
 
 export const useEntregas = () => {
     const [entregas, setEntregas] = useState<Entrega[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const fetchEntregas = useCallback(async (params?: {
         id_guia?: number;

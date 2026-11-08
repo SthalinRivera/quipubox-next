@@ -1,5 +1,8 @@
 "use client";
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from "react";
 import { useGuiasOperativas } from "@/hooks/useGuiasOperativas";
 import { useToast } from "@/hooks/useToast";
@@ -28,6 +31,7 @@ const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
 };
 
 export default function GuiasOperativasTable() {
+    const router = useRouter();
     const { guias, loading, fetchGuias, deleteGuia, firmarGuia, changeGuiaState } =
         useGuiasOperativas();
     const toast = useToast();
@@ -46,8 +50,7 @@ export default function GuiasOperativasTable() {
     };
 
     const handleCreate = () => {
-        setSelectedGuia(null);
-        setModalOpen(true);
+        router.push('/dashboard/operaciones-carga');
     };
 
     const handleDelete = async (id: number, numero: string) => {
@@ -70,13 +73,7 @@ export default function GuiasOperativasTable() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                Cargando guías...
-            </div>
-        );
-    }
+    if (loading) return <OperationSkeleton variant="list" heading={false} />;
 
     return (
         <div className="space-y-4">

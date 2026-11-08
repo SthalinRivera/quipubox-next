@@ -1,5 +1,7 @@
 "use client";
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useDetallesCarga } from "@/hooks/useDetallesCarga";
 import { useToast } from "@/hooks/useToast";
@@ -99,20 +101,14 @@ export function DetalleCargaModal({
             };
 
             try {
-                // Clientes (endpoint sin paginación)
-                const clientesResp = await fetchWithAuth<any>("clientes/all");
+                const [clientesResp, frutasResp, variedadesResp, tiposResp] = await Promise.all([
+                    fetchWithAuth("clientes/all"), fetchWithAuth("frutas"),
+                    fetchWithAuth("variedades"), fetchWithAuth("tipos-jaba"),
+                ]);
+                if (!mounted) return;
                 setClientes(extractArray(clientesResp));
-
-                // Frutas
-                const frutasResp = await fetchWithAuth<any>("frutas");
                 setFrutas(extractArray(frutasResp));
-
-                // Variedades
-                const variedadesResp = await fetchWithAuth<any>("variedades");
                 setVariedades(extractArray(variedadesResp));
-
-                // Tipos de jaba
-                const tiposResp = await fetchWithAuth<any>("tipos-jaba");
                 setTiposJaba(extractArray(tiposResp));
 
                 dataLoadedRef.current = true;
@@ -246,8 +242,9 @@ export function DetalleCargaModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submitting) return;
         // Validaciones
-        if (form.id_cliente_emisor === 0 || form.id_fruta === 0 || form.id_tipo_jaba === 0 || form.cantidad_jabas <= 0) {
+        if (form.id_cliente_emisor === 0 || form.id_fruta === 0 || form.id_tipo_jaba === 0 || form.cantidad_jabas <= 0 || !Number.isInteger(form.cantidad_jabas)) {
             toast.error("Complete los campos obligatorios (Cliente Emisor, Fruta, Tipo Jaba, Cantidad)");
             return;
         }
@@ -287,20 +284,18 @@ export function DetalleCargaModal({
 
     // JSX (mismo que antes, pero con los estados correctos)
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
+        <Modal isOpen={isOpen} onClose={() => { if (!submitting) onClose(); }} className="mx-4 max-h-[90dvh] max-w-2xl overflow-y-auto" ariaLabel={editingDetalle ? "Editar producto" : "Agregar producto"}>
             <div className="p-6 dark:bg-gray-900">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
-                    {editingDetalle ? "Editar detalle" : "Nuevo detalle de carga"}
+                    {editingDetalle ? "Editar producto" : "Agregar producto a la carga"}
                 </h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Complete los datos del detalle de carga
+                    Indica el producto, las jabas y cómo se entregará. Al guardar volverás a esta carga.
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                     {loadingData ? (
-                        <div className="py-8 text-center text-gray-500 dark:text-gray-400">
-                            Cargando datos necesarios...
-                        </div>
+                        <OperationSkeleton variant="compact" heading={false} />
                     ) : (
                         <>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -522,6 +517,7 @@ export function DetalleCargaModal({
                                 <Button
                                     type="button"
                                     variant="outline"
+                                    disabled={submitting}
                                     onClick={onClose}
                                     className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
@@ -532,7 +528,7 @@ export function DetalleCargaModal({
                                     disabled={submitting}
                                     className="dark:bg-brand-600 dark:hover:bg-brand-700"
                                 >
-                                    {submitting ? "Guardando..." : editingDetalle ? "Actualizar" : "Crear"}
+                                    {submitting ? "Guardando..." : editingDetalle ? "Guardar cambios" : "Agregar producto"}
                                 </Button>
                             </div>
                         </>

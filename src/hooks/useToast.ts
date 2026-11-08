@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export const useToast = () => {
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info') => {
@@ -37,10 +37,10 @@ export const useToast = () => {
     }, 3000);
   }, []);
 
-  return {
-    success: useCallback((msg: string) => showToast(msg, 'success'), [showToast]),
-    error: useCallback((msg: string) => showToast(msg, 'error'), [showToast]),
-    warning: useCallback((msg: string) => showToast(msg, 'warning'), [showToast]),
-    info: useCallback((msg: string) => showToast(msg, 'info'), [showToast]),
-  };
+  return useMemo(() => ({
+    success:(msg: string) => showToast(msg, 'success'),
+    error: (msg: string) => showToast(msg, 'error'),
+    warning: (msg: string) => showToast(msg, 'warning'),
+    info: (msg: string) => showToast(msg, 'info'),
+  }), [showToast]);
 };

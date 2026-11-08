@@ -5,7 +5,7 @@ import type { OperacionCarga, CreateOperacionCargaDTO, UpdateOperacionCargaDTO }
 
 export const useOperacionesCarga = () => {
     const [operaciones, setOperaciones] = useState<OperacionCarga[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const fetchAll = useCallback(async (params?: { estado?: string; fecha?: string }) => {
         setLoading(true);

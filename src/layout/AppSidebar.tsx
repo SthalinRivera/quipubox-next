@@ -103,6 +103,9 @@ const AppSidebar: React.FC = () => {
   const pathname = usePathname();
   const { hasRole, hasModulo, modulos } = useAuthStore();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
     index: number;
@@ -110,7 +113,7 @@ const AppSidebar: React.FC = () => {
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const isActive = useCallback((path: string) => path === pathname || (path !== '/dashboard' && pathname.startsWith(path + '/')), [pathname]);
 
   const { mainNavItems, othersItems } = useMemo(() => {
     const categoriasMap = new globalThis.Map<string, {
@@ -138,10 +141,16 @@ const AppSidebar: React.FC = () => {
     const sortedCategorias = Array.from(categoriasMap.values())
       .sort((a, b) => a.orden - b.orden);
 
+    const ordenOperaciones: Record<string, {orden: number; nombre: string}> = {
+      '/dashboard/operaciones-carga': {orden: 1, nombre: '1. Cargas y calidades'},
+      '/dashboard/items-reparto': {orden: 2, nombre: '2. Preparar entregas'},
+      '/dashboard/entregas': {orden: 3, nombre: '3. Ver entregas'},
+      '/dashboard/guias-operativas': {orden: 4, nombre: '4. Guías'},
+    };
     sortedCategorias.forEach((cat) => {
       const subItems = cat.modulos
-        .sort((a, b) => (a.orden || 0) - (b.orden || 0))
-        .map((m) => ({ name: m.nombre, path: m.ruta }));
+        .sort((a, b) => (ordenOperaciones[a.ruta]?.orden ?? (a.orden || 100)) - (ordenOperaciones[b.ruta]?.orden ?? (b.orden || 100)))
+        .map((m) => ({ name: ordenOperaciones[m.ruta]?.nombre || m.nombre, path: m.ruta }));
 
       if (subItems.length > 0) {
         navItems.push({ name: cat.nombre, icon: getIconFromName(cat.icono_web), subItems });
@@ -197,8 +206,6 @@ const AppSidebar: React.FC = () => {
       return false;
     });
 
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
     if (!mounted) return <aside className="fixed mt-16 ... w-[290px]" />;
 
     return (

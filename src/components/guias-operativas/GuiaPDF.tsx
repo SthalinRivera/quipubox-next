@@ -164,8 +164,8 @@ export const GuiaPDF = ({ guia, empresa }: any) => {
     const itemReparto = guia.items_reparto;
     const detalleCarga = itemReparto?.detalle_carga;
     const operacion = detalleCarga?.operaciones_carga;
-    const todasCalidades = itemReparto?._todas_las_calidades || [];
-    const itemsDelPuesto = itemReparto?._items_del_puesto || [];
+    const todasCalidades = itemReparto?.items_reparto_detalle || [];
+    const itemsDelPuesto = itemReparto ? [itemReparto] : [];
     const clienteReceptor = itemReparto?.clientes;
 
     // Calidades
@@ -181,7 +181,7 @@ export const GuiaPDF = ({ guia, empresa }: any) => {
     });
     const calidadesResumen = Object.values(calidadesMap);
     const totalGeneral = todasCalidades.reduce((s: number, d: any) => s + (d.precio_unitario ? d.cantidad * d.precio_unitario : 0), 0);
-    const cantidadTotal = calidadesResumen.reduce((s: number, c: any) => s + c.cantidad_total, 0);
+    const cantidadTotal = calidadesResumen.length ? calidadesResumen.reduce((s: number, c: any) => s + c.cantidad_total, 0) : (itemReparto?.cantidad_asignada || 0);
 
     // Entrega
     const tieneEntrega = guia.entregas && guia.entregas.length > 0;
@@ -212,7 +212,7 @@ export const GuiaPDF = ({ guia, empresa }: any) => {
     const requiereRetorno = detalleCarga?.requiere_retorno_jabas;
     const clienteEmisor = detalleCarga?.clientes?.nombres ? `${detalleCarga.clientes.nombres} ${detalleCarga.clientes.apellidos || ''}` : '—';
     const clienteEmisorTelefono = detalleCarga?.clientes?.telefono || '—';
-    const cantidadJabas = detalleCarga?.cantidad_jabas || 0;
+    const cantidadJabas = itemReparto?.cantidad_asignada || 0;
     const instruccion = detalleCarga?.instruccion_reparto || '—';
     const observacionesDetalle = detalleCarga?.observaciones || '—';
     const observacionesGuia = guia.observaciones || '—';

@@ -1,5 +1,9 @@
 "use client";
 
+import { Skeleton } from '@/components/ui/skeleton/Skeleton';
+import { OperationTableRows } from '@/components/ui/skeleton/OperationSkeleton';
+
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from "react";
 import { useEntregas } from "@/hooks/useEntregas";
 import { useToast } from "@/hooks/useToast";
@@ -43,7 +47,8 @@ const ESTADO_ICON: Record<string, any> = {
 };
 
 export default function EntregasTable() {
-    const { entregas, loading, fetchEntregas, changeState, firmarEntrega } = useEntregas();
+    const router = useRouter();
+    const { entregas, loading, fetchEntregas, firmarEntrega } = useEntregas();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
@@ -88,8 +93,7 @@ export default function EntregasTable() {
     };
 
     const handleCreate = () => {
-        setSelectedEntrega(null);
-        setModalOpen(true);
+        router.push('/dashboard/operaciones-carga');
     };
 
     const handleFirmar = async (id: number) => {
@@ -101,15 +105,6 @@ export default function EntregasTable() {
             } catch (err: any) {
                 toast.error(err.message);
             }
-        }
-    };
-
-    const handleQuickState = async (id: number, estado: string) => {
-        try {
-            await changeState(id, estado);
-            toast.success(`Estado cambiado a ${estado.replace('_', ' ')}`);
-        } catch (err: any) {
-            toast.error(err.message);
         }
     };
 
@@ -136,7 +131,7 @@ export default function EntregasTable() {
                                 <Icon className={`h-5 w-5 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`} />
                             </div>
                             <div className="text-left">
-                                <p className="text-lg font-bold text-gray-800 dark:text-white/90">{resumen[value]}</p>
+                                <div className="text-lg font-bold text-gray-800 dark:text-white/90">{loading ? <Skeleton className="my-1 h-5 w-8" aria-label="Cargando cantidad" /> : resumen[value]}</div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                             </div>
                         </button>
@@ -191,13 +186,7 @@ export default function EntregasTable() {
                             </TableHeader>
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                                 {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={8} className="py-12 text-center">
-                                            <div className="flex justify-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                    <OperationTableRows columns={8} />
                                 ) : entregas.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={8} className="py-12 text-center text-gray-500 dark:text-gray-400">
@@ -247,29 +236,19 @@ export default function EntregasTable() {
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => handleEdit(entrega)}
-                                                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                                                        className="inline-flex min-h-10 items-center gap-1.5 px-2 text-xs rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
                                                         title="Editar"
                                                     >
-                                                        <Pencil className="h-4 w-4" />
+                                                        <Pencil className="h-4 w-4" /> Editar datos
                                                     </button>
 
-                                                    {entrega.estado_entrega === "pendiente" && (
-                                                        <button
-                                                            onClick={() => handleQuickState(entrega.id_entrega, "entregado_total")}
-                                                            className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 transition-colors"
-                                                            title="Marcar entregado"
-                                                        >
-                                                            <CheckSquare className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-
-                                                    {!entrega.firma_recibido && entrega.estado_entrega !== "entregado_total" && (
+                                                    {!entrega.firma_recibido && entrega.cantidad_entregada > 0 && (
                                                         <button
                                                             onClick={() => handleFirmar(entrega.id_entrega)}
-                                                            className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 transition-colors"
+                                                            className="inline-flex min-h-10 items-center gap-1.5 px-2 text-xs rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 transition-colors"
                                                             title="Firmar recibido"
                                                         >
-                                                            <CheckCircle className="h-4 w-4" />
+                                                            <CheckCircle className="h-4 w-4" /> Registrar firma
                                                         </button>
                                                     )}
                                                 </div>

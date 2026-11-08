@@ -1,5 +1,7 @@
 "use client";
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 import React, { useEffect, useState } from "react";
 import { useDetallesCarga } from "@/hooks/useDetallesCarga";
 import { useToast } from "@/hooks/useToast";
@@ -36,7 +38,7 @@ export default function DetallesCargaTable({ operacionId, onRefresh, operacionEs
     const [generating, setGenerating] = useState(false);
     const router = useRouter();
 
-    const isLocked = operacionEstado === 'repartiendo' || operacionEstado === 'cancelada';
+    const isLocked = !['pendiente', 'en_curso'].includes(operacionEstado || '');
 
     useEffect(() => {
         if (operacionId && !isNaN(operacionId)) {
@@ -91,13 +93,7 @@ export default function DetallesCargaTable({ operacionId, onRefresh, operacionEs
         router.push(`/dashboard/operaciones-carga/${operacionId}/detalles/${detalleId}/calidades`);
     };
 
-    if (loading) {
-        return (
-            <div className="p-4 text-center text-gray-700 dark:text-gray-300">
-                Cargando detalles...
-            </div>
-        );
-    }
+    if (loading) return <OperationSkeleton variant="list" heading={false} />;
 
     return (
         <div className="space-y-4">

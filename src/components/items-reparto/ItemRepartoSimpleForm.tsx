@@ -1,5 +1,7 @@
 'use client';
 
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
@@ -25,8 +27,6 @@ export default function ItemRepartoSimpleForm({
 }: ItemRepartoSimpleFormProps) {
     const {
         getDetallesReparto,
-        getClientes,
-        getPuestos,
         getCalidadesByDetalle,
         createMultipleFromCalidades,
         detallesReparto,
@@ -44,7 +44,10 @@ export default function ItemRepartoSimpleForm({
     const [idClienteReceptor, setIdClienteReceptor] = useState<number>(0);
     const [idPuesto, setIdPuesto] = useState<number>(0);
     const [precioUnitario, setPrecioUnitario] = useState<string>('');
-    const [loadingOptions, setLoadingOptions] = useState(false);
+    const [loadingOptions, setLoadingOptions] = useState(true);
+    const [optionsError, setOptionsError] = useState(false);
+    const [optionsRetry, setOptionsRetry] = useState(0);
+    const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [step, setStep] = useState<'calidad' | 'destino'>('calidad');
 
@@ -54,14 +57,13 @@ export default function ItemRepartoSimpleForm({
     useEffect(() => {
         if (isOpen && !optionsLoadedRef.current) {
             setLoadingOptions(true);
+            setOptionsError(false);
             loadOptions()
-                .catch(() => setError('Error al cargar opciones'))
-                .finally(() => {
-                    optionsLoadedRef.current = true;
-                    setLoadingOptions(false);
-                });
+                .then(() => { optionsLoadedRef.current = true; })
+                .catch(() => setOptionsError(true))
+                .finally(() => setLoadingOptions(false));
         }
-    }, [isOpen, loadOptions]);
+    }, [isOpen, loadOptions, optionsRetry]);
 
     useEffect(() => {
         if (isOpen && operacionId) {
@@ -83,7 +85,9 @@ export default function ItemRepartoSimpleForm({
     useEffect(() => {
         if (detalleCargaId) {
             getCalidadesByDetalle(detalleCargaId).then((data) => {
-                const calidadesData = Array.isArray(data) ? data : [];
+                const pendientesDetalle = detallesReparto.find(d => d.id_detalle_carga === detalleCargaId);
+                const asignados = (pendientesDetalle?.items_reparto || []).flatMap((i: any) => i.items_reparto_detalle || []);
+                const calidadesData = (Array.isArray(data) ? data : []).map(c => ({...c, cantidad: c.cantidad - asignados.filter((a: any) => a.id_detalle_carga_calidad === c.id_detalle_carga_calidad).reduce((sum: number,a: any) => sum+a.cantidad,0)})).filter(c => c.cantidad > 0);
                 setCalidades(calidadesData);
                 if (calidadesData.length === 1) {
                     setCalidadSeleccionadaId(calidadesData[0].id_detalle_carga_calidad);
@@ -99,30 +103,44 @@ export default function ItemRepartoSimpleForm({
             setCantidadAsignar(0);
             setDetalleSeleccionado(null);
         }
-    }, [detalleCargaId, getCalidadesByDetalle]);
+    }, [detalleCargaId, getCalidadesByDetalle, detallesReparto]);
 
-    const clientesFiltrados = useMemo(() => {
+    const clientesReceptores = useMemo(() => {
         if (!clientesRaw || !detalleSeleccionado) return [];
-        const sedeDestinoId = detalleSeleccionado.operaciones_carga?.id_sede_destino;
         return clientesRaw.filter((cliente) => {
-            const relacionesReceptor = (cliente.cliente_sede || []).filter(
-                (cs: any) => cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos'
+            return cliente.estado !== false && (cliente.cliente_sede || []).some(
+                (cs: any) => cs.estado !== false && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos')
             );
-            if (relacionesReceptor.length === 0) return false;
-            if (!sedeDestinoId) return true;
-            return relacionesReceptor.some((cs: any) => cs.id_sede === sedeDestinoId);
         });
     }, [clientesRaw, detalleSeleccionado]);
+
+    const sedeDestinoId = detalleSeleccionado?.operaciones_carga?.id_sede_destino;
+    const clientesEnSedeDestino = useMemo(() => {
+        if (!sedeDestinoId) return [];
+        return clientesReceptores.filter((cliente) =>
+            cliente.cliente_sede?.some(
+                (cs: any) => cs.estado !== false
+                    && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos')
+                    && Number(cs.id_sede) === Number(sedeDestinoId),
+            ),
+        );
+    }, [clientesReceptores, sedeDestinoId]);
+    const clientesFiltrados = clientesEnSedeDestino.length
+        ? clientesEnSedeDestino
+        : clientesReceptores;
+    const mostrarAvisoOtraSede = Boolean(
+        sedeDestinoId && clientesReceptores.length && !clientesEnSedeDestino.length,
+    );
 
     const puestosFiltrados = useMemo(() => {
         if (!puestosRaw || !idClienteReceptor) return puestosRaw || [];
         const cliente = clientesFiltrados.find((c) => c.id_cliente === idClienteReceptor);
         if (!cliente) return puestosRaw || [];
         const puestosIds = (cliente.clientes_puestos || [])
-            .filter((cp: any) => cp.estado !== false)
-            .map((cp: any) => cp.id_puesto);
-        if (puestosIds.length === 0) return puestosRaw || [];
-        return (puestosRaw || []).filter((p) => puestosIds.includes(p.id_puesto));
+            .filter((cp: any) => cp.estado !== false && !cp.fecha_fin)
+            .map((cp: any) => Number(cp.id_puesto));
+        if (puestosIds.length === 0) return [];
+        return (puestosRaw || []).filter((p) => puestosIds.includes(Number(p.id_puesto)));
     }, [puestosRaw, idClienteReceptor, clientesFiltrados]);
 
     const calidadSeleccionada = calidades.find((c) => c.id_detalle_carga_calidad === calidadSeleccionadaId);
@@ -142,6 +160,7 @@ export default function ItemRepartoSimpleForm({
     };
 
     const handleClose = () => {
+        if (submitting) return;
         resetForm();
         onClose();
     };
@@ -163,6 +182,7 @@ export default function ItemRepartoSimpleForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submitting) return;
         setError(null);
         if (!calidadSeleccionada) {
             setError('Seleccione una calidad');
@@ -172,7 +192,7 @@ export default function ItemRepartoSimpleForm({
             setError('Seleccione cliente y puesto');
             return;
         }
-        if (cantidadAsignar <= 0 || cantidadAsignar > calidadSeleccionada.cantidad) {
+        if (!Number.isInteger(cantidadAsignar) || cantidadAsignar <= 0 || cantidadAsignar > calidadSeleccionada.cantidad) {
             setError(`Cantidad debe ser entre 1 y ${calidadSeleccionada.cantidad}`);
             return;
         }
@@ -193,19 +213,20 @@ export default function ItemRepartoSimpleForm({
             ],
         };
 
+        setSubmitting(true);
         try {
             await createMultipleFromCalidades(payload);
             onSuccess();
             resetForm();
         } catch (err) {
-            setError('Error al repartir');
-        }
+            setError(err instanceof Error ? err.message : 'No se pudo asignar el destino.');
+        } finally { setSubmitting(false); }
     };
 
     const selectClassName = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm";
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} className="max-w-lg">
+        <Modal isOpen={isOpen} onClose={handleClose} className="mx-4 max-h-[90dvh] max-w-lg overflow-y-auto" ariaLabel="Asignar receptor y puesto">
             <div className="p-5">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-5">
@@ -213,7 +234,7 @@ export default function ItemRepartoSimpleForm({
                         <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Repartir</h2>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Asignar receptor y puesto</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             {detalleSeleccionado
                                 ? `${detalleSeleccionado.clientes?.nombres} · ${detalleSeleccionado.cantidad_jabas} jabas`
@@ -223,7 +244,12 @@ export default function ItemRepartoSimpleForm({
                 </div>
 
                 {loadingOptions ? (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando...</div>
+                    <OperationSkeleton variant="compact" heading={false} />
+                ) : optionsError ? (
+                    <div role="alert" className="space-y-3 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                        <p>No se pudieron cargar los clientes y puestos. Intenta nuevamente.</p>
+                        <Button type="button" variant="outline" onClick={() => setOptionsRetry((n) => n + 1)}>Reintentar carga</Button>
+                    </div>
                 ) : (
                     <>
                         {/* Paso indicators */}
@@ -364,25 +390,43 @@ export default function ItemRepartoSimpleForm({
                                     </Label>
                                     {clientesFiltrados.length === 0 ? (
                                         <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                                            No hay clientes receptores disponibles
+                                            No hay clientes activos con relación Receptor o Ambos.
                                         </p>
                                     ) : (
-                                        <select
-                                            className={selectClassName}
-                                            value={idClienteReceptor}
-                                            onChange={(e) => {
-                                                setIdClienteReceptor(parseInt(e.target.value));
-                                                setIdPuesto(0);
-                                            }}
-                                            required
-                                        >
-                                            <option value="">Seleccionar cliente...</option>
-                                            {clientesFiltrados.map((c) => (
-                                                <option key={c.id_cliente} value={c.id_cliente}>
-                                                    {c.nombres} {c.apellidos || ''}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <>
+                                            {mostrarAvisoOtraSede && (
+                                                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                                    No hay receptores en la sede destino; se muestran receptores de otras sedes.
+                                                </p>
+                                            )}
+                                            <select
+                                                className={selectClassName}
+                                                value={idClienteReceptor}
+                                                onChange={(e) => {
+                                                    setIdClienteReceptor(parseInt(e.target.value));
+                                                    setIdPuesto(0);
+                                                }}
+                                                required
+                                            >
+                                                <option value="">Seleccionar cliente...</option>
+                                                {clientesFiltrados.map((c) => {
+                                                    const sedesReceptoras = (c.cliente_sede || [])
+                                                        .filter((cs: any) =>
+                                                            cs.estado !== false
+                                                            && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos'),
+                                                        )
+                                                        .map((cs: any) => cs.sedes?.nombre)
+                                                        .filter(Boolean);
+                                                    const nombreSedes = [...new Set(sedesReceptoras)].join(', ');
+                                                    return (
+                                                        <option key={c.id_cliente} value={c.id_cliente}>
+                                                            {c.nombres} {c.apellidos || ''}
+                                                            {mostrarAvisoOtraSede && nombreSedes ? ` · ${nombreSedes}` : ''}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </>
                                     )}
                                 </div>
 
@@ -437,10 +481,10 @@ export default function ItemRepartoSimpleForm({
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={loading || !idClienteReceptor || !idPuesto}
+                                        disabled={submitting || loading || !idClienteReceptor || !idPuesto}
                                         className="flex-1"
                                     >
-                                        {loading ? 'Repartiendo...' : 'Repartir'}
+                                        {submitting ? 'Guardando…' : 'Guardar destino'}
                                     </Button>
                                 </div>
                             </form>

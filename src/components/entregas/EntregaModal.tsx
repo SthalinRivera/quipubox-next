@@ -133,6 +133,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                         </Label>
                         <select
                             id="guia"
+                            disabled={Boolean(editingEntrega)}
                             value={form.id_guia}
                             onChange={(e) => setForm({ ...form, id_guia: parseInt(e.target.value) })}
                             required
@@ -154,6 +155,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                         </Label>
                         <select
                             id="item_reparto"
+                            disabled={Boolean(editingEntrega)}
                             value={form.id_item_reparto}
                             onChange={(e) => setForm({ ...form, id_item_reparto: parseInt(e.target.value) })}
                             required
@@ -175,6 +177,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                         </Label>
                         <select
                             id="entregador"
+                            disabled={Boolean(editingEntrega)}
                             value={form.id_entregador ?? 0}
                             onChange={(e) =>
                                 setForm({ ...form, id_entregador: parseInt(e.target.value) || null })
@@ -198,6 +201,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                             </Label>
                             <Input
                                 id="fecha_entrega"
+                                disabled={Boolean(editingEntrega)}
                                 type="date"
                                 value={form.fecha_entrega}
                                 onChange={(e) => setForm({ ...form, fecha_entrega: e.target.value })}
@@ -211,6 +215,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                             </Label>
                             <Input
                                 id="hora_entrega"
+                                disabled={Boolean(editingEntrega)}
                                 type="time"
                                 value={form.hora_entrega || ""}
                                 onChange={(e) =>
@@ -229,6 +234,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                             </Label>
                             <Input
                                 id="cantidad_entregada"
+                                disabled={Boolean(editingEntrega)}
                                 type="number"
                                 min="0"
                                 value={String(form.cantidad_entregada)}
@@ -245,6 +251,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                             </Label>
                             <Input
                                 id="cantidad_rechazada"
+                                disabled={Boolean(editingEntrega)}
                                 type="number"
                                 min="0"
                                 value={String(form.cantidad_rechazada)}
@@ -263,6 +270,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
                         </Label>
                         <select
                             id="estado_entrega"
+                                disabled
                             value={form.estado_entrega}
                             onChange={(e) => setForm({ ...form, estado_entrega: e.target.value })}
                             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-brand-800"

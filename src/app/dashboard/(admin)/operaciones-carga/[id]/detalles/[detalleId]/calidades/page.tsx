@@ -1,5 +1,7 @@
-// app/dashboard/operaciones-carga/[id]/detalles/[detalleId]/calidades/page.tsx
 'use client';
+// app/dashboard/operaciones-carga/[id]/detalles/[detalleId]/calidades/page.tsx
+import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
+
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -32,7 +34,7 @@ export default function CalidadesPage() {
     const [submitting, setSubmitting] = useState(false);
     const [operacionEstado, setOperacionEstado] = useState<string>('');
     const { setPasoCompletado, setCurrentStep } = useCreacionCargaStore();
-    const isLocked = operacionEstado === 'repartiendo' || operacionEstado === 'cancelada';
+    const isLocked = !['pendiente', 'en_curso'].includes(operacionEstado) || detalle?.es_reparto === false;
 
     const loadData = async () => {
         try {
@@ -42,6 +44,7 @@ export default function CalidadesPage() {
                 fetchWithAuth<{ id_calidad: number; nombre: string }[]>('calidades'),
                 fetchWithAuth<any>(`operaciones-carga/${operacionId}`),
             ]);
+            if (Number((det as { id_operacion: number }).id_operacion) !== Number(operacionId)) throw new Error('El producto no pertenece a esta operación');
             setDetalle(det);
             setCalidades(cal || []);
             setCalidadesOptions(opts || []);
@@ -64,7 +67,7 @@ export default function CalidadesPage() {
             }
             const completado = detalles.every(d => {
                 if (!d.es_reparto) return true;
-                const totalCalidades = d.calidades?.reduce((s: number, c: any) => s + c.cantidad, 0) || 0;
+                const totalCalidades = d.detalle_carga_calidades?.reduce((s: number, c: any) => s + c.cantidad, 0) || 0;
                 return totalCalidades === d.cantidad_jabas;
             });
             setPasoCompletado(2, completado);
@@ -94,7 +97,7 @@ export default function CalidadesPage() {
     const isComplete = pendiente === 0 && maxCantidad > 0;
 
     const handleAdd = async () => {
-        if (newCalidad.id_calidad === 0 || newCalidad.cantidad <= 0) {
+        if (newCalidad.id_calidad === 0 || newCalidad.cantidad <= 0 || !Number.isInteger(newCalidad.cantidad)) {
             toast.error('Complete los campos obligatorios');
             return;
         }
@@ -138,13 +141,7 @@ export default function CalidadesPage() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[300px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-        );
-    }
+    if (loading) return <OperationSkeleton variant="quality" heading={true} />;
 
     if (!detalle) {
         return (
@@ -158,10 +155,10 @@ export default function CalidadesPage() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto p-4 sm:p-6">
+        <div className="w-full">
             <Stepper />
 
-            <div className="mt-6 space-y-6">
+            <div className="mt-4 space-y-4">
                 {/* Banner when locked */}
                 {isLocked && (
                     <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
@@ -176,7 +173,7 @@ export default function CalidadesPage() {
                 {/* Encabezado con contexto */}
                 <div className="flex items-start justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                             Asignar calidades
                         </h1>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -337,7 +334,7 @@ export default function CalidadesPage() {
                     </Button>
                     {isComplete && (
                         <Button onClick={() => router.push(`/dashboard/operaciones-carga/${operacionId}`)}>
-                            Continuar
+                            Continuar con los destinos
                             <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                     )}

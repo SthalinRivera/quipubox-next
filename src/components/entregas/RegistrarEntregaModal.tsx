@@ -111,7 +111,7 @@ export function RegistrarEntregaModal({ open, onOpenChange, guia, onSaved }: Reg
                                 variant="outline"
                                 onClick={() => {
                                     onOpenChange(false);
-                                    router.push('/operaciones-carga');
+                                    router.push('/dashboard/operaciones-carga');
                                 }}
                             >
                                 Ir a Operaciones de Carga
