@@ -55,7 +55,7 @@ export default function ReporteOperativo() {
 
   const subTabs: { id: SubTab; label: string }[] = [
     { id: 'cargas', label: 'Cargas por Fecha' },
-    { id: 'guias', label: 'Guías Operativas' },
+    { id: 'guias', label: 'GuÃ­as Operativas' },
     { id: 'entregas', label: 'Entregas' },
   ];
 
@@ -89,7 +89,7 @@ export default function ReporteOperativo() {
             ? ['emitida', 'firmada', 'anulada', 'reemplazada', 'observada']
             : activeSubTab === 'entregas'
               ? ['pendiente', 'entregado_parcial', 'entregado_total', 'rechazado', 'observado']
-              : ['pendiente', 'en_curso', 'repartiendo', 'completado', 'cancelada']
+              : ['pendiente', 'en_curso', 'en_transito', 'repartiendo', 'completado']
         }
       />
 
@@ -135,7 +135,7 @@ export default function ReporteOperativo() {
                 color="purple"
               />
               <ReportCard
-                title="Días con Cargas"
+                title="DÃ­as con Cargas"
                 value={cargas.length}
                 subtitle="En el rango seleccionado"
                 icon={<AlertTriangle className="h-6 w-6" />}
@@ -202,7 +202,7 @@ export default function ReporteOperativo() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Guías Operativas
+              GuÃ­as Operativas
             </h3>
             <ExportButtons
               data={guias.guias.map((g) => ({
@@ -217,8 +217,8 @@ export default function ReporteOperativo() {
                 entregas_realizadas: g.entregas_realizadas,
               }))}
               filename="reporte-guias"
-              title="Reporte de Guías Operativas"
-              excelSheetName="Guías"
+              title="Reporte de GuÃ­as Operativas"
+              excelSheetName="GuÃ­as"
             />
           </div>
 
@@ -239,7 +239,7 @@ export default function ReporteOperativo() {
                   <TableHeader className="border-b border-gray-100 dark:border-white/5">
                     <TableRow>
                       <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                        N° Guía
+                        NÂ° GuÃ­a
                       </TableCell>
                       <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                         Fecha
@@ -265,7 +265,7 @@ export default function ReporteOperativo() {
                     {guias.guias.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                          No hay guías en el rango seleccionado.
+                          No hay guÃ­as en el rango seleccionado.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -331,7 +331,7 @@ export default function ReporteOperativo() {
                 estado: e.estado_entrega,
                 cantidad_entregada: e.cantidad_entregada,
                 cantidad_rechazada: e.cantidad_rechazada,
-                firma_recibido: e.firma_recibido ? 'Sí' : 'No',
+                firma_recibido: e.firma_recibido ? 'SÃ­' : 'No',
                 nombre_recibe: e.nombre_recibe || 'N/A',
                 numero_guia: e.guia.numero_guia,
                 entregador: e.entregador
@@ -371,7 +371,7 @@ export default function ReporteOperativo() {
                         Fecha
                       </TableCell>
                       <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
-                        Guía
+                        GuÃ­a
                       </TableCell>
                       <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">
                         Estado

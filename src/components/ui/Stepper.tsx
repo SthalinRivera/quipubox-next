@@ -6,7 +6,6 @@ import { Check, Lock } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api-client';
 import {
   cargaEditable,
-  cancelada,
   type OperacionFlujo,
 } from '@/types/flujoOperacion';
 
@@ -36,62 +35,16 @@ export function Stepper({ operacion }: { operacion?: OperacionFlujo }) {
   const base = op
     ? `/dashboard/operaciones-carga/${op.id_operacion}`
     : '/dashboard/operaciones-carga/nueva';
-  const confirmed = !!op && !cargaEditable(op.estado) && !cancelada(op.estado);
-  const hasDeliveries =
-    op?.detalle_carga.some((d) =>
-      d.items_reparto.some((i) => i.entregas.length > 0),
-    ) || false;
+  const confirmed = !!op && !cargaEditable(op.estado);
+  const allGuides = !!op?.detalle_carga.length && op.detalle_carga.every(d => d.items_reparto.length > 0 && d.items_reparto.every(i => i.guias_operativas.some(g => !!g.cobertura && !['anulada','reemplazada'].includes(g.estado))));
   const steps = [
-    {
-      label: 'Carga',
-      hint: 'Productos y cantidades',
-      href: base + '#carga',
-      done: !!op?.detalle_carga.length,
-      enabled: true,
-    },
-    {
-      label: 'Calidad y destinos',
-      hint:
-        op?.flujo.listaParaEntregar && !confirmed ? 'Falta confirmar carga' : op && !op.flujo.requiereCalidad
-          ? 'Sin clasificación'
-          : 'Clasificar y asignar',
-      href: base + '#calidad',
-      done: confirmed && !!op?.flujo.listaParaEntregar,
-      enabled: !!op?.detalle_carga.length,
-    },
-    {
-      label: 'Registrar entrega',
-      hint: 'Confirmar lo recibido',
-      href: base + '#entregar',
-      done: !!op?.flujo.entregasCompletas,
-      enabled: confirmed,
-    },
-    {
-      label: 'Ver entregas',
-      hint: 'Revisar registros',
-      href: base + '#entregas',
-      done: !!op?.flujo.entregasCompletas,
-      enabled: hasDeliveries,
-    },
-    {
-      label: 'Guías',
-      hint: 'Consultar documentos',
-      href: base + '#guias',
-      done: !!op?.flujo.entregasCompletas,
-      enabled: hasDeliveries,
-    },
+    { label: 'Carga', hint: 'Productos', href: base + '#carga', done: !!op?.detalle_carga.length, enabled: true },
+    { label: 'Preparar', hint: 'Calidad y destinos', href: base + '#calidad', done: !!op?.resumen?.preparada, enabled: !!op?.detalle_carga.length },
+    { label: 'Guías', hint: 'Emitir documentos', href: base + '#guias', done: allGuides, enabled: confirmed },
+    { label: 'Entregar', hint: 'Registrar recepción', href: base + '#entregar', done: !!op?.resumen?.conciliada, enabled: ['repartiendo','completado'].includes(op?.estado || '') },
+    { label: 'Cerrar', hint: 'Conciliar carga', href: base + '#cierre', done: op?.estado === 'completado', enabled: ['repartiendo','completado'].includes(op?.estado || '') },
   ];
-  const progressStep = pathname.endsWith('/detalles/nuevo')
-    ? 0
-    : pathname.includes('/calidades')
-      ? 1
-      : !op?.detalle_carga.length
-        ? 0
-        : !confirmed
-          ? 1
-          : !op.flujo.entregasCompletas
-            ? 2
-            : 4;
+  const progressStep = !op?.detalle_carga.length ? 0 : !confirmed ? 1 : op.estado === 'en_transito' || !allGuides ? 2 : op.resumen?.conciliada ? 4 : 3;
   const selectedIndex = steps.findIndex(
     (step) => selectedHash && step.href.endsWith(selectedHash),
   );
@@ -101,10 +54,10 @@ export function Stepper({ operacion }: { operacion?: OperacionFlujo }) {
       : progressStep;
   return (
     <nav
-      aria-label="Pasos de la operación"
+      aria-label="Pasos de la operaciÃ³n"
       className="mb-4 overflow-x-auto pb-1"
     >
-      <div className="grid min-w-[880px] grid-cols-5 gap-2">
+      <div className="grid min-w-[700px] grid-cols-5 gap-2">
         {steps.map((step, index) => {
           const content = (
             <>

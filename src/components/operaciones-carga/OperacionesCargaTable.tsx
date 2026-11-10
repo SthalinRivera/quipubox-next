@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { OperacionCargaModal } from "./OperacionCargaModal";
 import type { OperacionCarga } from "@/types/operacionCarga";
 import Label from "@/components/form/Label";
@@ -32,11 +32,10 @@ const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
     repartiendo: "info",
     en_transito: "info",
     completado: "success",
-    cancelado: "error",
 };
 
 export default function OperacionesCargaTable() {
-    const { operaciones, loading, fetchAll, remove } = useOperacionesCarga();
+    const { operaciones, loading, fetchAll } = useOperacionesCarga();
     const router = useRouter();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
@@ -62,17 +61,6 @@ export default function OperacionesCargaTable() {
         setModalOpen(true);
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm("¿Cancelar esta operación?")) {
-            try {
-                await remove(id);
-                toast.success("Operación cancelada");
-            } catch (err: any) {
-                toast.error(err.message || "Error al cancelar");
-            }
-        }
-    };
-
     const hayFiltros = Boolean(aplicados.fecha || aplicados.estado);
 
     return (
@@ -92,10 +80,9 @@ export default function OperacionesCargaTable() {
                             <option value="">Todos</option>
                             <option value="pendiente">Pendiente</option>
                             <option value="en_curso">Preparando carga</option>
-                            <option value="en_transito">Lista para entregar</option>
+                            <option value="en_transito">En tránsito</option>
                             <option value="repartiendo">Entregas en curso</option>
                             <option value="completado">Completado</option>
-                            <option value="cancelado">Cancelado</option>
                         </select>
                     </div>
                     <div className="w-48">
@@ -196,15 +183,7 @@ export default function OperacionesCargaTable() {
                                                         >
                                                             <Pencil className="h-5 w-5" />
                                                         </button>
-                                                        <button
-                                                            disabled={!cargaEditable(op.estado)}
-                                                            onClick={() => handleDelete(op.id_operacion)}
-                                                            className="text-gray-500 transition-colors hover:text-error-500 dark:text-gray-400 dark:hover:text-error-400"
-                                                            title="Cancelar"
-                                                            aria-label={`Cancelar carga ${op.id_operacion}`}
-                                                        >
-                                                            <Trash2 className="h-5 w-5" />
-                                                        </button>
+
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

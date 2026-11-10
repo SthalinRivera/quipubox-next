@@ -28,7 +28,6 @@ export enum EstadoOperacion {
     EN_TRANSITO = 'en_transito',
     REPARTIENDO = 'repartiendo',
     COMPLETADO = 'completado',
-    CANCELADO = 'cancelado',
 }
 
 export enum Seccion {
@@ -57,7 +56,7 @@ export enum TipoIncidencia {
     CAMBIO_DESTINO = 'cambio_destino',
     RECHAZO_RECEPTOR = 'rechazo_receptor',
     DIFERENCIA_CANTIDAD = 'diferencia_cantidad',
-    DANO_PRODUCTO = 'daño_producto',
+    DANO_PRODUCTO = 'daÃ±o_producto',
     PERDIDA_JABA = 'perdida_jaba',
     ACCIDENTE = 'accidente',
     OTRO = 'otro',

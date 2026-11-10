@@ -26,7 +26,8 @@ import { CalidadesProcesoModal } from '@/components/detalle-carga/CalidadesProce
 import { DetalleCargaModal } from '@/components/detalle-carga/DetalleCargaModal';
 import {
   cargaEditable,
-  cancelada,
+  operacionAbierta,
+  guiaVigente,
   saldoDestino,
   estadoOperacion,
   type OperacionFlujo,
@@ -64,18 +65,18 @@ export default function OperacionDetallePage() {
   }, [op]);
   const load = useCallback(async () => {
     if (!Number.isSafeInteger(id) || id <= 0) {
-      setError('La operación no es válida.');
+      setError('La operaciÃ³n no es vÃ¡lida.');
       return;
     }
     try {
       const data = await fetchWithAuth<OperacionFlujo>(
-        `operaciones-carga/${id}`,
+        `operaciones-carga/${id}/reparto`,
       );
       setOp(data);
       setError('');
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : 'No se pudo cargar la operación.',
+        e instanceof Error ? e.message : 'No se pudo cargar la operaciÃ³n.',
       );
     }
   }, [id]);
@@ -99,10 +100,20 @@ export default function OperacionDetallePage() {
       setBusy(false);
     }
   };
+  const ejecutar = async (ruta: string, method: 'POST' | 'PATCH', body?: { estado: string }) => {
+    if (busy) return;
+    setBusy(true); setError('');
+    try { await fetchWithAuth(ruta, { method, ...(body ? { body } : {}) }); await load(); }
+    catch (e) { setError(e instanceof Error ? e.message : 'No se pudo completar la acción.'); }
+    finally { setBusy(false); }
+  };
+  const avanzar = (estado: string) => ejecutar(`operaciones-carga/${id}/estado`, 'PATCH', { estado });
+  const emitirGuias = () => ejecutar(`operaciones-carga/${id}/generar-guias`, 'POST');
+  const cerrar = () => { if (window.confirm('¿Cerrar esta operación? Quedará disponible solo para consulta.')) void avanzar('completado'); };
   const eliminar = async (detalle: DetalleCarga) => {
     if (
       !window.confirm(
-        `¿Eliminar la carga de ${detalle.cantidad_jabas} jabas de ${detalle.frutas?.nombre || 'este producto'}?`,
+        `Â¿Eliminar la carga de ${detalle.cantidad_jabas} jabas de ${detalle.frutas?.nombre || 'este producto'}?`,
       )
     )
       return;
@@ -121,7 +132,7 @@ export default function OperacionDetallePage() {
   const quitarDestino = async (itemId: number) => {
     if (
       !window.confirm(
-        '¿Quitar este destino? Podrás asignar nuevamente las jabas antes de confirmar la carga.',
+        'Â¿Quitar este destino? PodrÃ¡s asignar nuevamente las jabas antes de confirmar la carga.',
       )
     )
       return;
@@ -142,7 +153,7 @@ export default function OperacionDetallePage() {
     return (
       <div className={card}>
         <p role="status" className="text-gray-600 dark:text-gray-300">
-          {error || 'Cargando la operación…'}
+          {error || 'Cargando la operaciÃ³nâ€¦'}
         </p>
         {error && (
           <Button onClick={load} className="mt-4">
@@ -151,8 +162,8 @@ export default function OperacionDetallePage() {
         )}
       </div>
     );
-  const editable = cargaEditable(op.estado),
-    cancelled = cancelada(op.estado);
+  const editable = operacionAbierta(op.estado);
+  const preparando = cargaEditable(op.estado);
   const destinos = op.detalle_carga.flatMap((d) =>
     d.items_reparto.map((item) => ({
       ...item,
@@ -167,41 +178,39 @@ export default function OperacionDetallePage() {
       producto: item.producto,
     })),
   );
-  const guias = destinos.flatMap((item) =>
-    item.entregas.some((e) => e.estado_entrega !== 'pendiente')
-      ? item.guias_operativas.map((g) => ({
-          ...g,
-          cliente: item.clientes?.nombres,
-        }))
-      : [],
-  );
-  const totalJabas = op.detalle_carga.reduce((sum, detalle) => sum + detalle.cantidad_jabas, 0);
-  const recibidas = entregas.filter((e) => e.estado_entrega !== 'pendiente').reduce((sum, e) => sum + e.cantidad_entregada, 0);
+  const guias = destinos.flatMap(item => item.guias_operativas.map(g => ({ ...g, cliente: item.clientes?.nombres })));
+  const faltanGuias = destinos.some(item => !guiaVigente(item));
+  const totalJabas = op.resumen.jabasCargadas;
+  const recibidas = entregas.filter(e => e.estado_entrega !== 'pendiente').reduce((sum,e) => sum + e.cantidad_entregada, 0);
   const porClasificar = op.detalle_carga.filter((d) => d.es_reparto && (d.detalle_carga_calidades || []).reduce((sum, c) => sum + c.cantidad, 0) !== d.cantidad_jabas);
   const porAsignar = op.detalle_carga.filter((d) => d.items_reparto.reduce((sum, item) => sum + item.cantidad_asignada, 0) !== d.cantidad_jabas);
   const siguienteDestino = destinos.find((item) => saldoDestino(item) > 0);
   const primeraCalidad = porClasificar[0];
   const primerDestino = porAsignar[0];
   const abrirSeccion = (seccion: string) => { window.location.hash = seccion; };
-  const siguiente = !op.detalle_carga.length
-    ? { title: 'Agrega el primer producto', detail: 'Indica de quién es, qué producto lleva y cuántas jabas son.', label: 'Agregar producto', action: () => setNuevoProducto(true) }
+  const siguiente = !op.detalle_carga.length && editable
+    ? { title: 'Agrega el primer producto', detail: '', label: 'Agregar producto', action: () => setNuevoProducto(true) }
     : editable && primeraCalidad
-      ? { title: `Completa las calidades de ${primeraCalidad.frutas?.nombre || 'este producto'}`, detail: `${porClasificar.length} ${porClasificar.length === 1 ? 'producto pendiente' : 'productos pendientes'} de clasificar.`, label: 'Completar calidades', action: () => setCalidadId(primeraCalidad.id_detalle_carga) }
+      ? { title: 'Completa las calidades', detail: primeraCalidad.frutas?.nombre || '', label: 'Clasificar', action: () => setCalidadId(primeraCalidad.id_detalle_carga) }
       : editable && primerDestino
-        ? { title: `Indica quién recibe ${primerDestino.frutas?.nombre || 'este producto'}`, detail: `${porAsignar.length} ${porAsignar.length === 1 ? 'producto pendiente' : 'productos pendientes'} de asignar por completo.`, label: primerDestino.es_reparto ? 'Asignar receptor y puesto' : 'Completar receptor', action: () => primerDestino.es_reparto ? setAsignar(primerDestino.id_detalle_carga) : setEditar(primerDestino) }
-        : editable && op.flujo.listaParaEntregar
-          ? { title: 'Todo listo para comenzar las entregas', detail: 'Confirma la carga cuando hayas agregado todos los productos.', label: 'Confirmar carga', action: () => setConfirmar(true) }
-          : editable
-            ? { title: 'Revisa los pendientes de esta carga', detail: op.flujo.pendientes[0] || 'Revisa los productos y sus destinos.', label: 'Revisar pendientes', action: () => abrirSeccion('calidad') }
-            : op.flujo.entregasCompletas
-              ? { title: 'Entregas completadas', detail: 'Puedes consultar los registros y sus guías.', label: 'Ver guías', action: () => abrirSeccion('guias') }
-              : siguienteDestino
-                ? { title: `Entrega a ${siguienteDestino.clientes?.nombres || 'este receptor'}`, detail: `${siguienteDestino.producto} · ${saldoDestino(siguienteDestino)} jabas pendientes · Puesto ${siguienteDestino.puestos?.numero_puesto || 'sin indicar'}`, label: 'Registrar entrega', action: () => setEntregar(siguienteDestino) }
-                : { title: 'Revisa las entregas registradas', detail: 'Consulta el estado de cada destino.', label: 'Ver entregas', action: () => abrirSeccion('entregas') };
+        ? { title: 'Asigna los receptores', detail: primerDestino.frutas?.nombre || '', label: 'Asignar', action: () => setAsignar(primerDestino.id_detalle_carga) }
+        : op.estado === 'pendiente'
+          ? { title: 'Comienza la preparación', detail: '', label: 'Iniciar carga', action: () => avanzar('en_curso') }
+          : preparando
+            ? { title: op.resumen.preparada ? 'Carga preparada' : 'Revisa los desgloses', detail: '', label: op.resumen.preparada ? 'Confirmar salida' : 'Revisar', action: () => op.resumen.preparada ? setConfirmar(true) : abrirSeccion('calidad') }
+            : (op.estado === 'en_transito' || op.estado === 'repartiendo') && faltanGuias
+              ? { title: 'Emite las guías pendientes', detail: '', label: 'Emitir guías', action: emitirGuias }
+              : op.estado === 'en_transito'
+                ? { title: 'Listo para comenzar el reparto', detail: '', label: 'Iniciar reparto', action: () => avanzar('repartiendo') }
+                : op.estado === 'repartiendo' && op.resumen.conciliada
+                  ? { title: 'Toda la carga está conciliada', detail: 'El responsable puede cerrar la operación.', label: 'Cerrar operación', action: cerrar }
+                  : op.estado === 'repartiendo' && siguienteDestino
+                    ? { title: `Entrega a ${siguienteDestino.clientes?.nombres || 'este receptor'}`, detail: `${saldoDestino(siguienteDestino)} jabas pendientes`, label: 'Registrar entrega', action: () => setEntregar(siguienteDestino) }
+                    : { title: op.estado === 'completado' ? 'Operación completada' : 'Revisa los pendientes', detail: '', label: 'Ver registros', action: () => abrirSeccion('entregas') };
   const preparacion = [
     { label: 'Productos', value: op.detalle_carga.length ? `${op.detalle_carga.length} registrados` : 'Agrega el primero', done: op.detalle_carga.length > 0, href: '#carga' },
-    { label: 'Calidades', value: !op.detalle_carga.length ? 'Después de agregar productos' : !op.flujo.requiereCalidad ? 'No requiere clasificación' : porClasificar.length ? `${porClasificar.length} por completar` : 'Completas', done: op.detalle_carga.length > 0 && porClasificar.length === 0, href: '#calidad' },
-    { label: 'Receptores y puestos', value: !op.detalle_carga.length ? 'Después de agregar productos' : porAsignar.length ? `${porAsignar.length} por completar` : 'Asignados', done: op.detalle_carga.length > 0 && porAsignar.length === 0, href: '#calidad' },
+    { label: 'Calidades', value: !op.detalle_carga.length ? 'DespuÃ©s de agregar productos' : !op.flujo.requiereCalidad ? 'No requiere clasificaciÃ³n' : porClasificar.length ? `${porClasificar.length} por completar` : 'Completas', done: op.detalle_carga.length > 0 && porClasificar.length === 0, href: '#calidad' },
+    { label: 'Receptores y puestos', value: !op.detalle_carga.length ? 'DespuÃ©s de agregar productos' : porAsignar.length ? `${porAsignar.length} por completar` : 'Asignados', done: op.detalle_carga.length > 0 && porAsignar.length === 0, href: '#calidad' },
   ];
   return (
     <div className="mx-auto max-w-full space-y-4 pb-6">
@@ -220,7 +229,7 @@ export default function OperacionDetallePage() {
             Carga #{id}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Camión {op.camiones?.placa} ·{' '}
+            CamiÃ³n {op.camiones?.placa} Â·{' '}
             {op.fecha_carga.slice(0, 10).split('-').reverse().join('/')}
           </p>
         </div>
@@ -237,12 +246,12 @@ export default function OperacionDetallePage() {
         ))}
       </dl>
       <Stepper operacion={op} />
-      {!cancelled && (editable || op.detalle_carga.length > 0) && <div className="overflow-hidden rounded-xl border border-brand-200 bg-brand-50/60 dark:border-brand-500/25 dark:bg-brand-500/5">
+      {(editable || op.detalle_carga.length > 0) && <div className="overflow-hidden rounded-xl border border-brand-200 bg-brand-50/60 dark:border-brand-500/25 dark:bg-brand-500/5">
         <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-          <div><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">{op.flujo.entregasCompletas ? 'Todo listo' : 'Qué falta · Siguiente paso'}</p><h2 className="text-base font-semibold text-gray-900 dark:text-white">{siguiente.title}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{siguiente.detail}</p></div>
-          <Button disabled={busy} onClick={siguiente.action}>{siguiente.label}<span aria-hidden="true">→</span></Button>
+          <div><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">{(op.estado === 'completado') ? 'Todo listo' : 'QuÃ© falta Â· Siguiente paso'}</p><h2 className="text-base font-semibold text-gray-900 dark:text-white">{siguiente.title}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{siguiente.detail}</p></div>
+          <Button disabled={busy} onClick={siguiente.action}>{siguiente.label}<span aria-hidden="true">â†’</span></Button>
         </div>
-        {editable && <ol className="grid border-t border-brand-200/60 bg-white/70 sm:grid-cols-3 dark:border-brand-500/20 dark:bg-gray-900/50">
+        {preparando && <ol className="grid border-t border-brand-200/60 bg-white/70 sm:grid-cols-3 dark:border-brand-500/20 dark:bg-gray-900/50">
           {preparacion.map((paso, index) => <li key={paso.label}><a href={paso.href} className="flex items-center gap-3 p-3 text-sm hover:bg-brand-50 dark:hover:bg-brand-500/10"><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${paso.done ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>{paso.done ? <CheckCircle size={16} /> : index + 1}</span><span><span className="block font-medium text-gray-900 dark:text-white">{paso.label}</span><span className="block text-xs text-gray-500 dark:text-gray-400">{paso.value}</span></span></a></li>)}
         </ol>}
       </div>}
@@ -254,12 +263,7 @@ export default function OperacionDetallePage() {
           {error}
         </div>
       )}
-      {cancelled && (
-        <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
-          Operación cancelada
-        </p>
-      )}
-      {op.flujo.entregasCompletas && (
+      {(op.estado === 'completado') && (
         <div className="flex items-center gap-3 rounded-xl bg-green-50 p-4 text-green-800 dark:bg-green-900/20 dark:text-green-300">
           <CheckCircle size={20} />
           <strong>Entregas completadas</strong>
@@ -280,7 +284,7 @@ export default function OperacionDetallePage() {
         </div>
         {!op.detalle_carga.length ? (
           <p className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500">
-            Agrega un producto para comenzar. Luego podrás completar sus calidades y receptores.
+            Agrega un producto para comenzar. Luego podrÃ¡s completar sus calidades y receptores.
           </p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -288,7 +292,7 @@ export default function OperacionDetallePage() {
               <article
                 key={d.id_detalle_carga}
                 className="flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-900"
-                aria-label={`${d.frutas?.nombre || 'Producto'} · ${d.cantidad_jabas} jabas`}
+                aria-label={`${d.frutas?.nombre || 'Producto'} Â· ${d.cantidad_jabas} jabas`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -303,7 +307,7 @@ export default function OperacionDetallePage() {
                 <p className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><UserRound size={14} className="shrink-0 text-gray-400" aria-hidden="true" /><span className="break-words">{d.clientes?.nombres || 'Sin emisor'}</span></p>
                 <div className="my-3 flex items-end justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-gray-800/60">
                   <p className="text-gray-900 dark:text-white"><span className="text-2xl font-semibold tabular-nums tracking-tight">{d.cantidad_jabas}</span><span className="ml-1.5 text-xs text-gray-500 dark:text-gray-400">jabas</span></p>
-                  <span className="pb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{d.tipos_jaba?.nombre || '—'}</span>
+                  <span className="pb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{d.tipos_jaba?.nombre || 'â€”'}</span>
                 </div>
                 <div className="mt-auto flex items-center justify-between gap-3">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${d.es_reparto ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' : 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300'}`}>{d.es_reparto ? 'Reparto' : 'Directa'}</span>
@@ -319,7 +323,7 @@ export default function OperacionDetallePage() {
       </section>
       <section id="calidad" className={card}>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <Layers size={20} /> 2. Calidad · Destinos
+          <Layers size={20} /> 2. Calidad Â· Destinos
         </h2>
         <div className="mt-4 space-y-3">
           {op.detalle_carga.map((d) => {
@@ -340,13 +344,13 @@ export default function OperacionDetallePage() {
               >
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {d.frutas?.nombre} · {d.cantidad_jabas} jabas
+                    {d.frutas?.nombre} Â· {d.cantidad_jabas} jabas
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
                     {d.es_reparto
                       ? `Calidad: ${clasificado} de ${d.cantidad_jabas} jabas`
                       : 'No requiere calidad'}{' '}
-                    · Con receptor: {asignado} de {d.cantidad_jabas}
+                    Â· Con receptor: {asignado} de {d.cantidad_jabas}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -389,22 +393,44 @@ export default function OperacionDetallePage() {
               </div>
             )}
             <Button
-              disabled={!op.flujo.listaParaEntregar || busy}
+              disabled={!op.resumen.preparada || op.estado !== 'en_curso' || busy}
               onClick={() => setConfirmar(true)}
             >
-              Confirmar carga
+              Confirmar salida
             </Button>
           </div>
         )}
       </section>
+      <section id="guias" className={card}>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+          <FileText size={20} /> 5. GuÃ­as
+        </h2>
+        {['en_transito', 'repartiendo'].includes(op.estado) && faltanGuias && <Button className="mt-3" disabled={busy || !op.resumen.preparada} onClick={emitirGuias}>Emitir pendientes</Button>}
+        <div className="mt-4 flex flex-wrap gap-3">
+          {guias.map((g) => (
+            <Link
+              key={g.id_guia}
+              className={link}
+              href={`/dashboard/guias-operativas/${g.id_guia}`}
+            >
+              GuÃ­a {g.numero_guia} Â· {g.cliente}
+            </Link>
+          ))}
+          {!guias.length && (
+            <p className="text-sm text-gray-500">
+              Las guÃ­as estarÃ¡n disponibles despuÃ©s de registrar una entrega.
+            </p>
+          )}
+        </div>
+      </section>
       <section id="entregar" className={card}>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <Truck size={20} /> 3. Entregas
+          <Truck size={20} /> 4. Entregas
         </h2>
         <p className="mt-1 text-sm text-gray-500">
           {editable
             ? 'Se habilita al completar calidades y receptores, y confirmar la carga.'
-            : cancelled ? 'Consulta los registros de esta carga cancelada.' : 'Elige un receptor y registra las jabas que recibió.'}
+            : cancelled ? 'Consulta los registros de esta carga cancelada.' : 'Elige un receptor y registra las jabas que recibiÃ³.'}
         </p>
         <div className="mt-4 space-y-3">
           {destinos.map((item) => (
@@ -414,11 +440,11 @@ export default function OperacionDetallePage() {
             >
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">
-                  {item.clientes?.nombres} · Puesto{' '}
+                  {item.clientes?.nombres} Â· Puesto{' '}
                   {item.puestos?.numero_puesto}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">
-                  {item.producto} · {item.cantidad_asignada} asignadas ·{' '}
+                  {item.producto} Â· {item.cantidad_asignada} asignadas Â·{' '}
                   {saldoDestino(item)} pendientes
                 </p>
               </div>
@@ -434,7 +460,7 @@ export default function OperacionDetallePage() {
               )}
               {saldoDestino(item) > 0 ? (
                 <Button
-                  disabled={editable || cancelled || busy}
+                  disabled={op.estado !== 'repartiendo' || !guiaVigente(item) || busy}
                   onClick={() => setEntregar(item)}
                 >
                   Registrar entrega
@@ -450,14 +476,14 @@ export default function OperacionDetallePage() {
       </section>
       <section id="entregas" className={card}>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          4. Entregas registradas
+          Entregas registradas
         </h2>
         <p className="mt-1 text-sm text-gray-500">
-          {op.flujo.entregados} de {op.flujo.totalItems} destinos completados.
+          {op.resumen.itemsResueltos} de {op.resumen.totalItems} destinos completados.
         </p>
         {!entregas.length ? (
           <p className="mt-4 text-sm text-gray-500">
-            Las entregas aparecerán aquí después de registrarlas.
+            Las entregas aparecerÃ¡n aquÃ­ despuÃ©s de registrarlas.
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
@@ -517,26 +543,11 @@ export default function OperacionDetallePage() {
           </div>
         )}
       </section>
-      <section id="guias" className={card}>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <FileText size={20} /> 5. Guías
-        </h2>
-        <div className="mt-4 flex flex-wrap gap-3">
-          {guias.map((g) => (
-            <Link
-              key={g.id_guia}
-              className={link}
-              href={`/dashboard/guias-operativas/${g.id_guia}`}
-            >
-              Guía {g.numero_guia} · {g.cliente}
-            </Link>
-          ))}
-          {!guias.length && (
-            <p className="text-sm text-gray-500">
-              Las guías estarán disponibles después de registrar una entrega.
-            </p>
-          )}
-        </div>
+      <section id="cierre" className={card}>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">5. Cierre</h2>
+        <p className="my-3 text-sm text-gray-500">{op.resumen.itemsResueltos}/{op.resumen.totalItems} destinos resueltos · {op.resumen.saldoEntrega} jabas pendientes · {op.resumen.jabasSinAsignar} sin asignar</p>
+        {op.estado === 'repartiendo' && <Button disabled={busy || !op.resumen.conciliada} onClick={cerrar}>Cerrar operación</Button>}
+        {op.estado === 'completado' && <p className="text-sm text-green-700">Operación completada</p>}
       </section>
       {confirmar && (
         <Modal
@@ -548,10 +559,10 @@ export default function OperacionDetallePage() {
         >
           <div className="space-y-4 p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              ¿La carga está lista para entregar?
+              Â¿La carga estÃ¡ lista para entregar?
             </h2>
             <p className="text-sm text-gray-500">
-              {op.detalle_carga.length} productos · {op.flujo.totalItems} destinos. No podrás editarlos después.
+              {op.detalle_carga.length} productos Â· {op.flujo.totalItems} destinos. No podrÃ¡s editarlos despuÃ©s.
             </p>
             {error && (
               <p role="alert" className="text-sm text-red-600">
@@ -567,7 +578,7 @@ export default function OperacionDetallePage() {
                 Volver
               </Button>
               <Button disabled={busy} onClick={confirmarCarga}>
-                {busy ? 'Confirmando…' : 'Confirmar'}
+                {busy ? 'Confirmandoâ€¦' : 'Confirmar'}
               </Button>
             </div>
           </div>

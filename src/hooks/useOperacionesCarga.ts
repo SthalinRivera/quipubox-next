@@ -35,16 +35,11 @@ export const useOperacionesCarga = () => {
 
     const update = async (id: number, payload: UpdateOperacionCargaDTO) => {
         const updated = await fetchWithAuth<OperacionCarga>(`operaciones-carga/${id}`, {
-            method: 'PUT', // o PATCH según tu backend
+            method: 'PUT', // o PATCH segÃºn tu backend
             body: payload,
         });
         await fetchAll();
         return updated;
-    };
-
-    const remove = async (id: number) => {
-        await fetchWithAuth(`operaciones-carga/${id}`, { method: 'DELETE' });
-        await fetchAll();
     };
 
     const changeState = async (id: number, estado: string) => {
@@ -55,5 +50,5 @@ export const useOperacionesCarga = () => {
         await fetchAll();
     };
 
-    return { operaciones, loading, fetchAll, create, update, remove, changeState };
+    return { operaciones, loading, fetchAll, create, update, changeState };
 };

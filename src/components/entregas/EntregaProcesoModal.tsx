@@ -6,7 +6,7 @@ import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import { fetchWithAuth } from '@/lib/api-client';
-import { saldoDestino, type DestinoFlujo } from '@/types/flujoOperacion';
+import { saldoDestino, guiaVigente, type DestinoFlujo } from '@/types/flujoOperacion';
 
 export default function EntregaProcesoModal({
   item,
@@ -20,6 +20,7 @@ export default function EntregaProcesoModal({
   onSaved: () => Promise<void>;
 }) {
   const saldo = saldoDestino(item);
+  const guia = guiaVigente(item);
   const [cantidad, setCantidad] = useState(saldo);
   const [rechazo, setRechazo] = useState(0);
   const [nombre, setNombre] = useState('');
@@ -30,6 +31,7 @@ export default function EntregaProcesoModal({
   const guardar = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy) return;
+    if (!guia) { setError('Emite una guía válida antes de entregar.'); return; }
     if (
       !nombre.trim() ||
       !Number.isInteger(cantidad) ||
@@ -40,7 +42,7 @@ export default function EntregaProcesoModal({
       cantidad + rechazo > saldo
     ) {
       setError(
-        'Indica quién recibe y cantidades válidas que no excedan el saldo.',
+        'Indica quiÃ©n recibe y cantidades vÃ¡lidas que no excedan el saldo.',
       );
       return;
     }
@@ -51,6 +53,7 @@ export default function EntregaProcesoModal({
         method: 'POST',
         body: {
           id_item_reparto: item.id_item_reparto,
+          id_guia: guia.id_guia,
           fecha_entrega: fecha,
           hora_entrega: format(new Date(), 'HH:mm'),
           cantidad_entregada: cantidad,
@@ -90,12 +93,12 @@ export default function EntregaProcesoModal({
             Registrar entrega
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            {item.clientes?.nombres} · Puesto {item.puestos?.numero_puesto}
+            {item.clientes?.nombres} Â· Puesto {item.puestos?.numero_puesto}
           </p>
         </div>
         <div className="rounded-xl bg-brand-50 p-4 text-sm text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-          Quedan <strong>{saldo} jabas</strong> por entregar. La guía se
-          vinculará automáticamente.
+          Quedan <strong>{saldo} jabas</strong> por entregar. La guÃ­a se
+          vincularÃ¡ automÃ¡ticamente.
         </div>
         {error && (
           <p
@@ -170,7 +173,7 @@ export default function EntregaProcesoModal({
             Volver
           </Button>
           <Button type="submit" disabled={busy}>
-            {busy ? 'Guardando entrega…' : 'Confirmar entrega'}
+            {busy ? 'Guardando entregaâ€¦' : 'Confirmar entrega'}
           </Button>
         </div>
       </form>
