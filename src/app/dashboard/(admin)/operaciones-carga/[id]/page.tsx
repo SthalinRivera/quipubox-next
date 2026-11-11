@@ -30,7 +30,6 @@ import {
   operacionAbierta,
   guiaVigente,
   saldoDestino,
-  estadoOperacion,
   type OperacionFlujo,
   type DestinoFlujo,
 } from '@/types/flujoOperacion';
@@ -236,7 +235,7 @@ export default function OperacionDetallePage() {
           </p>
         </div>
         <span className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-          {estadoOperacion[op.estado] || op.estado}
+          {op.estado}
         </span>
       </header>
       <dl className="grid grid-cols-2 divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white sm:grid-cols-4 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
