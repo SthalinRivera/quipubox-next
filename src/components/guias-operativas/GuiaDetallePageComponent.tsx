@@ -1,5 +1,6 @@
 'use client';
 
+import { guiaDocumento } from '@/lib/guia-documento';
 import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -106,7 +107,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
     }
 
     // ===== DATOS DEL BACKEND =====
-    const itemReparto = guia.items_reparto;
+    const itemReparto = guiaDocumento(guia).items_reparto;
     const detalleCarga = itemReparto?.detalle_carga;
     const operacion = detalleCarga?.operaciones_carga;
     const tieneEntregas = (guia.entregas?.length ?? 0) > 0;

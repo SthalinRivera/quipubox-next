@@ -7,6 +7,7 @@ export interface DetalleCarga {
     id_variedad?: number | null;
     id_tipo_jaba: number;
     cantidad_jabas: number;
+    orden_carga?: number;
     es_reparto: boolean;
     instruccion_reparto?: string | null;
     observaciones?: string | null;
@@ -35,6 +36,7 @@ export interface CreateDetalleCargaDto {
     id_variedad?: number | null;
     id_tipo_jaba: number;
     cantidad_jabas: number;
+    orden_carga?: number;
     es_reparto?: boolean;
     instruccion_reparto?: string | null;
     observaciones?: string | null;

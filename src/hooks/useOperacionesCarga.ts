@@ -6,19 +6,23 @@ import type { OperacionCarga, CreateOperacionCargaDTO, UpdateOperacionCargaDTO }
 export const useOperacionesCarga = () => {
     const [operaciones, setOperaciones] = useState<OperacionCarga[]>([]);
     const [loading, setLoading] = useState(true);
+    const [total, setTotal] = useState(0);
+    const [error, setError] = useState('');
 
-    const fetchAll = useCallback(async (params?: { estado?: string; fecha?: string }) => {
+    const fetchAll = useCallback(async (params?: { estado?: string; fecha?: string; page?: number }) => {
         setLoading(true);
         try {
             const query = new URLSearchParams();
             if (params?.estado) query.append('estado', params.estado);
             if (params?.fecha) query.append('fecha', params.fecha);
-            const url = `operaciones-carga${query.toString() ? `?${query}` : ''}`;
-            const response = await fetchWithAuth<OperacionCarga[]>(url);
-            setOperaciones(Array.isArray(response) ? response : []);
+            query.set('page', String(params?.page || 1));
+            query.set('limit', '20');
+            const url = `operaciones-carga/resumen-repartos${query.toString() ? `?${query}` : ''}`;
+            const response = await fetchWithAuth<{ data: OperacionCarga[]; total: number }>(url);
+            setOperaciones(response.data); setTotal(response.total); setError('');
         } catch (error) {
             console.error('Error fetching operaciones:', error);
-            setOperaciones([]);
+            setOperaciones([]); setTotal(0); setError(error instanceof Error ? error.message : 'No se pudieron cargar las operaciones.');
         } finally {
             setLoading(false);
         }
@@ -50,5 +54,5 @@ export const useOperacionesCarga = () => {
         await fetchAll();
     };
 
-    return { operaciones, loading, fetchAll, create, update, changeState };
+    return { operaciones, total, error, loading, fetchAll, create, update, changeState };
 };

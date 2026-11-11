@@ -35,7 +35,7 @@ export function Stepper({ operacion }: { operacion?: OperacionFlujo }) {
   const base = op
     ? `/dashboard/operaciones-carga/${op.id_operacion}`
     : '/dashboard/operaciones-carga/nueva';
-  const confirmed = !!op && !cargaEditable(op.estado);
+  const confirmed = !!op && ['en_transito','repartiendo','completado'].includes(op.estado);
   const allGuides = !!op?.detalle_carga.length && op.detalle_carga.every(d => d.items_reparto.length > 0 && d.items_reparto.every(i => i.guias_operativas.some(g => !!g.cobertura && !['anulada','reemplazada'].includes(g.estado))));
   const steps = [
     { label: 'Carga', hint: 'Productos', href: base + '#carga', done: !!op?.detalle_carga.length, enabled: true },
@@ -54,7 +54,7 @@ export function Stepper({ operacion }: { operacion?: OperacionFlujo }) {
       : progressStep;
   return (
     <nav
-      aria-label="Pasos de la operaciÃ³n"
+      aria-label="Pasos de la operación"
       className="mb-4 overflow-x-auto pb-1"
     >
       <div className="grid min-w-[700px] grid-cols-5 gap-2">

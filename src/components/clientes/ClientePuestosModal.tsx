@@ -88,12 +88,12 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
     }
   };
 
-  const handleRemove = async (puestoId: number, numeroPuesto: string) => {
+  const handleRemove = async (puestoId: number, numeroPuesto: string, ocupacionId: number) => {
     if (!cliente) return;
     const confirmar = window.confirm(`¿Desvincular el puesto "${numeroPuesto}" de este cliente?`);
     if (!confirmar) return;
     try {
-      await removePuesto(cliente.id_cliente, puestoId);
+      await removePuesto(cliente.id_cliente, puestoId, ocupacionId);
       toast.success(`Puesto "${numeroPuesto}" desvinculado`);
       await loadPuestos();
       onSaved?.();
@@ -161,7 +161,7 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
                     {pa.seccion && <p className="text-xs text-gray-500">Sección: {pa.seccion}</p>}
                   </div>
                   <button
-                    onClick={() => handleRemove(pa.id_puesto, pa.puestos?.numero_puesto || String(pa.id_puesto))}
+                    onClick={() => handleRemove(pa.id_puesto, pa.puestos?.numero_puesto || String(pa.id_puesto), pa.id_cliente_puesto)}
                     className="text-red-500 hover:text-red-700 transition-colors dark:text-red-400 dark:hover:text-red-300"
                     title="Desvincular"
                   >

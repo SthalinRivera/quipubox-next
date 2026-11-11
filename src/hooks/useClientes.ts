@@ -69,8 +69,8 @@ export const useClientes = () => {
         });
     }, []);
 
-    const removePuesto = useCallback(async (clienteId: number, puestoId: number) => {
-        await fetchWithAuth(`clientes/${clienteId}/puestos/${puestoId}`, { method: 'DELETE' });
+    const removePuesto = useCallback(async (clienteId: number, puestoId: number, ocupacionId?: number) => {
+        await fetchWithAuth(`clientes/${clienteId}/puestos/${puestoId}${ocupacionId ? `?id_cliente_puesto=${ocupacionId}` : ""}`, { method: 'DELETE' });
     }, []);
 
     // Alias para compatibilidad

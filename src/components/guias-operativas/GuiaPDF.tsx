@@ -1,3 +1,4 @@
+import { guiaDocumento } from '@/lib/guia-documento';
 // components/guias-operativas/GuiaPDF.tsx — Estilo Boleta de Venta
 import React from 'react';
 import {
@@ -161,6 +162,8 @@ const DashSep = () => <View style={styles.separator} />;
 const SolidSep = () => <View style={styles.separatorSolid} />;
 
 export const GuiaPDF = ({ guia, empresa }: any) => {
+    guia = guiaDocumento(guia);
+    empresa = guia.empresas || empresa;
     const itemReparto = guia.items_reparto;
     const detalleCarga = itemReparto?.detalle_carga;
     const operacion = detalleCarga?.operaciones_carga;
@@ -229,6 +232,7 @@ export const GuiaPDF = ({ guia, empresa }: any) => {
 
                 <Text style={styles.guiaTitle}>GUIA DE REMISION</Text>
                 <Text style={[styles.guiaTitle, { fontSize: 12 }]}>N° {guia.numero_guia}</Text>
+                {!guia.cobertura?.documento && <Text style={styles.fecha}>DOCUMENTO HISTÓRICO SIN COBERTURA VERIFICADA</Text>}
                 <Text style={styles.fecha}>Fecha emisión: {fechaEmision}</Text>
                 <Text style={styles.estado}>[ {guia.estado.toUpperCase()} ]</Text>
                 {porcentaje > 0 && (

@@ -128,8 +128,9 @@ export function DetalleCargaModal({
         if (!isOpen) return;
         if (editingDetalle) {
             setForm({
+                orden_carga: editingDetalle.orden_carga,
                 id_cliente_emisor: editingDetalle.id_cliente_emisor,
-                id_cliente_receptor: (editingDetalle as any).id_cliente_receptor ?? null,
+                id_cliente_receptor: (editingDetalle as any).items_reparto?.[0]?.id_cliente_receptor ?? (editingDetalle as any).id_cliente_receptor ?? null,
                 id_fruta: editingDetalle.id_fruta,
                 id_variedad: editingDetalle.id_variedad || null,
                 id_tipo_jaba: editingDetalle.id_tipo_jaba,
@@ -138,8 +139,8 @@ export function DetalleCargaModal({
                 instruccion_reparto: editingDetalle.instruccion_reparto || "",
                 observaciones: editingDetalle.observaciones || "",
                 requiere_retorno_jabas: editingDetalle.requiere_retorno_jabas ?? true,
-                id_puesto: (editingDetalle as any).id_puesto ?? null,
-                id_seccion: (editingDetalle as any).id_seccion ?? null,
+                id_puesto: (editingDetalle as any).items_reparto?.[0]?.id_puesto ?? (editingDetalle as any).id_puesto ?? null,
+                id_seccion: (editingDetalle as any).items_reparto?.[0]?.seccion ?? (editingDetalle as any).id_seccion ?? null,
             });
         } else {
             setForm({
@@ -513,7 +514,8 @@ export function DetalleCargaModal({
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4">
+                            <div className="max-w-32"><Label htmlFor="orden-carga">Orden</Label><Input id="orden-carga" type="number" min="1" step={1} value={form.orden_carga ?? ''} placeholder="Automático" onChange={e => setForm({ ...form, orden_carga: e.target.value ? Number(e.target.value) : undefined })} /></div>
+                        <div className="flex justify-end gap-3 pt-4">
                                 <Button
                                     type="button"
                                     variant="outline"

@@ -35,7 +35,7 @@ const ESTADO_COLOR: Record<string, "success" | "error" | "warning" | "info"> = {
 };
 
 export default function OperacionesCargaTable() {
-    const { operaciones, loading, fetchAll } = useOperacionesCarga();
+    const { operaciones, total, error, loading, fetchAll } = useOperacionesCarga();
     const router = useRouter();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
@@ -43,16 +43,16 @@ export default function OperacionesCargaTable() {
     const [filtroEstado, setFiltroEstado] = useState("");
     const [filtroFecha, setFiltroFecha] = useState("");
 
-    const [aplicados, setAplicados] = useState({ estado: '', fecha: '' });
+    const [aplicados, setAplicados] = useState({ estado: '', fecha: '', page: 1 });
 
     useEffect(() => {
-        void fetchAll({ estado: aplicados.estado || undefined, fecha: aplicados.fecha || undefined });
+        void fetchAll({ estado: aplicados.estado || undefined, fecha: aplicados.fecha || undefined, page: aplicados.page });
     }, [aplicados, fetchAll]);
 
     const limpiarFiltros = () => {
         setFiltroFecha('');
         setFiltroEstado('');
-        setAplicados({ estado: '', fecha: '' });
+        setAplicados({ estado: '', fecha: '', page: 1 });
     };
     const cambiosPendientes = filtroFecha !== aplicados.fecha || filtroEstado !== aplicados.estado;
 
@@ -67,7 +67,7 @@ export default function OperacionesCargaTable() {
         <div className="space-y-4">
             {/* Filtros y botón nueva operación */}
             <div className="flex flex-wrap items-end justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (!loading) setAplicados({ fecha: filtroFecha, estado: filtroEstado }); }}>
+                <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (!loading) setAplicados({ fecha: filtroFecha, estado: filtroEstado, page: 1 }); }}>
                     {/* Filtro estado */}
                     <div className="w-48">
                         <Label htmlFor="estado-carga-filtro" className="text-gray-700 dark:text-gray-300">Estado</Label>
@@ -108,13 +108,14 @@ export default function OperacionesCargaTable() {
 
             <div className="flex min-h-8 flex-wrap items-center justify-between gap-2 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                    {aplicados.fecha && <button type="button" disabled={loading} onClick={() => { setFiltroFecha(''); setAplicados({ ...aplicados, fecha: '' }); }} aria-label="Quitar filtro de fecha" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{aplicados.fecha.split('-').reverse().join('/')} <span aria-hidden="true">×</span></button>}
-                    {aplicados.estado && <button type="button" disabled={loading} onClick={() => { setFiltroEstado(''); setAplicados({ ...aplicados, estado: '' }); }} aria-label="Quitar filtro de estado" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{estadoOperacion[aplicados.estado]} <span aria-hidden="true">×</span></button>}
+                    {aplicados.fecha && <button type="button" disabled={loading} onClick={() => { setFiltroFecha(''); setAplicados({ ...aplicados, fecha: '', page: 1 }); }} aria-label="Quitar filtro de fecha" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{aplicados.fecha.split('-').reverse().join('/')} <span aria-hidden="true">×</span></button>}
+                    {aplicados.estado && <button type="button" disabled={loading} onClick={() => { setFiltroEstado(''); setAplicados({ ...aplicados, estado: '', page: 1 }); }} aria-label="Quitar filtro de estado" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{estadoOperacion[aplicados.estado]} <span aria-hidden="true">×</span></button>}
 
                 </div>
-                <p role="status" className="text-gray-500">{loading ? 'Buscando…' : `${operaciones.length} ${operaciones.length === 1 ? 'carga' : 'cargas'}`}</p>
+                <p role="status" className="text-gray-500">{loading ? 'Buscando…' : `${total} ${total === 1 ? 'carga' : 'cargas'}`}</p>
             </div>
 
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
             {/* Tabla de resultados; los filtros permanecen montados durante la consulta. */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
                 <div className="max-w-full overflow-x-auto">
@@ -196,11 +197,16 @@ export default function OperacionesCargaTable() {
                 </div>
             </div>
 
+            <div className="flex items-center justify-end gap-3 text-sm text-gray-500">
+                <Button variant="outline" disabled={loading || aplicados.page <= 1} onClick={() => setAplicados({ ...aplicados, page: aplicados.page - 1 })}>Anterior</Button>
+                <span>{aplicados.page} / {Math.max(1, Math.ceil(total / 20))}</span>
+                <Button variant="outline" disabled={loading || aplicados.page * 20 >= total} onClick={() => setAplicados({ ...aplicados, page: aplicados.page + 1 })}>Siguiente</Button>
+            </div>
             <OperacionCargaModal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 editingOperacion={selectedOperacion}
-                onSaved={() => fetchAll({ estado: aplicados.estado || undefined, fecha: aplicados.fecha || undefined })}
+                onSaved={() => fetchAll({ estado: aplicados.estado || undefined, fecha: aplicados.fecha || undefined, page: aplicados.page })}
             />
         </div>
     );
