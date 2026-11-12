@@ -6,5 +6,5 @@ export interface Seccion {
     observaciones?: string | null;
     estado: boolean;
     created_at?: string;
-    puestos?: { id_puesto: number; numero_puesto: string };
+    puestos?: { id_puesto: number; codigo_puesto: string };
 }

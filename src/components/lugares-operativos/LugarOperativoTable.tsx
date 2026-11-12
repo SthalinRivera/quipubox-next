@@ -106,7 +106,7 @@ export default function LugarOperativoTable() {
                             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                 <TableRow>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">ID</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Sede</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Ubicación</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombre</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Tipo</TableCell>
                                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Dirección</TableCell>
@@ -125,7 +125,7 @@ export default function LugarOperativoTable() {
                                     filteredItems.map((item) => (
                                         <TableRow key={item.id_lugar}>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.id_lugar}</TableCell>
-                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.sedes?.nombre || '—'}</TableCell>
+                                            <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.distritos?.nombre || '—'}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{item.nombre}</TableCell>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                                                 {item.tipo_lugar ? item.tipo_lugar.charAt(0).toUpperCase() + item.tipo_lugar.slice(1) : '—'}

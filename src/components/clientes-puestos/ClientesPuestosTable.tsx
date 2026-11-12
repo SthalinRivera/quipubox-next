@@ -75,13 +75,13 @@ export default function ClientesPuestosTable() {
                                         {asig.clientes.nombres} {asig.clientes.apellidos || ''}
                                     </TableCell>
                                     <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                        {asig.puestos.numero_puesto}
+                                        {asig.puestos.codigo_puesto}
                                     </TableCell>
                                     <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
                                         {asig.puestos.lugares_operativos?.nombre || '—'}
                                     </TableCell>
                                     <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
-                                        {asig.puestos.lugares_operativos?.sedes?.nombre || '—'}
+                                        {asig.puestos.lugares_operativos?.distritos?.nombre || '—'}
                                     </TableCell>
                                     <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
                                         {asig.seccion || '—'}

@@ -80,5 +80,18 @@ export const fetchWithAuth = async <T>(
     }
 
     const data = await response.json();
-    return data as T;
+    const normalizeIds = (value: any, key = ''): any => {
+        if (typeof value === 'string' && /^id(?:_|$)/.test(key) && !/ubigeo|provincia|departamento/.test(key) && /^\d+$/.test(value)) {
+            const number = Number(value);
+            return Number.isSafeInteger(number) ? number : value;
+        }
+        if (Array.isArray(value)) return value.map(item => normalizeIds(item));
+        if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,normalizeIds(v,k)]));
+        return value;
+    };
+    if (data && typeof data.success === 'boolean' && 'data' in data) {
+        if (!data.success) throw new Error(data.message || 'Error de API');
+        return normalizeIds(data.meta ? { data: data.data, ...data.meta } : data.data) as T;
+    }
+    return normalizeIds(data) as T;
 };

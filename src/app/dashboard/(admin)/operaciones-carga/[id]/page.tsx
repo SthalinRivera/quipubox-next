@@ -437,7 +437,7 @@ export default function OperacionDetallePage() {
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">
                   {item.clientes?.nombres} · Puesto{' '}
-                  {item.puestos?.numero_puesto}
+                  {item.puestos?.codigo_puesto}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">
                   {item.producto} · {item.cantidad_asignada} asignadas ·{' '}

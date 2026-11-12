@@ -21,7 +21,7 @@ export interface ItemReparto {
     };
     puestos?: {
         id_puesto: number;
-        numero_puesto: string;
+        codigo_puesto: string;
         lugares_operativos?: {   // 👈 Agregado
             id_lugar: number;
             nombre: string;

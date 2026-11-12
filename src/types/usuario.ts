@@ -1,7 +1,7 @@
 export interface Usuario {
     id_usuario: number;
     id_empresa: number;
-    id_sede?: number | null;
+    id_ubigeo?: string | null;
     nombres: string;
     apellidos?: string | null;
     telefono?: string | null;
@@ -12,7 +12,7 @@ export interface Usuario {
     estado: boolean;
     created_at?: string;
     empresas?: { id_empresa: number; razon_social: string };
-    sedes?: { id_sede: number; nombre: string };
+    distritos?: { id_ubigeo: string; nombre: string };
     usuarios_roles?: Array<{
         id_rol_usuario: number;
         roles_usuarios: {

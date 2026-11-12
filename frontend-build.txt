@@ -1,0 +1,91 @@
+
+> free-nextjs-admin-dashboard@2.3.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+(node:20164) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Compiled successfully in 52s
+  Running TypeScript ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/57) ...
+  Generating static pages using 3 workers (14/57) 
+  Generating static pages using 3 workers (28/57) 
+  Generating static pages using 3 workers (42/57) 
+✓ Generating static pages using 3 workers (57/57) in 2.6s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/proxy/[...path]
+├ ƒ /auth/callback
+├ ○ /dashboard
+├ ○ /dashboard/alerts
+├ ○ /dashboard/avatars
+├ ○ /dashboard/badge
+├ ○ /dashboard/bar-chart
+├ ○ /dashboard/basic-tables
+├ ○ /dashboard/blank
+├ ○ /dashboard/buttons
+├ ○ /dashboard/calendar
+├ ○ /dashboard/calidades
+├ ○ /dashboard/camiones
+├ ○ /dashboard/clientes
+├ ○ /dashboard/clientes-puestos
+├ ƒ /dashboard/clientes/[id]
+├ ○ /dashboard/configuracion
+├ ○ /dashboard/configuracion/categorias
+├ ○ /dashboard/configuracion/modulos
+├ ○ /dashboard/configuracion/permisos
+├ ○ /dashboard/empresas
+├ ○ /dashboard/entregas
+├ ○ /dashboard/error-404
+├ ○ /dashboard/evidencias
+├ ○ /dashboard/form-elements
+├ ○ /dashboard/frutas
+├ ○ /dashboard/guias-operativas
+├ ƒ /dashboard/guias-operativas/[id]
+├ ○ /dashboard/images
+├ ○ /dashboard/incidencias
+├ ○ /dashboard/items-reparto
+├ ○ /dashboard/jabas
+├ ○ /dashboard/jabas-por-cobrar
+├ ○ /dashboard/jabas-por-pagar
+├ ○ /dashboard/line-chart
+├ ○ /dashboard/logs-actividad
+├ ○ /dashboard/lugares-operativos
+├ ○ /dashboard/modals
+├ ○ /dashboard/operaciones-carga
+├ ƒ /dashboard/operaciones-carga/[id]
+├ ƒ /dashboard/operaciones-carga/[id]/detalles
+├ ƒ /dashboard/operaciones-carga/[id]/detalles/[detalleId]/calidades
+├ ƒ /dashboard/operaciones-carga/[id]/detalles/nuevo
+├ ○ /dashboard/operaciones-carga/nueva
+├ ○ /dashboard/profile
+├ ○ /dashboard/puestos
+├ ○ /dashboard/reportes
+├ ○ /dashboard/reportes/clientes
+├ ○ /dashboard/reportes/inventario
+├ ○ /dashboard/reportes/jabas
+├ ○ /dashboard/reportes/operativos
+├ ○ /dashboard/reportes/usuarios
+├ ○ /dashboard/roles
+├ ○ /dashboard/sedes
+├ ○ /dashboard/signup
+├ ○ /dashboard/tipos-jaba
+├ ○ /dashboard/ubicaciones
+├ ○ /dashboard/usuarios
+├ ○ /dashboard/variedades
+├ ○ /dashboard/videos
+└ ƒ /signin
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

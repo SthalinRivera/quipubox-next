@@ -11,7 +11,7 @@ export interface ItemReparto {
     observaciones?: string;
     seccion?: string;
     cliente?: { id_cliente: number; nombres: string; apellidos?: string };
-    puesto?: { id_puesto: number; numero_puesto: string; referencia?: string };
+    puesto?: { id_puesto: number; codigo_puesto: string; referencia?: string };
     detalle_carga?: any;
     entregas?: any[];
     items_reparto_detalle?: {

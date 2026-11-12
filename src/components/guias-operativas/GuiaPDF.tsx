@@ -246,7 +246,7 @@ export const GuiaPDF = ({ guia, empresa }: any) => {
                 <Field label="Nombre" value={`${clienteReceptor?.nombres || '—'} ${clienteReceptor?.apellidos || ''}`} />
                 {clienteReceptor?.apodo && <Field label="Apodo" value={clienteReceptor.apodo} />}
                 {clienteReceptor?.telefono && <Field label="Telefono" value={clienteReceptor.telefono} />}
-                <Field label="Puesto" value={`${itemReparto?.puestos?.numero_puesto || '—'} — ${itemReparto?.puestos?.lugares_operativos?.nombre || '—'}`} />
+                <Field label="Puesto" value={`${itemReparto?.puestos?.codigo_puesto || '—'} — ${itemReparto?.puestos?.lugares_operativos?.nombre || '—'}`} />
 
                 <SolidSep />
 
@@ -255,8 +255,8 @@ export const GuiaPDF = ({ guia, empresa }: any) => {
                 <Field label="Repartidor" value={guia.usuarios?.nombres || '—'} />
                 <Field label="Operacion" value={`#${operacion?.id_operacion || '—'}`} />
                 <Field label="Camion" value={operacion?.camiones?.placa || '—'} />
-                <Field label="Origen" value={operacion?.sedes_operaciones_carga_id_sede_origenTosedes?.nombre || '—'} />
-                <Field label="Destino" value={operacion?.sedes_operaciones_carga_id_sede_destinoTosedes?.nombre || '—'} />
+                <Field label="Origen" value={operacion?.distritos_operaciones_carga_id_ubigeo_origenTodistritos?.nombre || '—'} />
+                <Field label="Destino" value={operacion?.distritos_operaciones_carga_id_ubigeo_destinoTodistritos?.nombre || '—'} />
                 <Field label="Fecha carga" value={`${fechaCarga} ${horaCarga}`} />
                 <Field label="Items" value={`${itemsDelPuesto.length} asignados`} />
                 <Field label="Entregado" value={`${totalEntregado} / Rechazado: ${totalRechazado}`} />

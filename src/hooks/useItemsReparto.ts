@@ -13,7 +13,7 @@ export interface ItemReparto {
     observaciones?: string;
     seccion?: string;
     clientes?: { id_cliente: number; nombres: string; apellidos?: string };
-    puestos?: { id_puesto: number; numero_puesto: string };
+    puestos?: { id_puesto: number; codigo_puesto: string };
     items_reparto_detalle?: any[];
     detalle_carga?: any;
 }

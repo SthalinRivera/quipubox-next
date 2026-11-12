@@ -88,8 +88,8 @@ export default function UserInfo() {
   }
 
   // Acceso directo a las propiedades individuales
-  const empresa = profile.empresas; // objeto o undefined
-  const sede = profile.sedes;       // objeto o undefined
+  const empresa = profile.empresa; // objeto o undefined
+  const sede = profile.ubicacion;       // objeto o undefined
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">

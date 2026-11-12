@@ -93,7 +93,7 @@ export default function EntregaProcesoModal({
             Registrar entrega
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            {item.clientes?.nombres} Â· Puesto {item.puestos?.numero_puesto}
+            {item.clientes?.nombres} Â· Puesto {item.puestos?.codigo_puesto}
           </p>
         </div>
         <div className="rounded-xl bg-brand-50 p-4 text-sm text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">

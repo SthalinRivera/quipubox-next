@@ -238,7 +238,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
                         <Field label="Repartidor" value={guia.usuarios?.nombres || '—'} />
                         <Field label="Empresa" value={guia.empresas?.razon_social || '—'} />
-                        <Field label="Puesto" value={itemReparto?.puestos?.numero_puesto || '—'} />
+                        <Field label="Puesto" value={itemReparto?.puestos?.codigo_puesto || '—'} />
                         <Field label="Cliente receptor" value={clientesAgrupados.join(', ') || '—'} />
                         <Field label="Operación" value={
                             operacion?.id_operacion ? (
@@ -249,8 +249,8 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
                             ) : '—'
                         } />
                         <Field label="Camión" value={operacion?.camiones?.placa || '—'} />
-                        <Field label="Sede origen" value={operacion?.sedes_operaciones_carga_id_sede_origenTosedes?.nombre || '—'} />
-                        <Field label="Sede destino" value={operacion?.sedes_operaciones_carga_id_sede_destinoTosedes?.nombre || '—'} />
+                        <Field label="Sede origen" value={operacion?.distritos_operaciones_carga_id_ubigeo_origenTodistritos?.nombre || '—'} />
+                        <Field label="Sede destino" value={operacion?.distritos_operaciones_carga_id_ubigeo_destinoTodistritos?.nombre || '—'} />
                         <Field label="Fecha de carga" value={operacion?.fecha_carga ? formatDate(operacion.fecha_carga) : '—'} />
                         <Field label="Hora de carga" value={formatHora(operacion?.hora_carga)} />
                         <Field label="Items asignados" value={itemsDelPuesto.length} />
@@ -287,7 +287,7 @@ export function GuiaDetallePageComponent({ id, onBack }: Props) {
             <div className="rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] print:shadow-none print:border-0">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/[0.05]">
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        Calidades — Puesto {itemReparto?.puestos?.numero_puesto || '—'}
+                        Calidades — Puesto {itemReparto?.puestos?.codigo_puesto || '—'}
                     </h3>
                     {itemsDelPuesto.length > 1 && (
                         <Badge size="sm" color="info">{itemsDelPuesto.length} items</Badge>

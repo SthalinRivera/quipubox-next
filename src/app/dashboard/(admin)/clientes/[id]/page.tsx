@@ -23,7 +23,7 @@ import {
     LucideIcon,
 } from 'lucide-react';
 import { useClientes } from '@/hooks/useClientes';
-import { useSedes } from '@/hooks/useSedes';
+import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { usePuestos } from '@/hooks/usePuestos';
 import { useToast } from '@/hooks/useToast';
@@ -49,7 +49,6 @@ type ClienteFormData = z.infer<typeof clienteSchema>;
 const tipoRelacionOptions = [
     { value: 'emisor', label: '📤 Emisor' },
     { value: 'receptor', label: '📥 Receptor' },
-    { value: 'ambos', label: '🔄 Ambos' },
 ];
 const SECCIONES = ['A', 'B', 'C'];
 const seccionOptions = SECCIONES.map(s => ({ value: s, label: `Sección ${s}` }));
@@ -59,7 +58,7 @@ export default function ClienteDetailPage() {
     const router = useRouter();
     const clienteId = Number(params.id);
     const { update, toggleEstado } = useClientes();
-    const { sedes, fetchAll: fetchAllSedes } = useSedes();
+    const { ubicaciones, fetchAll: fetchAllSedes } = useUbicaciones();
     const { lugares, fetchAll: fetchAllLugares } = useLugarOperativo();
     const { puestos, fetchAll: fetchAllPuestos } = usePuestos();
     const toast = useToast();
@@ -71,20 +70,20 @@ export default function ClienteDetailPage() {
     const [editingBasic, setEditingBasic] = useState(false);
     const [sedesAsignadas, setSedesAsignadas] = useState<ClienteSede[]>([]);
     const [puestosAsignados, setPuestosAsignados] = useState<ClientePuesto[]>([]);
-    const [activeTab, setActiveTab] = useState<'basico' | 'sedes' | 'puestos'>('basico');
+    const [activeTab, setActiveTab] = useState<'basico' | 'ubicaciones' | 'puestos'>('basico');
 
     // Formulario edición
     const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ClienteFormData>({
         resolver: zodResolver(clienteSchema),
     });
 
-    // Estados para sedes
-    const [newSedeId, setNewSedeId] = useState<number>(0);
+    // Estados para ubicaciones
+    const [newSedeId, setNewSedeId] = useState<string>('');
     const [newTipoRelacion, setNewTipoRelacion] = useState('emisor');
     const [addingSede, setAddingSede] = useState(false);
 
     // Estados para puestos
-    const [selectedSedeId, setSelectedSedeId] = useState<number>(0);
+    const [selectedSedeId, setSelectedSedeId] = useState<string>('');
     const [selectedMercadoId, setSelectedMercadoId] = useState<number>(0);
     const [selectedPuestoId, setSelectedPuestoId] = useState<number>(0);
     const [selectedSeccion, setSelectedSeccion] = useState('');
@@ -99,7 +98,7 @@ export default function ClienteDetailPage() {
         try {
             const [clienteData, sedesData, puestosData] = await Promise.all([
                 fetchWithAuth<Cliente>(`clientes/${clienteId}`),
-                fetchWithAuth<ClienteSede[]>(`clientes/${clienteId}/sedes`),
+                fetchWithAuth<ClienteSede[]>(`clientes/${clienteId}/ubicaciones`),
                 fetchWithAuth<ClientePuesto[]>(`clientes/${clienteId}/puestos`),
             ]);
             setCliente(clienteData);
@@ -156,12 +155,12 @@ export default function ClienteDetailPage() {
         if (!newSedeId || !newTipoRelacion) return toast.warning('Seleccione una sede y tipo de relación');
         setAddingSede(true);
         try {
-            await fetchWithAuth('clientes/sedes', {
+            await fetchWithAuth('clientes/ubicaciones', {
                 method: 'POST',
-                body: { id_cliente: clienteId, id_sede: newSedeId, tipo_relacion: newTipoRelacion },
+                body: { id_cliente: clienteId, id_ubigeo: newSedeId, tipo_relacion: newTipoRelacion },
             });
             toast.success('Sede agregada');
-            setNewSedeId(0);
+            setNewSedeId('');
             setNewTipoRelacion('emisor');
             await loadClientData();
         } catch (err: any) {
@@ -171,10 +170,10 @@ export default function ClienteDetailPage() {
         }
     };
 
-    const handleRemoveSede = async (sedeId: number, nombre: string) => {
+    const handleRemoveSede = async (sedeId: string, nombre: string) => {
         if (!confirm(`¿Desvincular sede "${nombre}"?`)) return;
         try {
-            await fetchWithAuth(`clientes/${clienteId}/sedes/${sedeId}`, { method: 'DELETE' });
+            await fetchWithAuth(`clientes/${clienteId}/ubicaciones/${sedeId}`, { method: 'DELETE' });
             toast.success('Sede desvinculada');
             loadClientData();
         } catch (err: any) {
@@ -188,7 +187,7 @@ export default function ClienteDetailPage() {
         setSelectedPuestoId(0);
     }, [selectedSedeId]);
 
-    const mercadosDisponibles = lugares.filter(l => l.tipo_lugar === 'mercado' && l.id_sede === selectedSedeId);
+    const mercadosDisponibles = lugares.filter(l => l.tipo_lugar === 'mercado' && l.id_ubigeo === selectedSedeId);
     const mercadosOptions = mercadosDisponibles.map(m => ({ value: m.id_lugar.toString(), label: m.nombre }));
 
     useEffect(() => {
@@ -213,7 +212,7 @@ export default function ClienteDetailPage() {
 
     const puestosOptions = puestosDelMercado.map(p => ({
         value: p.id_puesto.toString(),
-        label: p.numero_puesto || 'Sin número',
+        label: p.codigo_puesto || 'Sin número',
     }));
 
     const handleAddPuesto = async () => {
@@ -225,7 +224,7 @@ export default function ClienteDetailPage() {
                 body: { id_puesto: selectedPuestoId, seccion: selectedSeccion },
             });
             toast.success('Puesto asignado');
-            setSelectedSedeId(0);
+            setSelectedSedeId('');
             setSelectedMercadoId(0);
             setSelectedPuestoId(0);
             setSelectedSeccion('');
@@ -272,9 +271,9 @@ export default function ClienteDetailPage() {
         );
     }
 
-    const sedesDisponibles = sedes.filter(s => !sedesAsignadas.some(sa => sa.id_sede === s.id_sede));
-    const sedesOptions = sedesDisponibles.map(s => ({ value: s.id_sede.toString(), label: s.nombre }));
-    const sedesClienteOptions = sedesAsignadas.map(s => ({ value: s.id_sede.toString(), label: s.sedes?.nombre || '' }));
+    const sedesDisponibles = ubicaciones.filter(s => !sedesAsignadas.some(sa => sa.id_ubigeo === s.id_ubigeo));
+    const sedesOptions = sedesDisponibles.map(s => ({ value: s.id_ubigeo.toString(), label: s.nombre }));
+    const sedesClienteOptions = sedesAsignadas.map(s => ({ value: s.id_ubigeo.toString(), label: s.distritos?.nombre || '' }));
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
@@ -318,7 +317,7 @@ export default function ClienteDetailPage() {
                     <nav className="flex gap-6">
                         {[
                             { id: 'basico', label: 'Datos básicos', icon: User },
-                            { id: 'sedes', label: 'Sedes', icon: Building2 },
+                            { id: 'ubicaciones', label: 'Sedes', icon: Building2 },
                             { id: 'puestos', label: 'Puestos', icon: LayoutGrid },
                         ].map(tab => {
                             const Icon = tab.icon as LucideIcon;
@@ -443,7 +442,7 @@ export default function ClienteDetailPage() {
                             </div>
                         )}
 
-                        {activeTab === 'sedes' && (
+                        {activeTab === 'ubicaciones' && (
                             <div className="space-y-8">
                                 <div>
                                     <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -453,18 +452,18 @@ export default function ClienteDetailPage() {
                                     {sedesAsignadas.length === 0 ? (
                                         <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                             <MapPin className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                                            <p className="text-gray-500 dark:text-gray-400">No hay sedes asignadas aún.</p>
+                                            <p className="text-gray-500 dark:text-gray-400">No hay ubicaciones asignadas aún.</p>
                                         </div>
                                     ) : (
                                         <ul className="divide-y divide-gray-200 dark:divide-gray-700 border rounded-lg overflow-hidden">
                                             {sedesAsignadas.map(s => (
-                                                <li key={s.id_cliente_sede} className="flex justify-between items-center p-4 bg-white dark:bg-gray-800">
+                                                <li key={s.id_cliente_distrito} className="flex justify-between items-center p-4 bg-white dark:bg-gray-800">
                                                     <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white">{s.sedes?.nombre}</p>
+                                                        <p className="font-medium text-gray-900 dark:text-white">{s.distritos?.nombre}</p>
                                                         <p className="text-sm text-gray-500 dark:text-gray-400">Relación: {s.tipo_relacion}</p>
                                                     </div>
                                                     <button
-                                                        onClick={() => handleRemoveSede(s.id_sede, s.sedes?.nombre || '')}
+                                                        onClick={() => handleRemoveSede(s.id_ubigeo, s.distritos?.nombre || '')}
                                                         className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                                                         title="Desvincular"
                                                     >
@@ -485,7 +484,7 @@ export default function ClienteDetailPage() {
                                             options={sedesOptions}
                                             placeholder="Seleccionar sede"
                                             value={newSedeId ? newSedeId.toString() : ''}
-                                            onChange={(v) => setNewSedeId(Number(v))}
+                                            onChange={(v) => setNewSedeId(v)}
                                         />
                                         <Select options={tipoRelacionOptions} value={newTipoRelacion} onChange={setNewTipoRelacion} />
                                         <Button onClick={handleAddSede} disabled={addingSede || !newSedeId} className="gap-2">
@@ -515,14 +514,14 @@ export default function ClienteDetailPage() {
                                                 <li key={p.id_cliente_puesto} className="flex justify-between items-center p-4 bg-white dark:bg-gray-800">
                                                     <div>
                                                         <p className="font-medium text-gray-900 dark:text-white">
-                                                            {p.puestos?.numero_puesto} - {p.puestos?.lugares_operativos?.nombre}
+                                                            {p.puestos?.codigo_puesto} - {p.puestos?.lugares_operativos?.nombre}
                                                         </p>
                                                         <p className="text-sm text-gray-500 dark:text-gray-400">
                                                             Sección: {p.seccion || '—'}
                                                         </p>
                                                     </div>
                                                     <button
-                                                        onClick={() => handleRemovePuesto(p.id_puesto, p.puestos?.numero_puesto || '')}
+                                                        onClick={() => handleRemovePuesto(p.id_puesto, p.puestos?.codigo_puesto || '')}
                                                         className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                                                         title="Desvincular"
                                                     >
@@ -549,7 +548,7 @@ export default function ClienteDetailPage() {
                                                 options={sedesClienteOptions}
                                                 placeholder="Sede"
                                                 value={selectedSedeId ? selectedSedeId.toString() : ''}
-                                                onChange={(v) => setSelectedSedeId(Number(v))}
+                                                onChange={(v) => setSelectedSedeId(v)}
                                             />
                                             <Select
                                                 options={mercadosOptions}

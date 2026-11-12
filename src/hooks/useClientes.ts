@@ -40,20 +40,20 @@ export const useClientes = () => {
     }, [updateCliente]);
 
     // ---------- Sedes ----------
-    const fetchSedesByCliente = useCallback(async (clienteId: number) => {
-        const data = await fetchWithAuth<any[]>(`clientes/${clienteId}/sedes`);
+    const fetchUbicacionesByCliente = useCallback(async (clienteId: number) => {
+        const data = await fetchWithAuth<any[]>(`clientes/${clienteId}/ubicaciones`);
         return data;
     }, []);
 
-    const assignSede = useCallback(async (clienteId: number, sedeId: number, tipoRelacion: string) => {
-        return await fetchWithAuth(`clientes/sedes`, {
+    const assignSede = useCallback(async (clienteId: number, sedeId: string, tipoRelacion: string) => {
+        return await fetchWithAuth(`clientes/ubicaciones`, {
             method: 'POST',
-            body: { id_cliente: clienteId, id_sede: sedeId, tipo_relacion: tipoRelacion },
+            body: { id_cliente: clienteId, id_ubigeo: sedeId, tipo_relacion: tipoRelacion },
         });
     }, []);
 
-    const removeSede = useCallback(async (clienteId: number, sedeId: number) => {
-        await fetchWithAuth(`clientes/${clienteId}/sedes/${sedeId}`, { method: 'DELETE' });
+    const removeSede = useCallback(async (clienteId: number, relacionId: number) => {
+        await fetchWithAuth(`clientes/${clienteId}/ubicaciones/${relacionId}`, { method: 'DELETE' });
     }, []);
 
     // ---------- Puestos ----------
@@ -79,7 +79,7 @@ export const useClientes = () => {
     return {
         clientes, loading, error,
         fetchAll, create, update, toggleEstado,
-        fetchSedesByCliente, assignSede, removeSede,
+        fetchUbicacionesByCliente, assignSede, removeSede,
         fetchPuestosByCliente, assignPuesto, removePuesto,
         getPuestos,
     };

@@ -145,10 +145,10 @@ export default function OperacionesCargaTable() {
                                             <TableRow key={op.id_operacion}>
                                                 <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{op.id_operacion}</TableCell>
                                                 <TableCell className="px-5 py-4 font-medium text-gray-800 dark:text-white/90">
-                                                    {op.sedes_operaciones_carga_id_sede_origenTosedes?.nombre ?? op.id_sede_origen}
+                                                    {op.distritos_operaciones_carga_id_ubigeo_origenTodistritos?.nombre ?? op.id_ubigeo_origen}
                                                 </TableCell>
                                                 <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                                                    {op.sedes_operaciones_carga_id_sede_destinoTosedes?.nombre ?? (op.id_sede_destino || "—")}
+                                                    {op.distritos_operaciones_carga_id_ubigeo_destinoTodistritos?.nombre ?? (op.id_ubigeo_destino || "—")}
                                                 </TableCell>
                                                 <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                                                     {op.camiones?.placa ?? op.id_camion}

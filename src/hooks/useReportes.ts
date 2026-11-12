@@ -12,7 +12,7 @@ import type {
   ReporteJabasPorCobrar,
   ReporteRecuperaciones,
   ReporteDevoluciones,
-  ReporteClientesPorSede,
+  ReporteClientesPorUbicacion,
   ReporteClientesPorPuesto,
   ReporteHistorialAsignacionPuestos,
   ReporteInventario,
@@ -26,7 +26,7 @@ const buildQuery = (filters: ReportFilters): string => {
   if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
   if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
   if (filters.estado) params.append('estado', filters.estado);
-  if (filters.id_sede) params.append('id_sede', String(filters.id_sede));
+  if (filters.id_ubigeo) params.append('id_ubigeo', String(filters.id_ubigeo));
   if (filters.id_cliente) params.append('id_cliente', String(filters.id_cliente));
   if (filters.id_fruta) params.append('id_fruta', String(filters.id_fruta));
   if (filters.id_tipo_jaba) params.append('id_tipo_jaba', String(filters.id_tipo_jaba));
@@ -174,13 +174,13 @@ export const useReportes = () => {
     }
   }, []);
 
-  const fetchClientesPorSede = useCallback(async (filters: ReportFilters = {}) => {
+  const fetchClientesPorUbicacion = useCallback(async (filters: ReportFilters = {}) => {
     setLoading(true);
     try {
       const query = buildQuery(filters);
-      return await fetchWithAuth<ReporteClientesPorSede[]>(`reportes/clientes-por-sede${query}`);
+      return await fetchWithAuth<ReporteClientesPorUbicacion[]>(`reportes/clientes-por-ubicacion${query}`);
     } catch (error) {
-      console.error('Error fetching reporte clientes por sede:', error);
+      console.error('Error fetching reporte clientes por ubicación:', error);
       return [];
     } finally {
       setLoading(false);
@@ -279,7 +279,7 @@ export const useReportes = () => {
     fetchJabasPorCobrar,
     fetchRecuperaciones,
     fetchDevoluciones,
-    fetchClientesPorSede,
+    fetchClientesPorUbicacion,
     fetchClientesPorPuesto,
     fetchHistorialAsignacionPuestos,
     fetchInventario,

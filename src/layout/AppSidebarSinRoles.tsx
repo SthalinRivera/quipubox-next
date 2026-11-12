@@ -37,7 +37,7 @@ const fase1: NavItem = {
   icon: <GridIcon />,
   subItems: [
     { name: "Empresas", path: "/dashboard/empresas" },
-    { name: "Sedes", path: "/dashboard/sedes" },
+    { name: "Ubicaciones", path: "/dashboard/ubicaciones" },
     { name: "Roles de usuarios", path: "/dashboard/roles" },
     { name: "Usuarios", path: "/dashboard/usuarios" },
     { name: "Clientes", path: "/dashboard/clientes" },

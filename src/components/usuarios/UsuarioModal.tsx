@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUsuarios } from '@/hooks/useUsuarios';
 import { useRoles } from '@/hooks/useRoles';
 import { useEmpresas } from '@/hooks/useEmpresas';
-import { useSedes } from '@/hooks/useSedes';
+import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useToast } from '@/hooks/useToast';
 import { fetchWithAuth } from '@/lib/api-client';
 import { Modal } from '@/components/ui/modal';
@@ -22,7 +22,7 @@ interface FormData {
     email: string;
     telefono: string;
     id_empresa: string;
-    id_sede: string;
+    id_ubigeo: string;
     roles: number[];
     estado: boolean;        // ahora es booleano, se usará un checkbox
 }
@@ -41,7 +41,7 @@ interface UsuarioModalProps {
 
 export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioModalProps) {
     const { empresas, loading: loadingEmpresas, fetchAll: fetchEmpresas } = useEmpresas();
-    const { sedes, fetchAll: fetchSedes } = useSedes();
+    const { ubicaciones, fetchAll: fetchUbicaciones } = useUbicaciones();
     const { roles, fetchAll: fetchRoles } = useRoles();
     const toast = useToast();
 
@@ -55,7 +55,7 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
         email: '',
         telefono: '',
         id_empresa: '',
-        id_sede: '',
+        id_ubigeo: '',
         roles: [],
         estado: true,   // por defecto activo
     });
@@ -66,9 +66,9 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
         if (isOpen) {
             fetchEmpresas();
             fetchRoles();
-            fetchSedes();
+            fetchUbicaciones();
         }
-    }, [isOpen, fetchEmpresas, fetchRoles, fetchSedes]);
+    }, [isOpen, fetchEmpresas, fetchRoles, fetchUbicaciones]);
 
     useEffect(() => {
         if (editingUser && isOpen) {
@@ -84,7 +84,7 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
                 email: editingUser.email,
                 telefono: editingUser.telefono || '',
                 id_empresa: editingUser.id_empresa?.toString() || '',
-                id_sede: editingUser.id_sede?.toString() || '',
+                id_ubigeo: editingUser.id_ubigeo?.toString() || '',
                 roles: rolesActuales.map(r => r.value),
                 estado: editingUser.estado ?? true,
             });
@@ -99,7 +99,7 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
                 email: '',
                 telefono: '',
                 id_empresa: '',
-                id_sede: '',
+                id_ubigeo: '',
                 roles: [],
                 estado: true,
             });
@@ -109,17 +109,17 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
         }
     }, [editingUser, isOpen]);
 
-    const sedesFiltradas = useMemo(() => {
+    const ubicacionsFiltradas = useMemo(() => {
         if (!form.id_empresa) return [];
-        return sedes.filter(s => s.id_empresa === Number(form.id_empresa));
-    }, [sedes, form.id_empresa]);
+        return ubicaciones;
+    }, [ubicaciones, form.id_empresa]);
 
     const empresasOptions = empresas.map(e => ({
         value: e.id_empresa.toString(),
         label: e.nombre_comercial || e.razon_social,
     }));
-    const sedesOptions = sedesFiltradas.map(s => ({
-        value: s.id_sede.toString(),
+    const ubicacionsOptions = ubicacionsFiltradas.map(s => ({
+        value: s.id_ubigeo.toString(),
         label: s.nombre,
     }));
     const roleOptions: RoleOption[] = roles.map(r => ({
@@ -135,7 +135,7 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
 
     const isStepValid = () => {
         if (step === 1) {
-            return !!(form.nombres && form.email && form.id_empresa && form.id_sede);
+            return !!(form.nombres && form.email && form.id_empresa && form.id_ubigeo);
         }
         if (step === 2) {
             return form.roles.length > 0;
@@ -158,7 +158,7 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
                 email: form.email,
                 telefono: form.telefono || undefined,
                 id_empresa: Number(form.id_empresa),
-                id_sede: Number(form.id_sede),
+                id_ubigeo: form.id_ubigeo,
                 roles: form.roles,
                 estado: form.estado,   // booleano
             };
@@ -302,23 +302,23 @@ export function UsuarioModal({ isOpen, onClose, editingUser, onSaved }: UsuarioM
                                         placeholder="Seleccionar empresa"
                                         value={form.id_empresa}
                                         onChange={(val) => {
-                                            setForm({ ...form, id_empresa: val, id_sede: '' });
+                                            setForm({ ...form, id_empresa: val, id_ubigeo: '' });
                                             setSelectedEmpresaId(Number(val));
                                         }}
                                     />
                                 )}
                             </div>
                             <div>
-                                <Label>Sede *</Label>
+                                <Label>Ubicación *</Label>
                                 <Select
-                                    options={sedesOptions}
-                                    placeholder={selectedEmpresaId ? "Seleccionar sede" : "Primero selecciona empresa"}
-                                    value={form.id_sede}
-                                    onChange={(val) => setForm({ ...form, id_sede: val })}
+                                    options={ubicacionsOptions}
+                                    placeholder={selectedEmpresaId ? "Seleccionar ubicacion" : "Primero selecciona empresa"}
+                                    value={form.id_ubigeo}
+                                    onChange={(val) => setForm({ ...form, id_ubigeo: val })}
                                     disabled={!selectedEmpresaId}
                                 />
-                                {selectedEmpresaId && sedesFiltradas.length === 0 && (
-                                    <p className="text-xs text-amber-500 mt-1">Esta empresa no tiene sedes registradas</p>
+                                {selectedEmpresaId && ubicacionsFiltradas.length === 0 && (
+                                    <p className="text-xs text-amber-500 mt-1">Esta empresa no tiene ubicaciones registradas</p>
                                 )}
                             </div>
                             <div className="flex items-center space-x-2">

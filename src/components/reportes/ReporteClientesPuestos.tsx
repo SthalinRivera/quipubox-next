@@ -16,30 +16,30 @@ import Badge from '@/components/ui/badge/Badge';
 import { Users, MapPin } from 'lucide-react';
 import type {
   ReportFilters,
-  ReporteClientesPorSede,
+  ReporteClientesPorUbicacion,
   ReporteClientesPorPuesto,
   ReporteHistorialAsignacionPuestos,
 } from '@/types/reportes';
 
-type SubTab = 'por-sede' | 'por-puesto' | 'historial';
+type SubTab = 'por-ubicacion' | 'por-puesto' | 'historial';
 
 export default function ReporteClientesPuestos() {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('por-sede');
-  const [clientesPorSede, setClientesPorSede] = useState<ReporteClientesPorSede[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('por-ubicacion');
+  const [clientesPorUbicacion, setClientesPorUbicacion] = useState<ReporteClientesPorUbicacion[]>([]);
   const [clientesPorPuesto, setClientesPorPuesto] = useState<ReporteClientesPorPuesto[]>([]);
   const [historial, setHistorial] = useState<ReporteHistorialAsignacionPuestos | null>(null);
 
   const {
     loading,
-    fetchClientesPorSede,
+    fetchClientesPorUbicacion,
     fetchClientesPorPuesto,
     fetchHistorialAsignacionPuestos,
   } = useReportes();
 
   const handleFilter = async (f: ReportFilters) => {
-    if (activeSubTab === 'por-sede') {
-      const data = await fetchClientesPorSede(f);
-      setClientesPorSede(data);
+    if (activeSubTab === 'por-ubicacion') {
+      const data = await fetchClientesPorUbicacion(f);
+      setClientesPorUbicacion(data);
     } else if (activeSubTab === 'por-puesto') {
       const data = await fetchClientesPorPuesto(f);
       setClientesPorPuesto(data);
@@ -50,13 +50,13 @@ export default function ReporteClientesPuestos() {
   };
 
   const handleClear = () => {
-    setClientesPorSede([]);
+    setClientesPorUbicacion([]);
     setClientesPorPuesto([]);
     setHistorial(null);
   };
 
   const subTabs: { id: SubTab; label: string }[] = [
-    { id: 'por-sede', label: 'Clientes por Sede' },
+    { id: 'por-ubicacion', label: 'Clientes por Ubicación' },
     { id: 'por-puesto', label: 'Clientes por Puesto' },
     { id: 'historial', label: 'Historial Asignación' },
   ];
@@ -81,32 +81,32 @@ export default function ReporteClientesPuestos() {
 
       <ReportFilter onFilter={handleFilter} onClear={handleClear} loading={loading} />
 
-      {/* Clientes por Sede */}
-      {activeSubTab === 'por-sede' && clientesPorSede.length > 0 && (
+      {/* Clientes por Ubicación */}
+      {activeSubTab === 'por-ubicacion' && clientesPorUbicacion.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Clientes por Sede</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Clientes por Ubicación</h3>
             <ExportButtons
-              data={clientesPorSede.flatMap((s) =>
+              data={clientesPorUbicacion.flatMap((s) =>
                 s.clientes.map((c) => ({
-                  sede: s.sede.nombre,
+                  ubicacion: s.ubicacion.nombre,
                   cliente: `${c.nombres} ${c.apellidos || ''}`,
                   tipo_relacion: c.tipo_relacion,
-                  puestos: c.puestos_asignados.map((p) => p.numero_puesto).join(', ') || 'N/A',
+                  puestos: c.puestos_asignados.map((p) => p.codigo_puesto).join(', ') || 'N/A',
                 })),
               )}
-              filename="reporte-clientes-por-sede"
-              title="Reporte de Clientes por Sede"
-              excelSheetName="Clientes por Sede"
+              filename="reporte-clientes-por-ubicacion"
+              title="Reporte de Clientes por Ubicación"
+              excelSheetName="Clientes por Ubicación"
             />
           </div>
 
-          {clientesPorSede.map((sede) => (
-            <div key={sede.sede.id_sede} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-white/3">
+          {clientesPorUbicacion.map((sede) => (
+            <div key={sede.ubicacion.id_ubigeo} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-white/3">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-gray-800 dark:text-white">
-                  {sede.sede.nombre}
-                  {sede.sede.ciudad && <span className="text-gray-400 ml-2">({sede.sede.ciudad})</span>}
+                  {sede.ubicacion.nombre}
+                  {sede.ubicacion.ciudad && <span className="text-gray-400 ml-2">({sede.ubicacion.ciudad})</span>}
                 </h4>
                 <Badge size="sm" color="primary">{sede.total_clientes} clientes</Badge>
               </div>
@@ -132,7 +132,7 @@ export default function ReporteClientesPuestos() {
                         </TableCell>
                         <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                           {c.puestos_asignados.length > 0
-                            ? c.puestos_asignados.map((p) => `${p.numero_puesto} (${p.lugar})`).join(', ')
+                            ? c.puestos_asignados.map((p) => `${p.codigo_puesto} (${p.lugar})`).join(', ')
                             : 'Sin puesto'}
                         </TableCell>
                       </TableRow>
@@ -153,9 +153,9 @@ export default function ReporteClientesPuestos() {
             <ExportButtons
               data={clientesPorPuesto.flatMap((p) =>
                 p.clientes.map((c) => ({
-                  sede: p.puesto.sede,
+                  ubicacion: p.puesto.ubicacion,
                   lugar: p.puesto.lugar,
-                  puesto: p.puesto.numero_puesto,
+                  puesto: p.puesto.codigo_puesto,
                   cliente: `${c.nombres} ${c.apellidos || ''}`,
                   fecha_inicio: c.fecha_inicio,
                   seccion: c.seccion || 'N/A',
@@ -172,8 +172,8 @@ export default function ReporteClientesPuestos() {
             <div key={puesto.puesto.id_puesto} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/5 dark:bg-white/3">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-gray-800 dark:text-white">
-                  Puesto {puesto.puesto.numero_puesto}
-                  <span className="text-gray-400 ml-2">({puesto.puesto.lugar} - {puesto.puesto.sede})</span>
+                  Puesto {puesto.puesto.codigo_puesto}
+                  <span className="text-gray-400 ml-2">({puesto.puesto.lugar} - {puesto.puesto.ubicacion})</span>
                 </h4>
                 <Badge size="sm" color="primary">{puesto.total_clientes} clientes</Badge>
               </div>
@@ -222,7 +222,7 @@ export default function ReporteClientesPuestos() {
             <ExportButtons
               data={historial.asignaciones.map((a) => ({
                 cliente: `${a.cliente.nombres} ${a.cliente.apellidos || ''}`,
-                puesto: `${a.puesto.numero_puesto} (${a.puesto.lugar})`,
+                puesto: `${a.puesto.codigo_puesto} (${a.puesto.lugar})`,
                 fecha_inicio: a.fecha_inicio,
                 fecha_fin: a.fecha_fin || 'Actual',
                 seccion: a.seccion || 'N/A',
@@ -265,7 +265,7 @@ export default function ReporteClientesPuestos() {
                             {a.cliente.nombres} {a.cliente.apellidos || ''}
                           </TableCell>
                           <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                            {a.puesto.numero_puesto}
+                            {a.puesto.codigo_puesto}
                           </TableCell>
                           <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">
                             {a.puesto.lugar}
@@ -296,9 +296,9 @@ export default function ReporteClientesPuestos() {
       )}
 
       {/* Empty states */}
-      {activeSubTab === 'por-sede' && clientesPorSede.length === 0 && !loading && (
+      {activeSubTab === 'por-ubicacion' && clientesPorUbicacion.length === 0 && !loading && (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          Use los filtros para generar el reporte de clientes por sede.
+          Use los filtros para generar el reporte de clientes por ubicación.
         </div>
       )}
       {activeSubTab === 'por-puesto' && clientesPorPuesto.length === 0 && !loading && (

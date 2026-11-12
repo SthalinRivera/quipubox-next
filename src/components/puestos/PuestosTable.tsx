@@ -42,7 +42,7 @@ export default function PuestosTable() {
   }, []);
 
   const filteredPuestos = (puestos || []).filter((p) => {
-    if (search && !p.numero_puesto.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !p.codigo_puesto.toLowerCase().includes(search.toLowerCase())) return false;
     if (mercadoId && p.id_lugar !== Number(mercadoId)) return false;
     if (tipoLugar && (p.lugares_operativos as any)?.tipo_lugar !== tipoLugar) return false;
     return true;
@@ -180,7 +180,7 @@ export default function PuestosTable() {
                     <TableRow key={puesto.id_puesto}>
                       <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{puesto.id_puesto}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{puesto.lugares_operativos?.nombre || '—'}</TableCell>
-                      <TableCell className="px-5 py-4 font-medium text-gray-800 dark:text-white/90">{puesto.numero_puesto}</TableCell>
+                      <TableCell className="px-5 py-4 font-medium text-gray-800 dark:text-white/90">{puesto.codigo_puesto}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{puesto.referencia || '—'}</TableCell>
                       <TableCell className="px-5 py-4">
                         <Badge size="sm" color={puesto.estado ? 'success' : 'error'}>
@@ -226,7 +226,7 @@ export default function PuestosTable() {
         onClose={() => setConfirmOpen(false)}
         onConfirm={executeToggle}
         title={pendingAction?.nuevoEstado ? 'Activar puesto' : 'Desactivar puesto'}
-        message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} el puesto "${pendingAction?.puesto.numero_puesto}"?`}
+        message={`¿${pendingAction?.nuevoEstado ? 'activar' : 'desactivar'} el puesto "${pendingAction?.puesto.codigo_puesto}"?`}
         confirmText={pendingAction?.nuevoEstado ? 'Activar' : 'Desactivar'}
         variant={pendingAction?.nuevoEstado ? 'info' : 'danger'}
         icon={pendingAction?.nuevoEstado ? <Play className="h-5 w-5" /> : <Power className="h-5 w-5" />}

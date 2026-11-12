@@ -212,7 +212,7 @@ export default function ReporteOperativo() {
                 repartidor: g.repartidor
                   ? `${g.repartidor.nombres} ${g.repartidor.apellidos || ''}`
                   : 'N/A',
-                puesto: g.puesto?.numero_puesto || 'N/A',
+                puesto: g.puesto?.codigo_puesto || 'N/A',
                 cantidad_items: g.cantidad_items,
                 entregas_realizadas: g.entregas_realizadas,
               }))}
@@ -299,7 +299,7 @@ export default function ReporteOperativo() {
                               : 'N/A'}
                           </TableCell>
                           <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
-                            {g.puesto?.numero_puesto || 'N/A'}
+                            {g.puesto?.codigo_puesto || 'N/A'}
                           </TableCell>
                           <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                             {g.cantidad_items}

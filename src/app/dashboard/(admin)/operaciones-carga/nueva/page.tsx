@@ -17,7 +17,7 @@ import { Stepper } from '@/components/ui/Stepper';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Sede {
-    id_sede: number;
+    id_ubigeo: string;
     nombre: string;
     tipo_sede: 'origen' | 'destino' | 'ambos' | null;
 }
@@ -43,8 +43,8 @@ export default function NuevaOperacionPage() {
     const defaultHora = format(now, 'HH:mm');
 
     const [form, setForm] = useState({
-        id_sede_origen: 0,
-        id_sede_destino: null as number | null,
+        id_ubigeo_origen: '',
+        id_ubigeo_destino: '',
         id_camion: 0,
         id_encargado_carga: null as number | null,
         id_repartidor_asignado: null as number | null,
@@ -67,14 +67,14 @@ export default function NuevaOperacionPage() {
         const loadData = async () => {
             try {
                 const [sedesRes, camionesRes, usuariosRes] = await Promise.all([
-                    fetchWithAuth<Sede[]>('sedes'),
+                    fetchWithAuth<Sede[]>('ubicaciones'),
                     fetchWithAuth<Camion[]>('camiones'),
                     fetchWithAuth<Usuario[]>('usuarios'),
                 ]);
                 if (!mounted) return;
                 const sedes = sedesRes || [];
-                setSedesOrigen(sedes.filter(s => s.tipo_sede === 'origen' || s.tipo_sede === 'ambos'));
-                setSedesDestino(sedes.filter(s => s.tipo_sede === 'destino' || s.tipo_sede === 'ambos'));
+                setSedesOrigen(sedes);
+                setSedesDestino(sedes);
                 setCamiones(camionesRes || []);
                 const usuarios = usuariosRes || [];
                 setEncargados(usuarios.filter(u => u.usuarios_roles?.some(r => r.roles_usuarios.nombre === 'encargado_carga')));
@@ -94,8 +94,8 @@ export default function NuevaOperacionPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (submitting) return;
-        if (form.id_sede_origen === 0 || form.id_camion === 0 || !form.fecha_carga) {
-            toast.error('Por favor, complete los campos obligatorios (Sede origen, Camión y Fecha).');
+        if (!form.id_ubigeo_origen || !form.id_ubigeo_destino || form.id_camion === 0 || !form.fecha_carga) {
+            toast.error('Por favor, complete los campos obligatorios (Ubicación de origen, Camión y Fecha).');
             return;
         }
         setSubmitting(true);
@@ -140,38 +140,38 @@ export default function NuevaOperacionPage() {
                         <section className="p-4">
                             <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Ruta</h2>
                             <div className="grid gap-4 md:grid-cols-2">
-                                {/* Sede origen */}
+                                {/* Ubicación de origen */}
                         <div className="space-y-1.5">
                             <Label htmlFor="sede_origen" className="text-sm font-medium">
-                                Sede origen <span className="text-red-500">*</span>
+                                Ubicación de origen <span className="text-red-500">*</span>
                             </Label>
                             <select
                                 id="sede_origen"
-                                value={form.id_sede_origen}
-                                onChange={e => setForm({ ...form, id_sede_origen: Number(e.target.value) })}
+                                value={form.id_ubigeo_origen}
+                                onChange={e => setForm({ ...form, id_ubigeo_origen: e.target.value })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 required
                             >
                                 <option value={0}>Selecciona una opción</option>
                                 {sedesOrigen.map(s => (
-                                    <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
+                                    <option key={s.id_ubigeo} value={s.id_ubigeo}>{s.nombre}</option>
                                 ))}
                             </select>
                         </div>
-                                {/* Sede destino */}
+                                {/* Ubicación de destino */}
                         <div className="space-y-1.5">
                             <Label htmlFor="sede_destino" className="text-sm font-medium">
-                                Sede destino <span className="text-gray-400 text-xs">(opcional)</span>
+                                Ubicación de destino <span className="text-gray-400 text-xs">(opcional)</span>
                             </Label>
                             <select
                                 id="sede_destino"
-                                value={form.id_sede_destino ?? 0}
-                                onChange={e => setForm({ ...form, id_sede_destino: Number(e.target.value) || null })}
+                                value={form.id_ubigeo_destino}
+                                onChange={e => setForm({ ...form, id_ubigeo_destino: e.target.value })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
                                 <option value={0}>Sin asignar</option>
                                 {sedesDestino.map(s => (
-                                    <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
+                                    <option key={s.id_ubigeo} value={s.id_ubigeo}>{s.nombre}</option>
                                 ))}
                             </select>
                         </div>

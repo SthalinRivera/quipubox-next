@@ -108,20 +108,20 @@ export default function ItemRepartoSimpleForm({
     const clientesReceptores = useMemo(() => {
         if (!clientesRaw || !detalleSeleccionado) return [];
         return clientesRaw.filter((cliente) => {
-            return cliente.estado !== false && (cliente.cliente_sede || []).some(
+            return cliente.estado !== false && (cliente.cliente_distrito || []).some(
                 (cs: any) => cs.estado !== false && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos')
             );
         });
     }, [clientesRaw, detalleSeleccionado]);
 
-    const sedeDestinoId = detalleSeleccionado?.operaciones_carga?.id_sede_destino;
+    const sedeDestinoId = detalleSeleccionado?.operaciones_carga?.id_ubigeo_destino;
     const clientesEnSedeDestino = useMemo(() => {
         if (!sedeDestinoId) return [];
         return clientesReceptores.filter((cliente) =>
-            cliente.cliente_sede?.some(
+            cliente.cliente_distrito?.some(
                 (cs: any) => cs.estado !== false
                     && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos')
-                    && Number(cs.id_sede) === Number(sedeDestinoId),
+                    && cs.id_ubigeo === sedeDestinoId,
             ),
         );
     }, [clientesReceptores, sedeDestinoId]);
@@ -410,12 +410,12 @@ export default function ItemRepartoSimpleForm({
                                             >
                                                 <option value="">Seleccionar cliente...</option>
                                                 {clientesFiltrados.map((c) => {
-                                                    const sedesReceptoras = (c.cliente_sede || [])
+                                                    const sedesReceptoras = (c.cliente_distrito || [])
                                                         .filter((cs: any) =>
                                                             cs.estado !== false
                                                             && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos'),
                                                         )
-                                                        .map((cs: any) => cs.sedes?.nombre)
+                                                        .map((cs: any) => cs.distritos?.nombre)
                                                         .filter(Boolean);
                                                     const nombreSedes = [...new Set(sedesReceptoras)].join(', ');
                                                     return (
@@ -446,7 +446,7 @@ export default function ItemRepartoSimpleForm({
                                         <option value="">Seleccionar puesto...</option>
                                         {(idClienteReceptor ? puestosFiltrados : puestosRaw || []).map((p) => (
                                             <option key={p.id_puesto} value={p.id_puesto}>
-                                                {p.numero_puesto} - {p.lugares_operativos?.nombre || ''}
+                                                {p.codigo_puesto} - {p.lugares_operativos?.nombre || ''}
                                             </option>
                                         ))}
                                     </select>

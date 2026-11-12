@@ -11,7 +11,7 @@ export interface DestinoFlujo {
   id_item_reparto: number;
   cantidad_asignada: number;
   clientes?: { nombres: string; apellidos?: string | null };
-  puestos?: { numero_puesto: string };
+  puestos?: { codigo_puesto: string };
   entregas: EntregaFlujo[];
   resoluciones_reparto?: { cantidad: number; tipo: string; motivo: string }[];
   guias_operativas: { id_guia: number; numero_guia: string; estado: string; cobertura?: { cantidad: number; id_item_reparto: string } | null }[];

@@ -12,10 +12,10 @@ export interface ClientePuesto {
     };
     puestos: {
         id_puesto: number;
-        numero_puesto: string;
+        codigo_puesto: string;
         lugares_operativos: {
             nombre: string; // mercado
-            sedes: { nombre: string } | null;
+            distritos: { nombre: string } | null;
         };
     };
 }

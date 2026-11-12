@@ -2,7 +2,7 @@ export interface Puesto {
   id_puesto: number;
   id_empresa: number;
   id_lugar: number;
-  numero_puesto: string;
+  codigo_puesto: string;
   referencia?: string | null;
   estado: boolean;
   created_at?: string;
@@ -10,6 +10,6 @@ export interface Puesto {
   lugares_operativos?: {
     id_lugar: number;
     nombre: string;
-    sedes?: { id_sede: number; nombre: string };
+    distritos?: { id_ubigeo: string; nombre: string };
   };
 }

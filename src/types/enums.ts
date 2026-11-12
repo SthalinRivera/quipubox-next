@@ -77,7 +77,6 @@ export enum TipoMaterialJaba {
 export enum TipoRelacionClienteSede {
     EMISOR = 'emisor',
     RECEPTOR = 'receptor',
-    AMBOS = 'ambos',
 }
 
 export enum TipoRecuperacionJaba {

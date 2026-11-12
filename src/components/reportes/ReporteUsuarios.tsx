@@ -93,7 +93,7 @@ export default function ReporteUsuarios() {
                 apellidos: u.apellidos || '',
                 email: u.email,
                 estado: u.estado ? 'Activo' : 'Inactivo',
-                sede: u.sede,
+                sede: u.ubicacion,
                 roles: u.roles.join(', '),
                 total_operaciones: u.total_operaciones,
                 total_entregas: u.total_entregas,
@@ -141,7 +141,7 @@ export default function ReporteUsuarios() {
                           {u.nombres} {u.apellidos || ''}
                         </TableCell>
                         <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{u.email}</TableCell>
-                        <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{u.sede}</TableCell>
+                        <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">{u.ubicacion}</TableCell>
                         <TableCell className="px-5 py-4">
                           <div className="flex flex-wrap gap-1">
                             {u.roles.map((rol, idx) => (

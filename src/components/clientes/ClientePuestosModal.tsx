@@ -41,8 +41,8 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
   };
 
   const clientSedeIds = useMemo(() => {
-    if (!cliente?.cliente_sede) return [];
-    return cliente.cliente_sede.map(cs => cs.id_sede).filter(id => id != null);
+    if (!cliente?.cliente_distrito) return [];
+    return cliente.cliente_distrito.map(cs => cs.id_ubigeo).filter(id => id != null);
   }, [cliente]);
 
   const puestosDisponibles = useMemo(() => {
@@ -51,7 +51,7 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
     );
     if (clientSedeIds.length > 0) {
       disponibles = disponibles.filter((p: Puesto) =>
-        clientSedeIds.includes(p.lugares_operativos?.sedes?.id_sede ?? 0)
+        clientSedeIds.includes(p.lugares_operativos?.distritos?.id_ubigeo ?? '')
       );
     }
     return disponibles;
@@ -59,7 +59,7 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
 
   const selectOptions = puestosDisponibles.map((p: Puesto) => ({
     value: p.id_puesto.toString(),
-    label: `${p.numero_puesto} - ${p.lugares_operativos?.nombre || 'Mercado'} (${p.lugares_operativos?.sedes?.nombre || '?'})`,
+    label: `${p.codigo_puesto} - ${p.lugares_operativos?.nombre || 'Mercado'} (${p.lugares_operativos?.distritos?.nombre || '?'})`,
   }));
 
   useEffect(() => {
@@ -114,13 +114,13 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
       if (clientSedeIds.length > 0) {
         return (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-            No hay más puestos disponibles en las sedes de este cliente.
+            No hay más puestos disponibles en las ubicaciones de este cliente.
           </p>
         );
       }
       return (
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-          Este cliente no tiene sedes asociadas. Primero asigne una sede.
+          Este cliente no tiene ubicaciones asociadas. Primero asigne una ubicación.
         </p>
       );
     }
@@ -152,16 +152,16 @@ export function ClientePuestosModal({ open, onOpenChange, cliente, onSaved }: Cl
                 <li key={pa.id_cliente_puesto} className="flex justify-between items-center border-b pb-2 last:border-0 dark:border-gray-700">
                   <div>
                     <p className="font-medium text-gray-800 dark:text-white">
-                      {pa.puestos?.numero_puesto || pa.id_puesto}
+                      {pa.puestos?.codigo_puesto || pa.id_puesto}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {pa.puestos?.lugares_operativos?.nombre || 'Mercado'} -
-                      Sede: {pa.puestos?.lugares_operativos?.sedes?.nombre || '?'}
+                      Ubicación: {pa.puestos?.lugares_operativos?.distritos?.nombre || '?'}
                     </p>
                     {pa.seccion && <p className="text-xs text-gray-500">Sección: {pa.seccion}</p>}
                   </div>
                   <button
-                    onClick={() => handleRemove(pa.id_puesto, pa.puestos?.numero_puesto || String(pa.id_puesto), pa.id_cliente_puesto)}
+                    onClick={() => handleRemove(pa.id_puesto, pa.puestos?.codigo_puesto || String(pa.id_puesto), pa.id_cliente_puesto)}
                     className="text-red-500 hover:text-red-700 transition-colors dark:text-red-400 dark:hover:text-red-300"
                     title="Desvincular"
                   >

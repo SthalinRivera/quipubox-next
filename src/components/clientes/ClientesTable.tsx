@@ -113,13 +113,13 @@ export default function ClientesTable() {
     refetch();
   };
 
-  // Renderizado de sedes (igual que antes)
-  const renderSedes = (sedes: ClienteSede[], cliente: Cliente) => {
+  // Renderizado de ubicaciones (igual que antes)
+  const renderSedes = (ubicaciones: ClienteSede[], cliente: Cliente) => {
     return (
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1">
-          {sedes && sedes.length > 0 ? (
-            sedes.map((rel) => {
+          {ubicaciones && ubicaciones.length > 0 ? (
+            ubicaciones.map((rel) => {
               let badgeColor: BadgeColor = 'light';
               switch (rel.tipo_relacion) {
                 case 'emisor': badgeColor = 'info'; break;
@@ -127,9 +127,9 @@ export default function ClientesTable() {
                 case 'ambos': badgeColor = 'warning'; break;
               }
               return (
-                <div key={rel.id_cliente_sede} className="relative group" title={`${rel.sedes?.nombre} - ${rel.tipo_relacion}`}>
+                <div key={rel.id_cliente_distrito} className="relative group" title={`${rel.distritos?.nombre} - ${rel.tipo_relacion}`}>
                   <Badge size="sm" color={badgeColor}>
-                    {rel.sedes?.nombre} ({rel.tipo_relacion === 'emisor' ? 'E' : rel.tipo_relacion === 'receptor' ? 'R' : 'E/R'})
+                    {rel.distritos?.nombre} ({rel.tipo_relacion === 'emisor' ? 'E' : rel.tipo_relacion === 'receptor' ? 'R' : 'E/R'})
                   </Badge>
                 </div>
               );
@@ -155,11 +155,11 @@ export default function ClientesTable() {
               if (pa.seccion === 'A') badgeColor = 'primary';
               else if (pa.seccion === 'B') badgeColor = 'info';
               else if (pa.seccion === 'C') badgeColor = 'success';
-              const tooltipText = `${pa.puestos?.numero_puesto} - ${pa.puestos?.lugares_operativos?.nombre || '?'} (Sede: ${pa.puestos?.lugares_operativos?.sedes?.nombre || '?'})${pa.seccion ? ` - Sección ${pa.seccion}` : ''}`;
+              const tooltipText = `${pa.puestos?.codigo_puesto} - ${pa.puestos?.lugares_operativos?.nombre || '?'} (Sede: ${pa.puestos?.lugares_operativos?.distritos?.nombre || '?'})${pa.seccion ? ` - Sección ${pa.seccion}` : ''}`;
               return (
                 <div key={pa.id_cliente_puesto} className="relative group" title={tooltipText}>
                   <Badge size="sm" color={badgeColor}>
-                    {pa.puestos?.numero_puesto || pa.id_puesto}
+                    {pa.puestos?.codigo_puesto || pa.id_puesto}
                     {pa.seccion && <span className="ml-0.5 text-[10px] opacity-80">({pa.seccion})</span>}
                   </Badge>
                 </div>
@@ -308,7 +308,7 @@ export default function ClientesTable() {
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Nombres</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Apellidos</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Teléfono</TableCell>
-                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Sedes</TableCell>
+                  <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Ubicaciones</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Lugares Operativos</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Puestos</TableCell>
                   <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Estado</TableCell>
@@ -330,7 +330,7 @@ export default function ClientesTable() {
                       <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{cliente.apellidos || '—'}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 dark:text-gray-400">{cliente.telefono || '—'}</TableCell>
                       <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
-                        {renderSedes(cliente.cliente_sede || [], cliente)}
+                        {renderSedes(cliente.cliente_distrito || [], cliente)}
                       </TableCell>
                       <TableCell className="px-5 py-4 text-gray-700 dark:text-gray-300">
                         {renderLugaresOperativos((cliente.clientes_puestos as PuestoAsignado[]) || [])}

@@ -17,7 +17,7 @@ import type { Puesto } from '@/types/puesto';
 
 const puestoSchema = z.object({
     id_lugar: z.number().min(1, 'Debes seleccionar un mercado'),
-    numero_puesto: z.string().min(1, 'El número de puesto es obligatorio'),
+    codigo_puesto: z.string().min(1, 'El número de puesto es obligatorio'),
     referencia: z.string().optional(),
     estado: z.boolean().default(true),
 });
@@ -46,7 +46,7 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
         resolver: zodResolver(puestoSchema) as any,
         defaultValues: {
             id_lugar: 0,
-            numero_puesto: '',
+            codigo_puesto: '',
             referencia: '',
             estado: true,
         },
@@ -62,12 +62,12 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
             if (editingPuesto) {
                 reset({
                     id_lugar: editingPuesto.id_lugar,
-                    numero_puesto: editingPuesto.numero_puesto,
+                    codigo_puesto: editingPuesto.codigo_puesto,
                     referencia: editingPuesto.referencia || '',
                     estado: editingPuesto.estado,
                 });
             } else {
-                reset({ id_lugar: 0, numero_puesto: '', referencia: '', estado: true });
+                reset({ id_lugar: 0, codigo_puesto: '', referencia: '', estado: true });
             }
         }
     }, [open, editingPuesto, reset]);
@@ -86,7 +86,7 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
             const payload = {
                 id_empresa: user.id_empresa,
                 id_lugar: data.id_lugar,
-                numero_puesto: data.numero_puesto,
+                codigo_puesto: data.codigo_puesto,
                 referencia: data.referencia?.trim() === '' ? null : (data.referencia || null),
                 estado: data.estado,
             };
@@ -141,11 +141,11 @@ export function PuestoModal({ open, onOpenChange, editingPuesto, onSaved }: Pues
                             Número de puesto <span className="text-error-500">*</span>
                         </Label>
                         <Controller
-                            name="numero_puesto"
+                            name="codigo_puesto"
                             control={control}
-                            render={({ field }) => <Input {...field} error={!!errors.numero_puesto} />}
+                            render={({ field }) => <Input {...field} error={!!errors.codigo_puesto} />}
                         />
-                        {errors.numero_puesto && <p className="mt-1 text-xs text-error-500">{errors.numero_puesto.message}</p>}
+                        {errors.codigo_puesto && <p className="mt-1 text-xs text-error-500">{errors.codigo_puesto.message}</p>}
                     </div>
 
                     <div>

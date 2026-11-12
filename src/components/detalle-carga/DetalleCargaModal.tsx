@@ -16,12 +16,12 @@ interface Cliente {
     id_cliente: number;
     nombres: string;
     apellidos?: string;
-    cliente_sede?: { tipo_relacion: string }[];
+    cliente_distrito?: { tipo_relacion: string }[];
 }
 
 interface Puesto {
     id_puesto: number;
-    numero_puesto: string;
+    codigo_puesto: string;
     referencia?: string;
 }
 
@@ -234,9 +234,9 @@ export function DetalleCargaModal({
 
     // Filtros de clientes
     const isClienteEmisor = (cliente: Cliente) =>
-        cliente.cliente_sede?.some(rel => rel.tipo_relacion === "emisor" || rel.tipo_relacion === "ambos") ?? false;
+        cliente.cliente_distrito?.some(rel => rel.tipo_relacion === "emisor" || rel.tipo_relacion === "ambos") ?? false;
     const isClienteReceptor = (cliente: Cliente) =>
-        cliente.cliente_sede?.some(rel => rel.tipo_relacion === "receptor" || rel.tipo_relacion === "ambos") ?? false;
+        cliente.cliente_distrito?.some(rel => rel.tipo_relacion === "receptor" || rel.tipo_relacion === "ambos") ?? false;
 
     const clientesEmisores = useMemo(() => clientes.filter(isClienteEmisor), [clientes]);
     const clientesReceptores = useMemo(() => clientes.filter(isClienteReceptor), [clientes]);
@@ -456,7 +456,7 @@ export function DetalleCargaModal({
                                                 </option>
                                                 {puestos.map(p => (
                                                     <option key={p.id_puesto} value={p.id_puesto}>
-                                                        {p.numero_puesto} {p.referencia ? `(${p.referencia})` : ""}
+                                                        {p.codigo_puesto} {p.referencia ? `(${p.referencia})` : ""}
                                                     </option>
                                                 ))}
                                             </select>

@@ -108,7 +108,7 @@ export default function UsuariosTable() {
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Apellidos</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Email</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Teléfono</TableCell>
-                                    <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Sede</TableCell>
+                                    <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Ubicación</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Estado </TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Roles</TableCell>
                                     <TableCell isHeader className="px-5 py-3 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Acciones</TableCell>
@@ -129,7 +129,7 @@ export default function UsuariosTable() {
                                             <TableCell className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{user.apellidos || '—'}</TableCell>
                                             <TableCell className="px-5 py-4 text-sm text-gray-900 dark:text-white">{user.email}</TableCell>
                                             <TableCell className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{user.telefono || '—'}</TableCell>
-                                            <TableCell className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{user.sedes?.nombre || '—'}</TableCell>
+                                            <TableCell className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{user.distritos?.nombre || '—'}</TableCell>
                                             <TableCell className="px-5 py-4">
                                                 <Badge size="sm" color={user.estado ? 'success' : 'error'}>
                                                     {user.estado ? 'Activo' : 'Inactivo'}

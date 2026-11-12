@@ -15,7 +15,7 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { format } from "date-fns"; // npm install date-fns (o usar new Date().toISOString().slice(0,10))
 
 interface Sede {
-    id_sede: number;
+    id_ubigeo: string;
     nombre: string;
     tipo_sede: "origen" | "destino" | "ambos" | null;
 }
@@ -62,8 +62,8 @@ export function OperacionCargaModal({
     const defaultHora = format(now, "HH:mm");
 
     const [form, setForm] = useState<CreateOperacionCargaDTO>({
-        id_sede_origen: 0,
-        id_sede_destino: null,
+        id_ubigeo_origen: '',
+        id_ubigeo_destino: '',
         id_camion: 0,
         id_encargado_carga: null,
         id_repartidor_asignado: null,
@@ -89,7 +89,7 @@ export function OperacionCargaModal({
             try {
                 // Cargar sedes, camiones y usuarios en paralelo
                 const [sedesRes, camionesRes, usuariosRes] = await Promise.all([
-                    fetchWithAuth<Sede[]>("sedes"),
+                    fetchWithAuth<Sede[]>("ubicaciones"),
                     fetchWithAuth<Camion[]>("camiones"),
                     fetchWithAuth<Usuario[]>("usuarios"),
                 ]);
@@ -98,8 +98,8 @@ export function OperacionCargaModal({
 
                 // Filtrar sedes por tipo
                 const sedes = sedesRes || [];
-                const origen = sedes.filter(s => s.tipo_sede === "origen" || s.tipo_sede === "ambos");
-                const destino = sedes.filter(s => s.tipo_sede === "destino" || s.tipo_sede === "ambos");
+                const origen = sedes;
+                const destino = sedes;
                 setSedesOrigen(origen);
                 setSedesDestino(destino);
 
@@ -134,8 +134,8 @@ export function OperacionCargaModal({
         if (!isOpen) return;
         if (editingOperacion) {
             setForm({
-                id_sede_origen: editingOperacion.id_sede_origen,
-                id_sede_destino: editingOperacion.id_sede_destino ?? null,
+                id_ubigeo_origen: editingOperacion.id_ubigeo_origen,
+                id_ubigeo_destino: editingOperacion.id_ubigeo_destino ?? '',
                 id_camion: editingOperacion.id_camion,
                 id_encargado_carga: editingOperacion.id_encargado_carga ?? null,
                 id_repartidor_asignado: editingOperacion.id_repartidor_asignado ?? null,
@@ -146,8 +146,8 @@ export function OperacionCargaModal({
             });
         } else {
             setForm({
-                id_sede_origen: 0,
-                id_sede_destino: null,
+                id_ubigeo_origen: '',
+                id_ubigeo_destino: '',
                 id_camion: 0,
                 id_encargado_carga: null,
                 id_repartidor_asignado: null,
@@ -161,7 +161,7 @@ export function OperacionCargaModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (form.id_sede_origen === 0 || form.id_camion === 0 || !form.fecha_carga) {
+        if (!form.id_ubigeo_origen || !form.id_ubigeo_destino || form.id_camion === 0 || !form.fecha_carga) {
             toast.error("Complete los campos obligatorios");
             return;
         }
@@ -184,7 +184,7 @@ export function OperacionCargaModal({
     };
 
     // Función auxiliar para renderizar selects con estilo consistente
-    const renderSelect = (id: string, label: string, value: number, onChange: (val: number) => void, options: { id: number; label: string }[], required?: boolean, disabled?: boolean) => (
+    const renderSelect = <T extends string | number,>(id: string, label: string, value: T, onChange: (val: T) => void, options: { id: T; label: string }[], required?: boolean, disabled?: boolean) => (
         <div className="space-y-2">
             <Label htmlFor={id} className="text-gray-700 dark:text-gray-300">
                 {label} {required && "*"}
@@ -192,7 +192,7 @@ export function OperacionCargaModal({
             <select
                 id={id}
                 value={value}
-                onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+                onChange={(e) => onChange((typeof value === 'string' ? e.target.value : Number(e.target.value)) as T)}
                 required={required}
                 disabled={disabled}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-brand-800"
@@ -206,8 +206,8 @@ export function OperacionCargaModal({
     );
 
     const camionesOptions = camiones.map(c => ({ id: c.id_camion, label: c.placa }));
-    const sedesOrigenOptions = sedesOrigen.map(s => ({ id: s.id_sede, label: s.nombre }));
-    const sedesDestinoOptions = sedesDestino.map(s => ({ id: s.id_sede, label: s.nombre }));
+    const sedesOrigenOptions = sedesOrigen.map(s => ({ id: s.id_ubigeo, label: s.nombre }));
+    const sedesDestinoOptions = sedesDestino.map(s => ({ id: s.id_ubigeo, label: s.nombre }));
     const encargadosOptions = encargados.map(u => ({ id: u.id_usuario, label: `${u.nombres} ${u.apellidos || ''}`.trim() }));
     const repartidoresOptions = repartidores.map(u => ({ id: u.id_usuario, label: `${u.nombres} ${u.apellidos || ''}`.trim() }));
 
@@ -226,24 +226,24 @@ export function OperacionCargaModal({
                 ) : (
                     <form onSubmit={handleSubmit} className="mt-6">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {/* Sede origen (solo origen/ambos) */}
+                            {/* Ubicación de origen (solo origen/ambos) */}
                             {renderSelect(
                                 "sede_origen",
-                                "Sede origen",
-                                form.id_sede_origen,
-                                (val) => setForm({ ...form, id_sede_origen: val }),
+                                "Ubicación de origen",
+                                form.id_ubigeo_origen,
+                                (val) => setForm({ ...form, id_ubigeo_origen: val }),
                                 sedesOrigenOptions,
                                 true
                             )}
 
-                            {/* Sede destino (solo destino/ambos) */}
+                            {/* Ubicación de destino (solo destino/ambos) */}
                             {renderSelect(
                                 "sede_destino",
-                                "Sede destino",
-                                form.id_sede_destino || 0,
-                                (val) => setForm({ ...form, id_sede_destino: val || null }),
+                                "Ubicación de destino",
+                                form.id_ubigeo_destino || '',
+                                (val) => setForm({ ...form, id_ubigeo_destino: val }),
                                 sedesDestinoOptions,
-                                false
+                                true
                             )}
 
                             {/* Camión */}

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useUsuarios } from '@/hooks/useUsuarios';
 import { useRoles } from '@/hooks/useRoles';
 import { useEmpresas } from '@/hooks/useEmpresas';
-import { useSedes } from '@/hooks/useSedes';
+import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useToast } from '@/hooks/useToast';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
@@ -30,7 +30,7 @@ export function UsuarioModal({
     const { create, update, assignRole, removeRole } = useUsuarios();
 
     const { empresas, loading: loadingEmpresas, fetchAll: fetchEmpresas } = useEmpresas();
-    const { sedes, loading: loadingSedes } = useSedes();
+    const { ubicaciones, loading: loadingUbicacións } = useUbicaciones();
     const { roles, fetchAll: fetchRoles } = useRoles();
     const toast = useToast();
     const [submitting, setSubmitting] = useState(false);
@@ -44,7 +44,7 @@ export function UsuarioModal({
         id_rol_usuario: '',
         estado_acceso: 'activo' as 'activo' | 'bloqueado',
         id_empresa: '',
-        id_sede: '',
+        id_ubigeo: '',
     });
 
     useEffect(() => {
@@ -65,7 +65,7 @@ export function UsuarioModal({
                 estado_acceso: editingUser.estado_acceso,
                 id_empresa: editingUser.id_empresa?.toString() || '',
                 // ✅ Convertir null/undefined a cadena vacía
-                id_sede: editingUser.id_sede ? editingUser.id_sede.toString() : '',
+                id_ubigeo: editingUser.id_ubigeo ? editingUser.id_ubigeo.toString() : '',
             });
             setSelectedEmpresaId(editingUser.id_empresa);
         } else {
@@ -77,7 +77,7 @@ export function UsuarioModal({
                 id_rol_usuario: '',
                 estado_acceso: 'activo',
                 id_empresa: '',
-                id_sede: '',
+                id_ubigeo: '',
             });
             setSelectedEmpresaId(undefined);
         }
@@ -93,23 +93,23 @@ export function UsuarioModal({
         label: emp.nombre_comercial || emp.razon_social,
     }));
 
-    const sedesFiltradas = sedes.filter((sede) => sede.id_empresa === Number(form.id_empresa));
-    const sedesOptions = sedesFiltradas.map((sede) => ({
-        value: sede.id_sede.toString(),
-        label: sede.nombre,
+    const ubicacionsFiltradas = ubicaciones;
+    const ubicacionsOptions = ubicacionsFiltradas.map((ubicacion) => ({
+        value: ubicacion.id_ubigeo.toString(),
+        label: ubicacion.nombre,
     }));
 
     const handleEmpresaChange = (value: string) => {
         const empresaId = Number(value);
         setSelectedEmpresaId(empresaId);
-        setForm((prev) => ({ ...prev, id_empresa: value, id_sede: '' }));
+        setForm((prev) => ({ ...prev, id_empresa: value, id_ubigeo: '' }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!form.id_empresa || !form.id_sede) {
-            toast.error('Debe seleccionar empresa y sede');
+        if (!form.id_empresa || !form.id_ubigeo) {
+            toast.error('Debe seleccionar empresa y ubicacion');
             return;
         }
         if (!form.nombres || !form.email) {
@@ -119,10 +119,10 @@ export function UsuarioModal({
 
         setSubmitting(true);
         try {
-            // ✅ Asegurar que id_sede sea number o undefined (nunca null o NaN)
-            const sedeId = form.id_sede ? Number(form.id_sede) : undefined;
-            if (sedeId === undefined || isNaN(sedeId)) {
-                toast.error('Sede inválida');
+            // ✅ Asegurar que id_ubigeo sea number o undefined (nunca null o NaN)
+            const ubicacionId = form.id_ubigeo ? Number(form.id_ubigeo) : undefined;
+            if (ubicacionId === undefined || isNaN(ubicacionId)) {
+                toast.error('Ubicación inválida');
                 return;
             }
 
@@ -133,7 +133,7 @@ export function UsuarioModal({
                 telefono: form.telefono || undefined,
                 estado_acceso: form.estado_acceso,
                 id_empresa: Number(form.id_empresa),
-                id_sede: sedeId,
+                id_ubigeo: ubicacionId,
                 estado: true,
             };
 
@@ -163,7 +163,7 @@ export function UsuarioModal({
         }
     };
 
-    const isSedeDisabled = !selectedEmpresaId || loadingSedes;
+    const isUbicaciónDisabled = !selectedEmpresaId || loadingUbicacións;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
@@ -239,25 +239,25 @@ export function UsuarioModal({
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="sede">Sede *</Label>
+                                <Label htmlFor="ubicacion">Ubicación *</Label>
                                 <div className="bg-white dark:bg-gray-800 rounded-md">
                                     <Select
-                                        options={sedesOptions}
+                                        options={ubicacionsOptions}
                                         placeholder={
                                             selectedEmpresaId
-                                                ? "Seleccionar sede"
+                                                ? "Seleccionar ubicacion"
                                                 : "Primero selecciona una empresa"
                                         }
-                                        value={form.id_sede}
-                                        onChange={(val) => setForm({ ...form, id_sede: val })}
+                                        value={form.id_ubigeo}
+                                        onChange={(val) => setForm({ ...form, id_ubigeo: val })}
                                     />
                                 </div>
-                                {loadingSedes && (
-                                    <p className="text-sm text-gray-400">Cargando sedes...</p>
+                                {loadingUbicacións && (
+                                    <p className="text-sm text-gray-400">Cargando ubicaciones...</p>
                                 )}
-                                {!loadingSedes && selectedEmpresaId && sedesFiltradas.length === 0 && (
+                                {!loadingUbicacións && selectedEmpresaId && ubicacionsFiltradas.length === 0 && (
                                     <p className="text-sm text-yellow-500">
-                                        Esta empresa no tiene sedes registradas
+                                        Esta empresa no tiene ubicaciones registradas
                                     </p>
                                 )}
                             </div>

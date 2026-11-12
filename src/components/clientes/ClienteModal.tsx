@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useClientes } from '@/hooks/useClientes';
 import { useEmpresas } from '@/hooks/useEmpresas';
-import { useSedes } from '@/hooks/useSedes';
+import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { usePuestos } from '@/hooks/usePuestos';
 import { useToast } from '@/hooks/useToast';
@@ -36,7 +36,7 @@ const clienteSchema = z.object({
 type ClienteFormData = z.infer<typeof clienteSchema>;
 
 interface SedeAsignada {
-    id_sede: number;
+    id_ubigeo: string;
     nombre: string;
     tipo_relacion: string;
 }
@@ -53,7 +53,6 @@ const seccionOptions = SECCIONES.map(s => ({ value: s, label: `Sección ${s}` })
 const tipoRelacionOptions = [
     { value: 'emisor', label: 'Emisor' },
     { value: 'receptor', label: 'Receptor' },
-    { value: 'ambos', label: 'Ambos' },
 ];
 
 interface Props {
@@ -66,11 +65,11 @@ interface Props {
 export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Props) {
     const {
         create, update,
-        fetchSedesByCliente, assignSede, removeSede,
+        fetchUbicacionesByCliente, assignSede, removeSede,
         fetchPuestosByCliente, assignPuesto, removePuesto,
     } = useClientes();
     const { empresas, fetchAll: fetchEmpresas } = useEmpresas();
-    const { sedes, fetchAll: fetchSedes } = useSedes();
+    const { ubicaciones, fetchAll: fetchUbicaciones } = useUbicaciones();
     const { lugares, fetchAll: fetchLugares } = useLugarOperativo();
     const toast = useToast();
 
@@ -87,12 +86,12 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
 
     // Sedes (paso 2)
     const [sedesAsignadas, setSedesAsignadas] = useState<SedeAsignada[]>([]);
-    const [newSedeId, setNewSedeId] = useState<number>(0);
+    const [newSedeId, setNewSedeId] = useState<string>('');
     const [newTipoRelacion, setNewTipoRelacion] = useState('emisor');
     const [cargandoSedes, setCargandoSedes] = useState(false);
 
     // Puestos (paso 3)
-    const [selectedSedeId, setSelectedSedeId] = useState<number>(0);
+    const [selectedSedeId, setSelectedSedeId] = useState<string>('');
     const [selectedMercadoId, setSelectedMercadoId] = useState<number>(0);
     const [selectedPuestoId, setSelectedPuestoId] = useState<number>(0);
     const [selectedSeccion, setSelectedSeccion] = useState('');
@@ -106,11 +105,11 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
         if (open) {
             fetchEmpresas();
             if (empresaId) {
-                fetchSedes();
+                fetchUbicaciones();
                 fetchLugares();
             }
         }
-    }, [open, empresaId, fetchEmpresas, fetchSedes, fetchLugares]);
+    }, [open, empresaId, fetchEmpresas, fetchUbicaciones, fetchLugares]);
 
     // Cargar asignaciones existentes al editar
     useEffect(() => {
@@ -119,10 +118,10 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                 setCargandoSedes(true);
                 setCargandoPuestos(true);
                 try {
-                    const sedesData = await fetchSedesByCliente(editingCliente.id_cliente);
+                    const sedesData = await fetchUbicacionesByCliente(editingCliente.id_cliente);
                     setSedesAsignadas(sedesData.map((s: any) => ({
-                        id_sede: s.id_sede,
-                        nombre: s.sedes?.nombre || '',
+                        id_ubigeo: s.id_ubigeo,
+                        nombre: s.distritos?.nombre || '',
                         tipo_relacion: s.tipo_relacion,
                     })));
                     const puestosData = await fetchPuestosByCliente(editingCliente.id_cliente);
@@ -130,7 +129,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                         id_puesto: p.id_puesto,
                         seccion: p.seccion,
                         nombreMercado: p.puestos?.lugares_operativos?.nombre,
-                        numeroPuesto: p.puestos?.numero_puesto,
+                        numeroPuesto: p.puestos?.codigo_puesto,
                     })));
                 } catch (e) { console.error(e); }
                 finally { setCargandoSedes(false); setCargandoPuestos(false); }
@@ -140,7 +139,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
             setSedesAsignadas([]);
             setPuestosAsignados([]);
         }
-    }, [open, editingCliente, fetchSedesByCliente, fetchPuestosByCliente]);
+    }, [open, editingCliente, fetchUbicacionesByCliente, fetchPuestosByCliente]);
 
     // Resetear formulario al abrir
     useEffect(() => {
@@ -163,14 +162,14 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
 
     // Opciones paso 2
     const sedesDisponibles = useMemo(() => {
-        return sedes.filter(s => s.id_empresa === empresaId && !sedesAsignadas.some(as => as.id_sede === s.id_sede));
-    }, [sedes, empresaId, sedesAsignadas]);
+        return ubicaciones.filter(s => !sedesAsignadas.some(as => as.id_ubigeo === s.id_ubigeo && as.tipo_relacion === newTipoRelacion));
+    }, [ubicaciones, empresaId, sedesAsignadas, newTipoRelacion]);
 
     // Opciones paso 3
-    const sedesAsignadasOpciones = useMemo(() => sedesAsignadas.map(s => ({ value: s.id_sede.toString(), label: s.nombre })), [sedesAsignadas]);
+    const sedesAsignadasOpciones = useMemo(() => sedesAsignadas.map(s => ({ value: s.id_ubigeo.toString(), label: s.nombre })), [sedesAsignadas]);
     const mercadosPorSede = useMemo(() => {
         if (!selectedSedeId) return [];
-        return lugares.filter(l => l.tipo_lugar === 'mercado' && l.id_sede === selectedSedeId);
+        return lugares.filter(l => l.tipo_lugar === 'mercado' && l.id_ubigeo === selectedSedeId);
     }, [lugares, selectedSedeId]);
     const mercadosOptions = useMemo(() => mercadosPorSede.map(m => ({ value: m.id_lugar.toString(), label: m.nombre })), [mercadosPorSede]);
 
@@ -197,7 +196,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
 
     const puestosOptions = useMemo(() => puestosPorMercado.map(p => ({
         value: p.id_puesto.toString(),
-        label: p.numero_puesto || 'Sin número',
+        label: p.codigo_puesto || 'Sin número',
     })), [puestosPorMercado]);
 
     // Limpiar selección al cambiar sede
@@ -206,18 +205,18 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
         setSelectedPuestoId(0);
     }, [selectedSedeId]);
 
-    // Acciones de sedes
+    // Acciones de ubicaciones
     const agregarSede = () => {
-        if (!newSedeId) return toast.warning('Seleccione una sede');
-        const sede = sedes.find(s => s.id_sede === newSedeId);
+        if (!newSedeId) return toast.warning('Seleccione una ubicación');
+        const sede = ubicaciones.find(s => s.id_ubigeo === newSedeId);
         if (!sede) return;
-        setSedesAsignadas(prev => [...prev, { id_sede: newSedeId, nombre: sede.nombre, tipo_relacion: newTipoRelacion }]);
-        setNewSedeId(0);
+        setSedesAsignadas(prev => [...prev, { id_ubigeo: newSedeId, nombre: sede.nombre, tipo_relacion: newTipoRelacion }]);
+        setNewSedeId('');
         setNewTipoRelacion('emisor');
     };
-    const eliminarSede = (id: number) => {
-        setSedesAsignadas(prev => prev.filter(s => s.id_sede !== id));
-        if (selectedSedeId === id) setSelectedSedeId(0);
+    const eliminarSede = (id: string, tipoRelacion: string) => {
+        setSedesAsignadas(prev => prev.filter(s => s.id_ubigeo !== id || s.tipo_relacion !== tipoRelacion));
+        if (selectedSedeId === id) setSelectedSedeId('');
     };
 
     // Acciones de puestos
@@ -234,7 +233,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
             id_puesto: selectedPuestoId,
             seccion: selectedSeccion,
             nombreMercado: mercado?.nombre,
-            numeroPuesto: puesto?.numero_puesto,
+            numeroPuesto: puesto?.codigo_puesto,
         }]);
         setSelectedMercadoId(0);
         setSelectedPuestoId(0);
@@ -255,7 +254,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                 id_empresa: data.id_empresa,
                 estado: true,
                 // Arrays de relaciones (tal como los tienes en los estados)
-                sedes: sedesAsignadas.map(s => ({ id_sede: s.id_sede, tipo_relacion: s.tipo_relacion })),
+                ubicaciones: sedesAsignadas.map(s => ({ id_ubigeo: s.id_ubigeo, tipo_relacion: s.tipo_relacion })),
                 puestos: puestosAsignados.map(p => ({ id_puesto: p.id_puesto, seccion: p.seccion })),
             };
 
@@ -298,7 +297,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
 
     const steps = [
         { id: 1, label: 'Datos básicos', icon: User },
-        { id: 2, label: 'Sedes', icon: Building2 },
+        { id: 2, label: 'Ubicaciones', icon: Building2 },
         { id: 3, label: 'Puestos', icon: LayoutGrid },
     ];
 
@@ -394,21 +393,21 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                     {step === 2 && (
                         <div className="space-y-5">
                             <div>
-                                <Label className="text-base font-semibold">📍 Sedes asignadas</Label>
+                                <Label className="text-base font-semibold">📍 Ubicaciones asignadas</Label>
                                 {cargandoSedes ? (
                                     <p className="text-sm text-gray-500">Cargando...</p>
                                 ) : (
                                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50 dark:bg-gray-800/40 dark:border-gray-700 mt-2">
                                         {sedesAsignadas.length === 0 ? (
-                                            <p className="text-sm text-gray-500 italic text-center py-2">Sin sedes asignadas</p>
+                                            <p className="text-sm text-gray-500 italic text-center py-2">Sin ubicaciones asignadas</p>
                                         ) : (
                                             sedesAsignadas.map(s => (
-                                                <div key={s.id_sede} className="flex justify-between items-center p-2 bg-white dark:bg-gray-700/30 rounded-md border">
+                                                <div key={`${s.id_ubigeo}-${s.tipo_relacion}`} className="flex justify-between items-center p-2 bg-white dark:bg-gray-700/30 rounded-md border">
                                                     <div>
                                                         <p className="font-medium">{s.nombre}</p>
                                                         <p className="text-xs text-gray-500">{tipoRelacionOptions.find(o => o.value === s.tipo_relacion)?.label}</p>
                                                     </div>
-                                                    <button type="button" onClick={() => eliminarSede(s.id_sede)} className="text-red-500 hover:text-red-700">
+                                                    <button type="button" onClick={() => eliminarSede(s.id_ubigeo, s.tipo_relacion)} className="text-red-500 hover:text-red-700">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
@@ -418,19 +417,19 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                                 )}
                             </div>
                             <div className="border-t pt-4 dark:border-gray-700">
-                                <Label className="mb-2 block">Agregar nueva sede</Label>
+                                <Label className="mb-2 block">Agregar nueva ubicación</Label>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <Select
-                                        options={sedesDisponibles.map(s => ({ value: s.id_sede.toString(), label: s.nombre }))}
-                                        placeholder="Seleccionar sede"
+                                        options={sedesDisponibles.map(s => ({ value: s.id_ubigeo.toString(), label: s.nombre }))}
+                                        placeholder="Seleccionar ubicación"
                                         value={newSedeId ? newSedeId.toString() : ''}
-                                        onChange={(v) => setNewSedeId(Number(v))}
+                                        onChange={(v) => setNewSedeId(v)}
                                         disabled={!empresaId}
                                     />
                                     <Select options={tipoRelacionOptions} value={newTipoRelacion} onChange={setNewTipoRelacion} />
                                 </div>
                                 <Button type="button" variant="outline" size="sm" onClick={agregarSede} className="mt-2 w-full">
-                                    <Plus className="w-4 h-4 mr-1" /> Agregar sede
+                                    <Plus className="w-4 h-4 mr-1" /> Agregar ubicación
                                 </Button>
                             </div>
                         </div>
@@ -466,7 +465,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
 
                             {sedesAsignadas.length === 0 ? (
                                 <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
-                                    ⚠️ Primero asigne al menos una sede en el paso anterior.
+                                    ⚠️ Primero asigne al menos una ubicación en el paso anterior.
                                 </div>
                             ) : (
                                 <div className="border-t pt-4 dark:border-gray-700">
@@ -474,9 +473,9 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                         <Select
                                             options={sedesAsignadasOpciones}
-                                            placeholder="Sede"
+                                            placeholder="Ubicación"
                                             value={selectedSedeId ? selectedSedeId.toString() : ''}
-                                            onChange={(v) => setSelectedSedeId(Number(v))}
+                                            onChange={(v) => setSelectedSedeId(v)}
                                         />
                                         <Select
                                             options={mercadosOptions}

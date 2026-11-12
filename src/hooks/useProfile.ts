@@ -11,7 +11,7 @@ interface Empresa {
 }
 
 interface Sede {
-    id_sede: number;
+    id_ubigeo: string;
     nombre: string;
     ciudad?: string;
     departamento?: string;
@@ -25,7 +25,7 @@ interface Rol {
 }
 
 export interface PerfilUsuario {
-    id_usuario: number;
+    id: number;
     nombres: string;
     apellidos?: string;
     email: string;
@@ -33,8 +33,8 @@ export interface PerfilUsuario {
     avatar_url?: string;
     estado_acceso: 'activo' | 'bloqueado';
     created_at?: string;
-    empresas?: Empresa;
-    sedes?: Sede;
+    empresa?: Empresa;
+    ubicacion?: Sede;
     usuarios_roles?: { roles_usuarios: Rol }[];
 }
 

@@ -10,14 +10,14 @@ import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import Select from '@/components/form/Select';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
-import { useSedes } from '@/hooks/useSedes';
+import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';
 import { TipoLugar, TIPOS_LUGAR } from '@/types/enums';
 import type { LugarOperativo } from '@/types/lugarOperativo';
 
 const lugarOperativoSchema = z.object({
-    id_sede: z.number().min(1, 'Debes seleccionar una sede'),
+    id_ubigeo: z.string().regex(/^\d{6}$/, 'Selecciona una ubicación'),
     nombre: z.string().min(1, 'El nombre es obligatorio'),
     direccion_referencia: z.string().optional(),
     observaciones: z.string().optional(),
@@ -36,7 +36,7 @@ interface LugarOperativoModalProps {
 
 export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSaved }: LugarOperativoModalProps) {
     const { create, update } = useLugarOperativo();
-    const { sedes, fetchAll: fetchSedes } = useSedes();
+    const { ubicaciones, fetchAll: fetchUbicaciones } = useUbicaciones();
     const toast = useToast();
     const user = useAuthStore((s) => s.user);
 
@@ -48,7 +48,7 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
     } = useForm<LugarOperativoFormData>({
         resolver: zodResolver(lugarOperativoSchema) as any,
         defaultValues: {
-            id_sede: 0,
+            id_ubigeo: '',
             nombre: '',
             direccion_referencia: '',
             observaciones: '',
@@ -59,14 +59,14 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
     });
 
     useEffect(() => {
-        if (open) fetchSedes();
-    }, [open, fetchSedes]);
+        if (open) fetchUbicaciones();
+    }, [open, fetchUbicaciones]);
 
     useEffect(() => {
         if (open) {
             if (editingMercado) {
                 reset({
-                    id_sede: editingMercado.id_sede,
+                    id_ubigeo: editingMercado.id_ubigeo,
                     nombre: editingMercado.nombre,
                     direccion_referencia: editingMercado.direccion_referencia || '',
                     observaciones: editingMercado.observaciones || '',
@@ -74,13 +74,13 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                     estado: editingMercado.estado,
                 });
             } else {
-                reset({ id_sede: 0, nombre: '', direccion_referencia: '', observaciones: '', tipo_lugar: TipoLugar.MERCADO, estado: true });
+                reset({ id_ubigeo: '', nombre: '', direccion_referencia: '', observaciones: '', tipo_lugar: TipoLugar.MERCADO, estado: true });
             }
         }
     }, [open, editingMercado, reset]);
 
-    const sedesOptions = sedes.map(s => ({
-        value: s.id_sede.toString(),
+    const sedesOptions = ubicaciones.map(s => ({
+        value: s.id_ubigeo.toString(),
         label: s.nombre,
     }));
 
@@ -97,7 +97,7 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
         try {
             const payload = {
                 id_empresa: user.id_empresa,
-                id_sede: data.id_sede,
+                id_ubigeo: data.id_ubigeo,
                 nombre: data.nombre,
                 direccion_referencia: data.direccion_referencia?.trim() === '' ? null : (data.direccion_referencia || null),
                 observaciones: data.observaciones?.trim() === '' ? null : (data.observaciones || null),
@@ -135,21 +135,21 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                 <div className="space-y-4">
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
-                            Sede <span className="text-error-500">*</span>
+                            Ubicación <span className="text-error-500">*</span>
                         </Label>
                         <Controller
-                            name="id_sede"
+                            name="id_ubigeo"
                             control={control}
                             render={({ field }) => (
                                 <Select
                                     options={sedesOptions}
-                                    placeholder="Seleccionar sede"
+                                    placeholder="Seleccionar ubicación"
                                     value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(Number(val))}
+                                    onChange={(val) => field.onChange(val)}
                                 />
                             )}
                         />
-                        {errors.id_sede && <p className="mt-1 text-xs text-error-500">{errors.id_sede.message}</p>}
+                        {errors.id_ubigeo && <p className="mt-1 text-xs text-error-500">{errors.id_ubigeo.message}</p>}
                     </div>
 
                     <div>

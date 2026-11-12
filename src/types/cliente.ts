@@ -9,21 +9,21 @@ export interface Cliente {
     estado: boolean;
     created_at?: string;
     empresas?: { id_empresa: number; razon_social: string };
-    cliente_sede?: ClienteSede[];
+    cliente_distrito?: ClienteSede[];
     clientes_puestos?: ClientePuesto[];
 }
 
 export interface ClienteSede {
-    id_cliente_sede: number;
+    id_cliente_distrito: number;
     id_cliente: number;
-    id_sede: number;
+    id_ubigeo: string;
     tipo_relacion: string;
     estado: boolean;
-    sedes?: Sede;
+    distritos?: Sede;
 }
 
 export interface Sede {
-    id_sede: number;
+    id_ubigeo: string;
     id_empresa: number;
     nombre: string;
     tipo_sede?: string;
@@ -37,7 +37,7 @@ export interface Puesto {
     id_puesto: number;
     id_empresa: number;
     id_lugar: number;
-    numero_puesto: string;
+    codigo_puesto: string;
     referencia?: string;
     estado: boolean;
 }
@@ -52,12 +52,12 @@ export interface ClientePuesto {
     seccion?: string | null;
     puestos?: {
         id_puesto: number;
-        numero_puesto: string;
+        codigo_puesto: string;
         lugares_operativos?: {
             id_lugar: number;
             nombre: string;
             tipo_lugar?: string;
-            sedes?: { nombre: string };
+            distritos?: { nombre: string };
         };
     };
 }
@@ -71,12 +71,12 @@ export interface PuestoAsignado {
     seccion?: string | null;
     puestos?: {
         id_puesto: number;
-        numero_puesto: string;
+        codigo_puesto: string;
         lugares_operativos?: {
             id_lugar: number;
             nombre: string;
             tipo_lugar?: string;
-            sedes?: { nombre: string };
+            distritos?: { nombre: string };
         };
     };
     clientes_puestos?: PuestoAsignado[];
