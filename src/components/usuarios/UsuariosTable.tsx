@@ -22,7 +22,7 @@ import type { Usuario } from '@/types/usuario';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function UsuariosTable() {
-    const { usuarios, loading, fetchAll, toggleEstado } = useUsuarios();
+    const { usuarios, loading, error, fetchAll, toggleEstado } = useUsuarios();
     const { roles, loading: rolesLoading, fetchAll: fetchRoles } = useRoles();
     const toast = useToast();
 
@@ -32,9 +32,9 @@ export default function UsuariosTable() {
     const [pendingAction, setPendingAction] = useState<{ user: Usuario; tipo: 'softDelete' | 'acceso' } | null>(null);
 
     useEffect(() => {
-        fetchAll();
-        fetchRoles();
-    }, []);
+        void fetchAll().catch(() => {});
+        void fetchRoles();
+    }, [fetchAll, fetchRoles]);
 
     const handleEdit = (user: Usuario) => {
         setSelectedUser(user);
@@ -76,13 +76,21 @@ export default function UsuariosTable() {
     if (loading && usuarios.length === 0) {
         return (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                <TableSkeleton columns={7} rows={5} showActionButton={true} />;
+                <TableSkeleton columns={7} rows={5} showActionButton={true} />
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
+            {error && (
+                <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                    <p>No se pudieron cargar los usuarios: {error instanceof Error ? error.message : 'Error al consultar el servidor.'}</p>
+                    <Button variant="outline" disabled={loading} onClick={() => { void fetchAll().catch(() => {}); }}>
+                        Reintentar
+                    </Button>
+                </div>
+            )}
             <div className="flex justify-end">
                 <Button onClick={handleCreate} startIcon={<Plus className="h-4 w-4" />}>
                     Nuevo Usuario
@@ -110,7 +118,7 @@ export default function UsuariosTable() {
                                 {usuarios.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={10} className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
-                                            No hay usuarios registrados.
+                                            {error ? 'No se pudo obtener el listado de usuarios.' : 'No hay usuarios registrados.'}
                                         </TableCell>
                                     </TableRow>
                                 ) : (

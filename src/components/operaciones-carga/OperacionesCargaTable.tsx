@@ -1,7 +1,7 @@
 "use client";
 
 import { OperationTableRows } from '@/components/ui/skeleton/OperationSkeleton';
-import { cargaEditable } from '@/types/flujoOperacion';
+import { estadoOperacion, cargaEditable } from '@/types/flujoOperacion';
 import { ESTADOS_OPERACION } from '@/types/enums';
 
 
@@ -80,7 +80,7 @@ export default function OperacionesCargaTable() {
                         >
                             <option value="">Todos</option>
                             {ESTADOS_OPERACION.map((estado) => (
-                                <option key={estado} value={estado}>{estado}</option>
+                                <option key={estado} value={estado}>{estadoOperacion[estado] || estado}</option>
                             ))}
                         </select>
                     </div>
@@ -108,7 +108,7 @@ export default function OperacionesCargaTable() {
             <div className="flex min-h-8 flex-wrap items-center justify-between gap-2 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                     {aplicados.fecha && <button type="button" disabled={loading} onClick={() => { setFiltroFecha(''); setAplicados({ ...aplicados, fecha: '', page: 1 }); }} aria-label="Quitar filtro de fecha" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{aplicados.fecha.split('-').reverse().join('/')} <span aria-hidden="true">×</span></button>}
-                    {aplicados.estado && <button type="button" disabled={loading} onClick={() => { setFiltroEstado(''); setAplicados({ ...aplicados, estado: '', page: 1 }); }} aria-label="Quitar filtro de estado" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{aplicados.estado} <span aria-hidden="true">×</span></button>}
+                    {aplicados.estado && <button type="button" disabled={loading} onClick={() => { setFiltroEstado(''); setAplicados({ ...aplicados, estado: '', page: 1 }); }} aria-label="Quitar filtro de estado" className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{estadoOperacion[aplicados.estado] || aplicados.estado} <span aria-hidden="true">×</span></button>}
 
                 </div>
                 <p role="status" className="text-gray-500">{loading ? 'Buscando…' : `${total} ${total === 1 ? 'carga' : 'cargas'}`}</p>
@@ -159,7 +159,7 @@ export default function OperacionesCargaTable() {
                                                 <TableCell className="px-5 py-4">
                                                     <div className="space-y-1">
                                                         <Badge size="sm" color={ESTADO_COLOR[op.estado] || "light"}>
-                                                            {op.estado}
+                                                            {estadoOperacion[op.estado] || op.estado}
                                                         </Badge>
 
                                                     </div>

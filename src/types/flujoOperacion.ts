@@ -53,9 +53,9 @@ export const saldoDestino = (item: DestinoFlujo) =>
         .reduce((sum, e) => sum + e.cantidad_entregada, 0) - (item.resoluciones_reparto || []).reduce((sum, r) => sum + r.cantidad, 0),
   );
 export const estadoOperacion: Record<string, string> = {
-  pendiente: 'Carga pendiente',
-  en_curso: 'Preparando carga',
+  pendiente: 'Pendiente',
+  en_curso: 'En curso',
   en_transito: 'En tránsito',
-  repartiendo: 'Entregas en curso',
-  completado: 'Entregas completadas',
+  repartiendo: 'Repartiendo',
+  completado: 'Completado',
 };

@@ -12,6 +12,7 @@ export const useUsuarios = () => {
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const data = await fetchWithAuth<Usuario[]>('usuarios');
             setUsuarios(data);
