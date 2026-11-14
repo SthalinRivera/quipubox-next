@@ -30,7 +30,7 @@ export default function UserDropdown() {
     ? `${profile.nombres} ${profile.apellidos || ""}`
     : user?.email || "Usuario";
   const userEmail = user?.email || "usuario@ejemplo.com";
-  const userAvatar = profile?.avatar_url || "/images/user/default-avatar.jpg";
+  const userAvatar = profile?.avatar_url || "/images/user/user-01.jpg";
 
   const handleLogout = async () => {
     await logout();

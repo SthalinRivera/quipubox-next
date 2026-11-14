@@ -181,6 +181,7 @@ export function CalidadesTable({ detalleId, maxCantidad }: CalidadesTableProps) 
             </div>
 
             <CalidadModal
+                detalleId={detalleId}
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 editingCalidad={selectedCalidad}

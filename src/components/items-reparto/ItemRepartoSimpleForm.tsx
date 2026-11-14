@@ -2,11 +2,12 @@
 
 import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
+import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 import { useItemsReparto } from '@/hooks/useItemsReparto';
 import { Package, User, MapPin, DollarSign, CheckCircle } from 'lucide-react';
 
@@ -25,17 +26,7 @@ export default function ItemRepartoSimpleForm({
     operacionId,
     defaultDetalleId,
 }: ItemRepartoSimpleFormProps) {
-    const {
-        getDetallesReparto,
-        getCalidadesByDetalle,
-        createMultipleFromCalidades,
-        detallesReparto,
-        clientes: clientesRaw,
-        puestos: puestosRaw,
-        loading,
-        loadOptions,
-    } = useItemsReparto();
-
+    const { createMultipleFromCalidades, loading } = useItemsReparto();
     const [detalleCargaId, setDetalleCargaId] = useState<number>(0);
     const [detalleSeleccionado, setDetalleSeleccionado] = useState<any>(null);
     const [calidades, setCalidades] = useState<any[]>([]);
@@ -44,108 +35,35 @@ export default function ItemRepartoSimpleForm({
     const [idClienteReceptor, setIdClienteReceptor] = useState<number>(0);
     const [idPuesto, setIdPuesto] = useState<number>(0);
     const [precioUnitario, setPrecioUnitario] = useState<string>('');
-    const [loadingOptions, setLoadingOptions] = useState(true);
-    const [optionsError, setOptionsError] = useState(false);
     const [optionsRetry, setOptionsRetry] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [step, setStep] = useState<'calidad' | 'destino'>('calidad');
 
-    const optionsLoadedRef = useRef(false);
     const modalInicializadoRef = useRef(false);
 
+    const { data: opciones, loading: loadingOptions, error: optionsError } = useOpcionesFlujo<{
+        detalle: any; calidades: any[]; clientes: any[]; puestos: any[];
+    }>('reparto', { operacion: operacionId, detalle: defaultDetalleId, cliente: idClienteReceptor, buscar: String(optionsRetry) }, isOpen && !!operacionId && !!defaultDetalleId);
+    const [lastOptions, setLastOptions] = useState<typeof opciones>();
     useEffect(() => {
-        if (isOpen && !optionsLoadedRef.current) {
-            setLoadingOptions(true);
-            setOptionsError(false);
-            loadOptions()
-                .then(() => { optionsLoadedRef.current = true; })
-                .catch(() => setOptionsError(true))
-                .finally(() => setLoadingOptions(false));
-        }
-    }, [isOpen, loadOptions, optionsRetry]);
-
-    useEffect(() => {
-        if (isOpen && operacionId) {
-            getDetallesReparto(operacionId);
-        }
-    }, [isOpen, operacionId, getDetallesReparto]);
-
-    useEffect(() => {
-        if (isOpen && defaultDetalleId && !detalleCargaId && !modalInicializadoRef.current) {
-            const detalle = detallesReparto.find((d) => d.id_detalle_carga === defaultDetalleId);
-            if (detalle) {
-                setDetalleCargaId(defaultDetalleId);
-                setDetalleSeleccionado(detalle);
-                modalInicializadoRef.current = true;
-            }
-        }
-    }, [isOpen, defaultDetalleId, detallesReparto, detalleCargaId]);
-
-    useEffect(() => {
-        if (detalleCargaId) {
-            getCalidadesByDetalle(detalleCargaId).then((data) => {
-                const pendientesDetalle = detallesReparto.find(d => d.id_detalle_carga === detalleCargaId);
-                const asignados = (pendientesDetalle?.items_reparto || []).flatMap((i: any) => i.items_reparto_detalle || []);
-                const calidadesData = (Array.isArray(data) ? data : []).map(c => ({...c, cantidad: c.cantidad - asignados.filter((a: any) => a.id_detalle_carga_calidad === c.id_detalle_carga_calidad).reduce((sum: number,a: any) => sum+a.cantidad,0)})).filter(c => c.cantidad > 0);
-                setCalidades(calidadesData);
-                if (calidadesData.length === 1) {
-                    setCalidadSeleccionadaId(calidadesData[0].id_detalle_carga_calidad);
-                    setCantidadAsignar(calidadesData[0].cantidad);
-                } else {
-                    setCalidadSeleccionadaId(null);
-                    setCantidadAsignar(0);
-                }
-            });
-        } else {
-            setCalidades([]);
-            setCalidadSeleccionadaId(null);
-            setCantidadAsignar(0);
-            setDetalleSeleccionado(null);
-        }
-    }, [detalleCargaId, getCalidadesByDetalle, detallesReparto]);
-
-    const clientesReceptores = useMemo(() => {
-        if (!clientesRaw || !detalleSeleccionado) return [];
-        return clientesRaw.filter((cliente) => {
-            return cliente.estado !== false && (cliente.cliente_distrito || []).some(
-                (cs: any) => cs.estado !== false && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos')
-            );
-        });
-    }, [clientesRaw, detalleSeleccionado]);
-
-    const sedeDestinoId = detalleSeleccionado?.operaciones_carga?.id_ubigeo_destino;
-    const clientesEnSedeDestino = useMemo(() => {
-        if (!sedeDestinoId) return [];
-        return clientesReceptores.filter((cliente) =>
-            cliente.cliente_distrito?.some(
-                (cs: any) => cs.estado !== false
-                    && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos')
-                    && cs.id_ubigeo === sedeDestinoId,
-            ),
-        );
-    }, [clientesReceptores, sedeDestinoId]);
-    const clientesFiltrados = clientesEnSedeDestino.length
-        ? clientesEnSedeDestino
-        : clientesReceptores;
-    const mostrarAvisoOtraSede = Boolean(
-        sedeDestinoId && clientesReceptores.length && !clientesEnSedeDestino.length,
-    );
-
-    const puestosFiltrados = useMemo(() => {
-        if (!puestosRaw || !idClienteReceptor) return puestosRaw || [];
-        const cliente = clientesFiltrados.find((c) => c.id_cliente === idClienteReceptor);
-        if (!cliente) return puestosRaw || [];
-        const puestosIds = (cliente.clientes_puestos || [])
-            .filter((cp: any) => cp.estado !== false && !cp.fecha_fin)
-            .map((cp: any) => Number(cp.id_puesto));
-        if (puestosIds.length === 0) return [];
-        return (puestosRaw || []).filter((p) => puestosIds.includes(Number(p.id_puesto)));
-    }, [puestosRaw, idClienteReceptor, clientesFiltrados]);
+        if (!isOpen) { modalInicializadoRef.current = false; setLastOptions(undefined); return; }
+        if (!opciones) return;
+        setLastOptions(opciones);
+        setDetalleCargaId(opciones.detalle.id_detalle_carga); setDetalleSeleccionado(opciones.detalle);
+        setCalidades(opciones.calidades);
+        setCalidadSeleccionadaId(prev => opciones.calidades.some(c => c.id_detalle_carga_calidad === prev) ? prev : opciones.calidades.length === 1 ? opciones.calidades[0].id_detalle_carga_calidad : null);
+        if (!modalInicializadoRef.current) { setCantidadAsignar(opciones.calidades.length === 1 ? opciones.calidades[0].cantidad : 0); modalInicializadoRef.current = true; }
+        setIdClienteReceptor(prev => opciones.clientes.some(c => c.id_cliente === prev) ? prev : 0);
+        setIdPuesto(prev => opciones.puestos.some(p => p.id_puesto === prev) ? prev : 0);
+    }, [opciones, isOpen]);
+    const clientesFiltrados = (opciones ?? lastOptions)?.clientes || [];
+    const puestosFiltrados = (opciones ?? lastOptions)?.puestos || [];
 
     const calidadSeleccionada = calidades.find((c) => c.id_detalle_carga_calidad === calidadSeleccionadaId);
 
     const resetForm = () => {
+        setLastOptions(undefined);
         setDetalleCargaId(0);
         setDetalleSeleccionado(null);
         setCalidades([]);
@@ -182,7 +100,7 @@ export default function ItemRepartoSimpleForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (submitting) return;
+        if (submitting || loading || loadingOptions || optionsError) return;
         setError(null);
         if (!calidadSeleccionada) {
             setError('Seleccione una calidad');
@@ -243,13 +161,17 @@ export default function ItemRepartoSimpleForm({
                     </div>
                 </div>
 
-                {loadingOptions ? (
-                    <OperationSkeleton variant="compact" heading={false} />
-                ) : optionsError ? (
-                    <div role="alert" className="space-y-3 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                <div role="status" aria-live="polite" className="mb-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
+                    {loadingOptions && lastOptions ? 'Actualizando puestos disponibles…' : ''}
+                </div>
+                {optionsError && (
+                    <div role="alert" className="mb-3 space-y-3 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
                         <p>No se pudieron cargar los clientes y puestos. Intenta nuevamente.</p>
                         <Button type="button" variant="outline" onClick={() => setOptionsRetry((n) => n + 1)}>Reintentar carga</Button>
                     </div>
+                )}
+                {loadingOptions && !lastOptions ? (
+                    <OperationSkeleton variant="compact" heading={false} />
                 ) : (
                     <>
                         {/* Paso indicators */}
@@ -394,11 +316,6 @@ export default function ItemRepartoSimpleForm({
                                         </p>
                                     ) : (
                                         <>
-                                            {mostrarAvisoOtraSede && (
-                                                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                                                    No hay receptores en la sede destino; se muestran receptores de otras sedes.
-                                                </p>
-                                            )}
                                             <select
                                                 className={selectClassName}
                                                 value={idClienteReceptor}
@@ -409,22 +326,7 @@ export default function ItemRepartoSimpleForm({
                                                 required
                                             >
                                                 <option value="">Seleccionar cliente...</option>
-                                                {clientesFiltrados.map((c) => {
-                                                    const sedesReceptoras = (c.cliente_distrito || [])
-                                                        .filter((cs: any) =>
-                                                            cs.estado !== false
-                                                            && (cs.tipo_relacion === 'receptor' || cs.tipo_relacion === 'ambos'),
-                                                        )
-                                                        .map((cs: any) => cs.distritos?.nombre)
-                                                        .filter(Boolean);
-                                                    const nombreSedes = [...new Set(sedesReceptoras)].join(', ');
-                                                    return (
-                                                        <option key={c.id_cliente} value={c.id_cliente}>
-                                                            {c.nombres} {c.apellidos || ''}
-                                                            {mostrarAvisoOtraSede && nombreSedes ? ` · ${nombreSedes}` : ''}
-                                                        </option>
-                                                    );
-                                                })}
+                                                {clientesFiltrados.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.nombres} {c.apellidos || ''}</option>)}
                                             </select>
                                         </>
                                     )}
@@ -441,10 +343,10 @@ export default function ItemRepartoSimpleForm({
                                         value={idPuesto}
                                         onChange={(e) => setIdPuesto(parseInt(e.target.value))}
                                         required
-                                        disabled={!idClienteReceptor}
+                                        disabled={loadingOptions || !!optionsError || !idClienteReceptor}
                                     >
                                         <option value="">Seleccionar puesto...</option>
-                                        {(idClienteReceptor ? puestosFiltrados : puestosRaw || []).map((p) => (
+                                        {puestosFiltrados.map((p) => (
                                             <option key={p.id_puesto} value={p.id_puesto}>
                                                 {p.codigo_puesto} - {p.lugares_operativos?.nombre || ''}
                                             </option>
@@ -481,7 +383,7 @@ export default function ItemRepartoSimpleForm({
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={submitting || loading || !idClienteReceptor || !idPuesto}
+                                        disabled={submitting || loading || loadingOptions || !!optionsError || !idClienteReceptor || !idPuesto}
                                         className="flex-1"
                                     >
                                         {submitting ? 'Guardando…' : 'Guardar destino'}

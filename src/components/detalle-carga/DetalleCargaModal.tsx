@@ -2,7 +2,7 @@
 
 import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useDetallesCarga } from "@/hooks/useDetallesCarga";
 import { useToast } from "@/hooks/useToast";
 import { Modal } from "@/components/ui/modal";
@@ -10,7 +10,7 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import type { DetalleCarga, CreateDetalleCargaDto } from "@/types/detalleCarga";
-import { fetchWithAuth } from "@/lib/api-client";
+import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 
 interface Cliente {
     id_cliente: number;
@@ -26,7 +26,7 @@ interface Puesto {
 }
 
 interface Seccion {
-    id_seccion: number;
+    id_seccion: string;
     nombre_seccion: string;
 }
 
@@ -48,26 +48,27 @@ export function DetalleCargaModal({
     const { createDetalle, updateDetalle } = useDetallesCarga(operacionId);
     const toast = useToast();
     const [submitting, setSubmitting] = useState(false);
-    const [loadingData, setLoadingData] = useState(true);
-    const dataLoadedRef = useRef(false);
+    const [hasLoadedOptions, setHasLoadedOptions] = useState(false);
+    const [optionsRetry, setOptionsRetry] = useState(0);
+    useEffect(() => { if (!isOpen) setHasLoadedOptions(false); }, [isOpen]);
 
     // Datos maestros
-    const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [clientesEmisores, setClientesEmisores] = useState<Cliente[]>([]);
+    const [clientesReceptores, setClientesReceptores] = useState<Cliente[]>([]);
     const [frutas, setFrutas] = useState<{ id_fruta: number; nombre: string }[]>([]);
-    const [variedades, setVariedades] = useState<{ id_variedad: number; nombre: string; id_fruta: number }[]>([]);
     const [tiposJaba, setTiposJaba] = useState<{ id_tipo_jaba: number; nombre: string }[]>([]);
-    const [filteredVariedades, setFilteredVariedades] = useState<typeof variedades>([]);
+    const [filteredVariedades, setFilteredVariedades] = useState<{ id_variedad: number; nombre: string }[]>([]);
 
     // Datos para entrega manual
     const [puestos, setPuestos] = useState<Puesto[]>([]);
     const [secciones, setSecciones] = useState<Seccion[]>([]);
-    const [loadingPuestos, setLoadingPuestos] = useState(false);
-    const [loadingSecciones, setLoadingSecciones] = useState(false);
+
+
 
     const [form, setForm] = useState<CreateDetalleCargaDto & {
         id_cliente_receptor?: number | null;
         id_puesto?: number | null;
-        id_seccion?: number | null;
+        id_seccion?: string | null;
     }>({
         id_cliente_emisor: 0,
         id_cliente_receptor: null,
@@ -83,45 +84,27 @@ export function DetalleCargaModal({
         id_seccion: null,
     });
 
-    // 1. Carga de datos maestros (una sola vez)
+    const { data: opciones, loading: loadingData, error: opcionesError } = useOpcionesFlujo<{
+        emisores: Cliente[]; receptores: Cliente[]; frutas: typeof frutas; variedades: typeof filteredVariedades;
+        tiposJaba: typeof tiposJaba; puestos: Puesto[]; secciones: Seccion[];
+    }>('carga', { operacion: operacionId, fruta: form.id_fruta, cliente: form.es_reparto ? null : form.id_cliente_receptor, puesto: form.es_reparto ? null : form.id_puesto, buscar: String(optionsRetry) }, isOpen);
     useEffect(() => {
-        if (!isOpen) return;
-        if (dataLoadedRef.current) {
-            setLoadingData(false);
-            return;
-        }
-        let mounted = true;
-        setLoadingData(true);
-
-        const loadData = async () => {
-            const extractArray = (resp: any): any[] => {
-                if (Array.isArray(resp)) return resp;
-                if (resp && typeof resp === "object" && Array.isArray(resp.data)) return resp.data;
-                return [];
-            };
-
-            try {
-                const [clientesResp, frutasResp, variedadesResp, tiposResp] = await Promise.all([
-                    fetchWithAuth("clientes/all"), fetchWithAuth("frutas"),
-                    fetchWithAuth("variedades"), fetchWithAuth("tipos-jaba"),
-                ]);
-                if (!mounted) return;
-                setClientes(extractArray(clientesResp));
-                setFrutas(extractArray(frutasResp));
-                setVariedades(extractArray(variedadesResp));
-                setTiposJaba(extractArray(tiposResp));
-
-                dataLoadedRef.current = true;
-            } catch (err: any) {
-                console.error("Error cargando datos maestros:", err);
-                toast.error("No se pudieron cargar todos los datos. Recargue la página.");
-            } finally {
-                if (mounted) setLoadingData(false);
-            }
-        };
-        loadData();
-        return () => { mounted = false; };
-    }, [isOpen]);
+        if (!opciones) return;
+        setHasLoadedOptions(true);
+        setClientesEmisores(opciones.emisores); setClientesReceptores(opciones.receptores);
+        setFrutas(opciones.frutas); setFilteredVariedades(opciones.variedades); setTiposJaba(opciones.tiposJaba);
+        setPuestos(opciones.puestos); setSecciones(opciones.secciones);
+        setForm(prev => ({...prev,
+            id_cliente_emisor: opciones.emisores.some(x => x.id_cliente === prev.id_cliente_emisor) ? prev.id_cliente_emisor : 0,
+            id_fruta: opciones.frutas.some(x => x.id_fruta === prev.id_fruta) ? prev.id_fruta : 0,
+            id_tipo_jaba: opciones.tiposJaba.some(x => x.id_tipo_jaba === prev.id_tipo_jaba) ? prev.id_tipo_jaba : 0,
+            id_variedad: opciones.variedades.some(x => x.id_variedad === prev.id_variedad) ? prev.id_variedad : null,
+            id_cliente_receptor: opciones.receptores.some(x => x.id_cliente === prev.id_cliente_receptor) ? prev.id_cliente_receptor : null,
+            id_puesto: opciones.puestos.some(x => x.id_puesto === prev.id_puesto) ? prev.id_puesto : null,
+            id_seccion: opciones.secciones.some(x => x.id_seccion === prev.id_seccion) ? prev.id_seccion : null,
+        }));
+    }, [opciones]);
+    useEffect(() => { if (opcionesError) toast.error(opcionesError); }, [opcionesError, toast]);
 
     // 2. Resetear formulario al editar
     useEffect(() => {
@@ -160,90 +143,9 @@ export function DetalleCargaModal({
         }
     }, [isOpen, editingDetalle]);
 
-    // 3. Filtrar variedades según fruta
-    useEffect(() => {
-        if (form.id_fruta && variedades.length) {
-            setFilteredVariedades(variedades.filter(v => v.id_fruta === form.id_fruta));
-        } else {
-            setFilteredVariedades([]);
-        }
-    }, [form.id_fruta, variedades]);
-
-    // 4. Cargar puestos del cliente receptor (solo si NO es reparto)
-    useEffect(() => {
-        const loadPuestos = async () => {
-            if (form.es_reparto || !form.id_cliente_receptor) {
-                setPuestos([]);
-                setForm(prev => ({ ...prev, id_puesto: null, id_seccion: null }));
-                return;
-            }
-            setLoadingPuestos(true);
-            try {
-                console.log("Cargando puestos para cliente:", form.id_cliente_receptor);
-                const data = await fetchWithAuth<any[]>(`clientes/${form.id_cliente_receptor}/puestos`);
-                console.log("Respuesta puestos:", data);
-                // Extraer los puestos reales (anidados en .puestos)
-                const puestosExtraidos = data
-                    .map(item => item.puestos)
-                    .filter(p => p && p.id_puesto);
-                console.log("Puestos extraídos:", puestosExtraidos);
-                setPuestos(puestosExtraidos);
-                setForm(prev => ({ ...prev, id_puesto: null, id_seccion: null }));
-            } catch (error: any) {
-                console.error("Error cargando puestos:", error);
-                toast.error(`No se pudieron cargar los puestos: ${error.message || "Error de red"}`);
-            } finally {
-                setLoadingPuestos(false);
-            }
-        };
-        loadPuestos();
-    }, [form.es_reparto, form.id_cliente_receptor]);
-
-    // 5. Cargar secciones del puesto seleccionado
-    useEffect(() => {
-        const loadSecciones = async () => {
-            if (form.es_reparto || !form.id_puesto) {
-                setSecciones([]);
-                setForm(prev => ({ ...prev, id_seccion: null }));
-                return;
-            }
-            setLoadingSecciones(true);
-            try {
-                const data = await fetchWithAuth<Seccion[]>(`puestos/${form.id_puesto}/secciones`);
-                console.log("Secciones cargadas:", data);
-                setSecciones(data || []);
-                setForm(prev => ({ ...prev, id_seccion: null }));
-            } catch (error: any) {
-                console.error("Error cargando secciones:", error);
-                toast.error(`No se pudieron cargar las secciones: ${error.message || "Error de red"}`);
-            } finally {
-                setLoadingSecciones(false);
-            }
-        };
-        loadSecciones();
-    }, [form.es_reparto, form.id_puesto]);
-
-    // 6. Limpiar campos cuando se activa/desactiva reparto
-    useEffect(() => {
-        if (form.es_reparto) {
-            setPuestos([]);
-            setSecciones([]);
-            setForm(prev => ({ ...prev, id_cliente_receptor: null, id_puesto: null, id_seccion: null }));
-        }
-    }, [form.es_reparto]);
-
-    // Filtros de clientes
-    const isClienteEmisor = (cliente: Cliente) =>
-        cliente.cliente_distrito?.some(rel => rel.tipo_relacion === "emisor" || rel.tipo_relacion === "ambos") ?? false;
-    const isClienteReceptor = (cliente: Cliente) =>
-        cliente.cliente_distrito?.some(rel => rel.tipo_relacion === "receptor" || rel.tipo_relacion === "ambos") ?? false;
-
-    const clientesEmisores = useMemo(() => clientes.filter(isClienteEmisor), [clientes]);
-    const clientesReceptores = useMemo(() => clientes.filter(isClienteReceptor), [clientes]);
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (submitting) return;
+        if (submitting || loadingData || opcionesError) return;
         // Validaciones
         if (form.id_cliente_emisor === 0 || form.id_fruta === 0 || form.id_tipo_jaba === 0 || form.cantidad_jabas <= 0 || !Number.isInteger(form.cantidad_jabas)) {
             toast.error("Complete los campos obligatorios (Cliente Emisor, Fruta, Tipo Jaba, Cantidad)");
@@ -294,8 +196,17 @@ export function DetalleCargaModal({
                     Indica el producto, las jabas y cómo se entregará. Al guardar volverás a esta carga.
                 </p>
 
+                <div role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
+                    {loadingData && hasLoadedOptions ? 'Actualizando opciones disponibles…' : ''}
+                </div>
+                {opcionesError && (
+                    <div role="alert" className="space-y-2 text-sm text-red-600">
+                        <p>No se pudieron actualizar las opciones.</p>
+                        <Button type="button" variant="outline" onClick={() => setOptionsRetry(n => n + 1)}>Reintentar carga</Button>
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                    {loadingData ? (
+                    {loadingData && !hasLoadedOptions ? (
                         <OperationSkeleton variant="compact" heading={false} />
                     ) : (
                         <>
@@ -349,7 +260,7 @@ export function DetalleCargaModal({
                                         id="variedad"
                                         value={form.id_variedad ?? 0}
                                         onChange={(e) => setForm({ ...form, id_variedad: parseInt(e.target.value) || null })}
-                                        disabled={!form.id_fruta}
+                                        disabled={loadingData || !!opcionesError || !form.id_fruta}
                                         className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:disabled:bg-gray-700 dark:focus:ring-brand-800"
                                     >
                                         <option value={0}>-- Ninguna --</option>
@@ -400,7 +311,7 @@ export function DetalleCargaModal({
                                         <input
                                             type="checkbox"
                                             checked={form.es_reparto}
-                                            onChange={(e) => setForm({ ...form, es_reparto: e.target.checked })}
+                                            onChange={(e) => setForm({ ...form, es_reparto: e.target.checked, id_cliente_receptor: null, id_puesto: null, id_seccion: null })}
                                             className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
                                         Requiere reparto
@@ -448,11 +359,11 @@ export function DetalleCargaModal({
                                                 value={form.id_puesto ?? 0}
                                                 onChange={(e) => setForm({ ...form, id_puesto: parseInt(e.target.value) || null, id_seccion: null })}
                                                 required
-                                                disabled={loadingPuestos || !form.id_cliente_receptor}
+                                                disabled={loadingData || !!opcionesError || !form.id_cliente_receptor}
                                                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:disabled:bg-gray-700 dark:focus:ring-brand-800"
                                             >
                                                 <option value={0}>
-                                                    {loadingPuestos ? "Cargando puestos..." : "Seleccione un puesto"}
+                                                    {loadingData ? "Cargando puestos..." : "Seleccione un puesto"}
                                                 </option>
                                                 {puestos.map(p => (
                                                     <option key={p.id_puesto} value={p.id_puesto}>
@@ -468,13 +379,13 @@ export function DetalleCargaModal({
                                             </Label>
                                             <select
                                                 id="seccion"
-                                                value={form.id_seccion ?? 0}
-                                                onChange={(e) => setForm({ ...form, id_seccion: parseInt(e.target.value) || null })}
-                                                disabled={loadingSecciones || !form.id_puesto}
+                                                value={form.id_seccion ?? ''}
+                                                onChange={(e) => setForm({ ...form, id_seccion: e.target.value || null })}
+                                                disabled={loadingData || !!opcionesError || !form.id_puesto}
                                                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:disabled:bg-gray-700 dark:focus:ring-brand-800"
                                             >
-                                                <option value={0}>
-                                                    {loadingSecciones ? "Cargando secciones..." : "Seleccione una sección"}
+                                                <option value="">
+                                                    {loadingData ? "Cargando secciones..." : "Seleccione una sección"}
                                                 </option>
                                                 {secciones.map(s => (
                                                     <option key={s.id_seccion} value={s.id_seccion}>{s.nombre_seccion}</option>
@@ -527,7 +438,7 @@ export function DetalleCargaModal({
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={submitting}
+                                    disabled={submitting || loadingData || !!opcionesError}
                                     className="dark:bg-brand-600 dark:hover:bg-brand-700"
                                 >
                                     {submitting ? "Guardando..." : editingDetalle ? "Guardar cambios" : "Agregar producto"}

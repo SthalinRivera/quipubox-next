@@ -1,26 +1,30 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import { fetchWithAuth } from '@/lib/api-client';
-import { saldoDestino, guiaVigente, type DestinoFlujo } from '@/types/flujoOperacion';
+import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
+import { type DestinoFlujo } from '@/types/flujoOperacion';
 
 export default function EntregaProcesoModal({
   item,
+  operacionId,
   fechaCarga,
   onClose,
   onSaved,
 }: {
   item: DestinoFlujo;
+  operacionId: number;
   fechaCarga: string;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
-  const saldo = saldoDestino(item);
-  const guia = guiaVigente(item);
+  const { data: opciones, loading, error: optionsError } = useOpcionesFlujo<{items: { id_item_reparto: number; id_guia: number; saldo_pendiente: number }[]}>('entrega', { operacion: operacionId, item: item.id_item_reparto });
+  const guia = opciones?.items[0];
+  const saldo = guia?.saldo_pendiente || 0;
   const [cantidad, setCantidad] = useState(saldo);
   const [rechazo, setRechazo] = useState(0);
   const [nombre, setNombre] = useState('');
@@ -28,9 +32,10 @@ export default function EntregaProcesoModal({
   const [observaciones, setObservaciones] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => { if (guia) setCantidad(guia.saldo_pendiente); }, [guia]);
   const guardar = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (busy || loading || optionsError) return;
     if (!guia) { setError('Emite una guía válida antes de entregar.'); return; }
     if (
       !nombre.trim() ||
@@ -100,12 +105,12 @@ export default function EntregaProcesoModal({
           Quedan <strong>{saldo} jabas</strong> por entregar. La guÃ­a se
           vincularÃ¡ automÃ¡ticamente.
         </div>
-        {error && (
+        {(error || optionsError || (!loading && !guia)) && (
           <p
             role="alert"
             className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300"
           >
-            {error}
+            {error || optionsError || 'Este destino ya no tiene una entrega pendiente con guía vigente.'}
           </p>
         )}
         <div>
@@ -169,10 +174,10 @@ export default function EntregaProcesoModal({
           calcula con las cantidades recibidas.
         </p>
         <div className="flex justify-end gap-3">
-          <Button variant="outline" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy || loading} onClick={onClose}>
             Volver
           </Button>
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" disabled={busy || loading || !guia || !!optionsError}>
             {busy ? 'Guardando entregaâ€¦' : 'Confirmar entrega'}
           </Button>
         </div>

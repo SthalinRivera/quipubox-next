@@ -1,8 +1,9 @@
 "use client";
 
+import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useOperacionesCarga } from "@/hooks/useOperacionesCarga";
 import { useToast } from "@/hooks/useToast";
 import { Modal } from "@/components/ui/modal";
@@ -11,7 +12,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import DatePicker from "@/components/ui/date-picker/DatePicker";
 import type { OperacionCarga, CreateOperacionCargaDTO } from "@/types/operacionCarga";
-import { fetchWithAuth } from "@/lib/api-client";
 import { format } from "date-fns"; // npm install date-fns (o usar new Date().toISOString().slice(0,10))
 
 interface Sede {
@@ -48,13 +48,11 @@ export function OperacionCargaModal({
     const { create, update } = useOperacionesCarga();
     const toast = useToast();
     const [submitting, setSubmitting] = useState(false);
-    const [loadingData, setLoadingData] = useState(true);
     const [sedesOrigen, setSedesOrigen] = useState<Sede[]>([]);
     const [sedesDestino, setSedesDestino] = useState<Sede[]>([]);
     const [camiones, setCamiones] = useState<Camion[]>([]);
     const [encargados, setEncargados] = useState<Usuario[]>([]);
     const [repartidores, setRepartidores] = useState<Usuario[]>([]);
-    const dataLoadedRef = useRef(false);
 
     // Fecha y hora actual para valores por defecto (formato 'YYYY-MM-DD' y 'HH:MM')
     const now = new Date();
@@ -73,61 +71,21 @@ export function OperacionCargaModal({
         observaciones: null,
     });
 
-    // Cargar datos auxiliares una sola vez al abrir el modal
+    const { data: opciones, loading: loadingData, error: opcionesError } = useOpcionesFlujo<{
+        origenes: Sede[]; destinos: Sede[]; camiones: Camion[]; encargados: Usuario[]; repartidores: Usuario[];
+    }>('operacion', { origen: form.id_ubigeo_origen }, isOpen);
     useEffect(() => {
-        if (!isOpen) return;
-
-        if (dataLoadedRef.current) {
-            setLoadingData(false);
-            return;
-        }
-
-        let isMounted = true;
-        setLoadingData(true);
-
-        const loadData = async () => {
-            try {
-                // Cargar sedes, camiones y usuarios en paralelo
-                const [sedesRes, camionesRes, usuariosRes] = await Promise.all([
-                    fetchWithAuth<Sede[]>("ubicaciones"),
-                    fetchWithAuth<Camion[]>("camiones"),
-                    fetchWithAuth<Usuario[]>("usuarios"),
-                ]);
-
-                if (!isMounted) return;
-
-                // Filtrar sedes por tipo
-                const sedes = sedesRes || [];
-                const origen = sedes;
-                const destino = sedes;
-                setSedesOrigen(origen);
-                setSedesDestino(destino);
-
-                setCamiones(camionesRes || []);
-
-                // Filtrar usuarios según rol (asumiendo que cada usuario tiene una lista de roles)
-                const usuarios = usuariosRes || [];
-                const encargadosFiltrados = usuarios.filter(u =>
-                    u.usuarios_roles?.some(r => r.roles_usuarios.nombre === "encargado_carga")
-                );
-                const repartidoresFiltrados = usuarios.filter(u =>
-                    u.usuarios_roles?.some(r => r.roles_usuarios.nombre === "repartidor")
-                );
-                setEncargados(encargadosFiltrados);
-                setRepartidores(repartidoresFiltrados);
-
-                dataLoadedRef.current = true;
-            } catch (error) {
-                console.error(error);
-                toast.error("No se pudieron cargar los datos necesarios");
-            } finally {
-                if (isMounted) setLoadingData(false);
-            }
-        };
-
-        loadData();
-        return () => { isMounted = false; };
-    }, [isOpen, toast]);
+        if (!opciones) return;
+        setSedesOrigen(opciones.origenes); setSedesDestino(opciones.destinos);
+        setCamiones(opciones.camiones); setEncargados(opciones.encargados); setRepartidores(opciones.repartidores);
+        setForm(prev => ({ ...prev,
+            id_ubigeo_destino: opciones.destinos.some(x => x.id_ubigeo === prev.id_ubigeo_destino) ? prev.id_ubigeo_destino : '',
+            id_camion: opciones.camiones.some(x => x.id_camion === prev.id_camion) ? prev.id_camion : 0,
+            id_encargado_carga: opciones.encargados.some(x => x.id_usuario === prev.id_encargado_carga) ? prev.id_encargado_carga : null,
+            id_repartidor_asignado: opciones.repartidores.some(x => x.id_usuario === prev.id_repartidor_asignado) ? prev.id_repartidor_asignado : null,
+        }));
+    }, [opciones]);
+    useEffect(() => { if (opcionesError) toast.error(opcionesError); }, [opcionesError, toast]);
 
     // Resetear formulario según si estamos editando o creando
     useEffect(() => {
@@ -197,7 +155,7 @@ export function OperacionCargaModal({
                 disabled={disabled}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-brand-800"
             >
-                <option value={0}>-- Seleccione --</option>
+                <option value={typeof value === 'string' ? '' : 0}>-- Seleccione --</option>
                 {options.map(opt => (
                     <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
@@ -231,7 +189,7 @@ export function OperacionCargaModal({
                                 "sede_origen",
                                 "Ubicación de origen",
                                 form.id_ubigeo_origen,
-                                (val) => setForm({ ...form, id_ubigeo_origen: val }),
+                                (val) => setForm({ ...form, id_ubigeo_origen: val, id_ubigeo_destino: '' }),
                                 sedesOrigenOptions,
                                 true
                             )}
@@ -326,7 +284,7 @@ export function OperacionCargaModal({
                             >
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={submitting}>
+                            <Button type="submit" disabled={submitting || loadingData || !!opcionesError}>
                                 {submitting ? "Guardando..." : (editingOperacion ? "Actualizar" : "Crear")}
                             </Button>
                         </div>

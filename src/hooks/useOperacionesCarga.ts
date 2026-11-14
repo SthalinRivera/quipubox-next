@@ -33,7 +33,6 @@ export const useOperacionesCarga = () => {
             method: 'POST',
             body: payload,
         });
-        await fetchAll();
         return newOp;
     };
 
@@ -42,7 +41,6 @@ export const useOperacionesCarga = () => {
             method: 'PUT', // o PATCH segÃºn tu backend
             body: payload,
         });
-        await fetchAll();
         return updated;
     };
 

@@ -9,6 +9,7 @@ import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import { useToast } from '@/hooks/useToast';
+import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 import { fetchWithAuth } from '@/lib/api-client';
 import type { GuiaOperativa } from '@/types/guiaOperativa';
 import type { ItemReparto } from '@/types/itemReparto';
@@ -29,7 +30,10 @@ export function RegistrarEntregaModal({ open, onOpenChange, guia, onSaved }: Reg
     const hasItemReparto = !!itemReparto?.id_item_reparto;
 
     // Calcular cantidad total a entregar (usar total agrupado si existe, o cantidad del item)
-    const totalAsignado = itemReparto?._total_asignado_agrupado ?? itemReparto?.cantidad_asignada ?? 0;
+    const operacionId = itemReparto?.detalle_carga?.id_operacion;
+    const { data: opciones, loading: loadingOpciones, error: opcionesError } = useOpcionesFlujo<{ items: { id_item_reparto: number; id_guia: number; saldo_pendiente: number }[] }>('entrega', { operacion: operacionId, item: itemReparto?.id_item_reparto }, open && !!operacionId);
+    const pendiente = opciones?.items[0];
+    const totalAsignado = pendiente?.id_guia === guia.id_guia ? pendiente.saldo_pendiente : 0;
 
     // Fecha y hora automáticas al abrir el modal
     const [fechaEntrega] = useState(new Date().toISOString().split('T')[0]);
@@ -56,6 +60,7 @@ export function RegistrarEntregaModal({ open, onOpenChange, guia, onSaved }: Reg
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loadingOpciones || opcionesError || submitting) return;
         if (!hasItemReparto) {
             toast.error('No hay items de reparto asociados a esta guía');
             return;
@@ -100,6 +105,7 @@ export function RegistrarEntregaModal({ open, onOpenChange, guia, onSaved }: Reg
                     Guía: {guia.numero_guia}
                 </p>
 
+                {opcionesError && <p role="alert" className="text-red-600">{opcionesError}</p>}
                 {!hasItemReparto ? (
                     <div className="mt-4 space-y-3">
                         <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
@@ -111,7 +117,7 @@ export function RegistrarEntregaModal({ open, onOpenChange, guia, onSaved }: Reg
                                 variant="outline"
                                 onClick={() => {
                                     onOpenChange(false);
-                                    router.push('/dashboard/operaciones-carga');
+                                    router.push('/dashboard/items-reparto');
                                 }}
                             >
                                 Ir a Operaciones de Carga
@@ -193,7 +199,7 @@ export function RegistrarEntregaModal({ open, onOpenChange, guia, onSaved }: Reg
                             >
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={submitting}>
+                            <Button type="submit" disabled={submitting || loadingOpciones || !!opcionesError || !totalAsignado}>
                                 {submitting ? 'Guardando...' : 'Registrar Entrega'}
                             </Button>
                         </div>

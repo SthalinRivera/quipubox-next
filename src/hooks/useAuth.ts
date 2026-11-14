@@ -7,6 +7,14 @@ import { fetchWithAuth } from '@/lib/api-client'
 import { useAuthStore } from '@/stores/authStore';
 
 let sessionRestorePromise: Promise<any> | null = null;
+let profileRequest: { token: string; promise: Promise<any> } | null = null;
+function sessionProfile(token: string) {
+    if (profileRequest?.token === token) return profileRequest.promise;
+    const promise = fetchWithAuth('/auth/session', { headers: { Authorization: `Bearer ${token}` } });
+    profileRequest = { token, promise };
+    void promise.catch(() => { if (profileRequest?.promise === promise) profileRequest = null; });
+    return promise;
+}
 
 export const useAuth = () => {
     const [user, setUser] = useState<any>(null)
@@ -17,9 +25,7 @@ export const useAuth = () => {
 
     const fetchUser = async (token: string) => {
         try {
-            const profile = await fetchWithAuth('/auth/profile', {
-                headers: { Authorization: `Bearer ${token}` },
-            })
+            const profile = await sessionProfile(token)
             setUser(profile)
             useAuthStore.getState().setUser(profile); // <- guardar en store
 
@@ -28,6 +34,7 @@ export const useAuth = () => {
             console.error('fetchUser error:', error)
             setUser(null)
             useAuthStore.getState().clearUser();
+            sessionRestorePromise = null;
             return null
         }
     }
@@ -137,6 +144,7 @@ export const useAuth = () => {
         } finally {
             setUser(null)
             sessionRestorePromise = null;
+            profileRequest = null;
             useAuthStore.getState().clearUser();
             router.push('/signin')
         }
@@ -162,6 +170,7 @@ export const useAuth = () => {
                 if (event === 'SIGNED_OUT') {
                     setUser(null);
                     sessionRestorePromise = null;
+            profileRequest = null;
                     useAuthStore.getState().clearUser();
                 }
                 if (event === 'TOKEN_REFRESHED' && session) {

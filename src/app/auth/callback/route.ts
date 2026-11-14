@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
     try {
-        const profileRes = await fetch(`${apiBase}/auth/profile`, {
+        const profileRes = await fetch(`${apiBase}/auth/check`, {
             headers: { Authorization: `Bearer ${session.access_token}` },
         });
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Check, Lock } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api-client';
 import {
-  cargaEditable,
+  clasificacionCompleta,
   type OperacionFlujo,
 } from '@/types/flujoOperacion';
 
@@ -35,16 +35,11 @@ export function Stepper({ operacion }: { operacion?: OperacionFlujo }) {
   const base = op
     ? `/dashboard/operaciones-carga/${op.id_operacion}`
     : '/dashboard/operaciones-carga/nueva';
-  const confirmed = !!op && ['en_transito','repartiendo','completado'].includes(op.estado);
-  const allGuides = !!op?.detalle_carga.length && op.detalle_carga.every(d => d.items_reparto.length > 0 && d.items_reparto.every(i => i.guias_operativas.some(g => !!g.cobertura && !['anulada','reemplazada'].includes(g.estado))));
   const steps = [
-    { label: 'Carga', hint: 'Productos', href: base + '#carga', done: !!op?.detalle_carga.length, enabled: true },
-    { label: 'Preparar', hint: 'Calidad y destinos', href: base + '#calidad', done: !!op?.resumen?.preparada, enabled: !!op?.detalle_carga.length },
-    { label: 'Guías', hint: 'Emitir documentos', href: base + '#guias', done: allGuides, enabled: confirmed },
-    { label: 'Entregar', hint: 'Registrar recepción', href: base + '#entregar', done: !!op?.resumen?.conciliada, enabled: ['repartiendo','completado'].includes(op?.estado || '') },
-    { label: 'Cerrar', hint: 'Conciliar carga', href: base + '#cierre', done: op?.estado === 'completado', enabled: ['repartiendo','completado'].includes(op?.estado || '') },
+    { label: 'Carga', hint: 'Productos y jabas', href: base + '#carga', done: !!op?.detalle_carga.length, enabled: true },
+    { label: 'Calidades', hint: 'Clasificar las jabas', href: base + '#calidad', done: !!op && clasificacionCompleta(op), enabled: !!op?.detalle_carga.length },
   ];
-  const progressStep = !op?.detalle_carga.length ? 0 : !confirmed ? 1 : op.estado === 'en_transito' || !allGuides ? 2 : op.resumen?.conciliada ? 4 : 3;
+  const progressStep = op?.detalle_carga.length ? 1 : 0;
   const selectedIndex = steps.findIndex(
     (step) => selectedHash && step.href.endsWith(selectedHash),
   );
@@ -54,10 +49,10 @@ export function Stepper({ operacion }: { operacion?: OperacionFlujo }) {
       : progressStep;
   return (
     <nav
-      aria-label="Pasos de la operación"
+      aria-label="Carga y calidades"
       className="mb-4 overflow-x-auto pb-1"
     >
-      <div className="grid min-w-[700px] grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {steps.map((step, index) => {
           const content = (
             <>

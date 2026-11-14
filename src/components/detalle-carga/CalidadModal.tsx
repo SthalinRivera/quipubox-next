@@ -10,6 +10,7 @@ import type { DetalleCalidad, CreateDetalleCalidadDto } from "@/types/detalleCar
 
 interface CalidadModalProps {
     isOpen: boolean;
+    detalleId: number;
     onClose: () => void;
     editingCalidad?: DetalleCalidad | null;
     onSave: (data: CreateDetalleCalidadDto) => Promise<void>;
@@ -19,6 +20,7 @@ interface CalidadModalProps {
 
 export function CalidadModal({
     isOpen,
+    detalleId,
     onClose,
     editingCalidad,
     onSave,
@@ -35,10 +37,10 @@ export function CalidadModal({
 
     useEffect(() => {
         if (!isOpen) return;
-        fetchWithAuth<{ id_calidad: number; nombre: string }[]>("calidades")
+        fetchWithAuth<{ id_calidad: number; nombre: string }[]>(`opciones-flujo/calidades?detalle=${detalleId}${editingCalidad ? `&calidad=${editingCalidad.id_detalle_carga_calidad}` : ''}`)
             .then((data) => setCalidades(data || []))
             .catch(console.error);
-    }, [isOpen]);
+    }, [isOpen, detalleId, editingCalidad]);
 
     useEffect(() => {
         if (editingCalidad) {

@@ -7,7 +7,6 @@ import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { fetchWithAuth } from "@/lib/api-client";
 import type { Entrega, CreateEntregaDto } from "@/types/entrega";
 
 interface EntregaModalProps {
@@ -40,24 +39,11 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
     });
 
     useEffect(() => {
-        if (!isOpen) return;
-        const loadData = async () => {
-            try {
-                const [guiasRes, itemsRes, usuariosRes] = await Promise.all([
-                    fetchWithAuth<any[]>("guias-operativas"),
-                    fetchWithAuth<any[]>("items-reparto"),
-                    fetchWithAuth<any[]>("usuarios"),
-                ]);
-                setGuias(guiasRes || []);
-                setItemsReparto(itemsRes || []);
-                setUsuarios(usuariosRes || []);
-            } catch (error) {
-                console.error(error);
-                toast.error("Error al cargar datos");
-            }
-        };
-        loadData();
-    }, [isOpen, toast]);
+        if (!isOpen || !editingEntrega) return;
+        setGuias([{ id_guia: editingEntrega.id_guia, numero_guia: `#${editingEntrega.id_guia}` }]);
+        setItemsReparto([{ id_item_reparto: editingEntrega.id_item_reparto }]);
+        setUsuarios(editingEntrega.id_entregador ? [{ id_usuario: editingEntrega.id_entregador, nombres: `#${editingEntrega.id_entregador}` }] : []);
+    }, [isOpen, editingEntrega]);
 
     useEffect(() => {
         if (editingEntrega) {
@@ -100,7 +86,7 @@ export function EntregaModal({ isOpen, onClose, editingEntrega, onSaved }: Entre
         setSubmitting(true);
         try {
             if (editingEntrega) {
-                await updateEntrega(editingEntrega.id_entrega, form);
+                await updateEntrega(editingEntrega.id_entrega, { nombre_recibe: form.nombre_recibe, firma_recibido: form.firma_recibido, observaciones: form.observaciones });
                 toast.success("Entrega actualizada");
             } else {
                 await createEntrega(form);

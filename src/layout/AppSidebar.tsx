@@ -143,8 +143,8 @@ const AppSidebar: React.FC = () => {
 
     const ordenOperaciones: Record<string, {orden: number; nombre: string}> = {
       '/dashboard/operaciones-carga': {orden: 1, nombre: '1. Cargas y calidades'},
-      '/dashboard/items-reparto': {orden: 2, nombre: '2. Preparar entregas'},
-      '/dashboard/entregas': {orden: 3, nombre: '3. Ver entregas'},
+      '/dashboard/items-reparto': {orden: 2, nombre: '2. Entregar'},
+      '/dashboard/entregas': {orden: 3, nombre: '3. Historial de entregas'},
       '/dashboard/guias-operativas': {orden: 4, nombre: '4. Guías'},
     };
     sortedCategorias.forEach((cat) => {

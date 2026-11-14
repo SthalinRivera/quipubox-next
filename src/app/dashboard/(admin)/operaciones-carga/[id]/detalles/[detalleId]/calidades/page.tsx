@@ -38,17 +38,12 @@ export default function CalidadesPage() {
 
     const loadData = async () => {
         try {
-            const [det, cal, opts, op] = await Promise.all([
-                fetchWithAuth(`detalle-carga/${detalleId}`),
-                fetchWithAuth<Calidad[]>(`detalle-carga/${detalleId}/calidades`),
-                fetchWithAuth<{ id_calidad: number; nombre: string }[]>('calidades'),
-                fetchWithAuth<any>(`operaciones-carga/${operacionId}`),
-            ]);
-            if (Number((det as { id_operacion: number }).id_operacion) !== Number(operacionId)) throw new Error('El producto no pertenece a esta operación');
-            setDetalle(det);
-            setCalidades(cal || []);
-            setCalidadesOptions(opts || []);
-            setOperacionEstado(op?.estado || '');
+            const data = await fetchWithAuth<{detalle: any; opciones: {id_calidad: number; nombre: string}[]; estado: string; clasificacionCompleta: boolean}>(`opciones-flujo/clasificacion?operacion=${operacionId}&detalle=${detalleId}`);
+            setDetalle(data.detalle);
+            setCalidades(data.detalle.detalle_carga_calidades);
+            setCalidadesOptions(data.opciones);
+            setOperacionEstado(data.estado);
+            setPasoCompletado(2, data.clasificacionCompleta);
         } catch (err) {
             console.error(err);
             toast.error('Error al cargar datos');
@@ -57,34 +52,9 @@ export default function CalidadesPage() {
         }
     };
 
-    const checkPaso2Completo = async () => {
-        if (!operacionId) return;
-        try {
-            const detalles = await fetchWithAuth<any[]>(`operaciones-carga/${operacionId}/detalles`);
-            if (detalles.length === 0) {
-                setPasoCompletado(2, false);
-                return;
-            }
-            const completado = detalles.every(d => {
-                if (!d.es_reparto) return true;
-                const totalCalidades = d.detalle_carga_calidades?.reduce((s: number, c: any) => s + c.cantidad, 0) || 0;
-                return totalCalidades === d.cantidad_jabas;
-            });
-            setPasoCompletado(2, completado);
-        } catch (err) {
-            console.error('Error al verificar completado de paso 2', err);
-        }
-    };
-
     useEffect(() => {
         loadData();
-    }, [detalleId]);
-
-    useEffect(() => {
-        if (!loading) {
-            checkPaso2Completo();
-        }
-    }, [calidades, loading]);
+    }, [detalleId, operacionId]);
 
     useEffect(() => {
         setCurrentStep(2);
@@ -120,7 +90,6 @@ export default function CalidadesPage() {
             });
             toast.success('Calidad agregada');
             await loadData();
-            await checkPaso2Completo();
             setNewCalidad({ id_calidad: 0, cantidad: 1, precio_unitario: '' });
         } catch (err: any) {
             toast.error(err.message || 'Error');
@@ -135,7 +104,6 @@ export default function CalidadesPage() {
             await fetchWithAuth(`detalle-carga/calidades/${id}`, { method: 'DELETE' });
             toast.success('Calidad eliminada');
             await loadData();
-            await checkPaso2Completo();
         } catch (err: any) {
             toast.error(err.message || 'Error');
         }

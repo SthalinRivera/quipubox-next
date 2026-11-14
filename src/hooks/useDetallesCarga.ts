@@ -30,7 +30,6 @@ export const useDetallesCarga = (operacionId: number) => {
             method: 'POST',
             body: dto,
         });
-        await fetchDetalles();
         return newDetalle;
     };
 
@@ -39,7 +38,6 @@ export const useDetallesCarga = (operacionId: number) => {
             method: 'PUT',
             body: dto,
         });
-        await fetchDetalles();
         return updated;
     };
 
@@ -67,7 +65,6 @@ export const useDetallesCarga = (operacionId: number) => {
             method: 'PUT',
             body: dto,
         });
-        await fetchDetalles();
         return updated;
     };
 

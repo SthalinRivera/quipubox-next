@@ -20,6 +20,14 @@ export interface Entrega {
   usuarios?: { nombres: string; apellidos?: string };
 }
 
+export interface EntregaPendienteTransito {
+  id_operacion: number;
+  fecha_carga: string;
+  estado: "en_transito";
+  cantidad_jabas: number;
+  cantidad_destinos: number;
+}
+
 export interface CreateEntregaDto {
   id_guia: number;
   id_item_reparto: number;

@@ -59,3 +59,8 @@ export const estadoOperacion: Record<string, string> = {
   repartiendo: 'Repartiendo',
   completado: 'Completado',
 };
+
+export const clasificacionCompleta = (op: Pick<OperacionFlujo, 'detalle_carga'>) =>
+  op.detalle_carga.length > 0 && op.detalle_carga.every(d =>
+    d.cantidad_jabas > 0 && ((!d.es_reparto && !d.detalle_carga_calidades?.length) ||
+      (d.detalle_carga_calidades || []).reduce((sum,c) => sum + c.cantidad, 0) === d.cantidad_jabas));

@@ -1,9 +1,10 @@
 'use client';
 // app/dashboard/operaciones-carga/nueva/page.tsx
+import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 import { NuevaOperacionSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
 
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/useToast';
 import { fetchWithAuth } from '@/lib/api-client';
@@ -29,14 +30,13 @@ export default function NuevaOperacionPage() {
     const { setOperacion, setCurrentStep } = useCreacionCargaStore();
     const toast = useToast();
 
-    const [loadingData, setLoadingData] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [hasLoadedOptions, setHasLoadedOptions] = useState(false);
     const [sedesOrigen, setSedesOrigen] = useState<Sede[]>([]);
     const [sedesDestino, setSedesDestino] = useState<Sede[]>([]);
     const [camiones, setCamiones] = useState<Camion[]>([]);
     const [encargados, setEncargados] = useState<Usuario[]>([]);
     const [repartidores, setRepartidores] = useState<Usuario[]>([]);
-    const dataLoadedRef = useRef(false);
 
     const now = new Date();
     const defaultFecha = format(now, 'yyyy-MM-dd');
@@ -56,44 +56,26 @@ export default function NuevaOperacionPage() {
 
     interface NuevaOperacionResponse { id_operacion: number; }
 
-    // Cargar datos
+    const { data: opciones, loading: loadingData, error: opcionesError } = useOpcionesFlujo<{
+        origenes: Sede[]; destinos: Sede[]; camiones: Camion[]; encargados: Usuario[]; repartidores: Usuario[];
+    }>('operacion', { origen: form.id_ubigeo_origen }, true);
     useEffect(() => {
-        if (dataLoadedRef.current) {
-            setLoadingData(false);
-            return;
-        }
-        let mounted = true;
-        setLoadingData(true);
-        const loadData = async () => {
-            try {
-                const [sedesRes, camionesRes, usuariosRes] = await Promise.all([
-                    fetchWithAuth<Sede[]>('ubicaciones'),
-                    fetchWithAuth<Camion[]>('camiones'),
-                    fetchWithAuth<Usuario[]>('usuarios'),
-                ]);
-                if (!mounted) return;
-                const sedes = sedesRes || [];
-                setSedesOrigen(sedes);
-                setSedesDestino(sedes);
-                setCamiones(camionesRes || []);
-                const usuarios = usuariosRes || [];
-                setEncargados(usuarios.filter(u => u.usuarios_roles?.some(r => r.roles_usuarios.nombre === 'encargado_carga')));
-                setRepartidores(usuarios.filter(u => u.usuarios_roles?.some(r => r.roles_usuarios.nombre === 'repartidor')));
-                dataLoadedRef.current = true;
-            } catch (err) {
-                console.error(err);
-                toast.error('No se pudieron cargar los datos necesarios. Intente de nuevo.');
-            } finally {
-                if (mounted) setLoadingData(false);
-            }
-        };
-        loadData();
-        return () => { mounted = false; };
-    }, [toast]);
+        if (!opciones) return;
+        setHasLoadedOptions(true);
+        setSedesOrigen(opciones.origenes); setSedesDestino(opciones.destinos);
+        setCamiones(opciones.camiones); setEncargados(opciones.encargados); setRepartidores(opciones.repartidores);
+        setForm(prev => ({ ...prev,
+            id_ubigeo_destino: opciones.destinos.some(x => x.id_ubigeo === prev.id_ubigeo_destino) ? prev.id_ubigeo_destino : '',
+            id_camion: opciones.camiones.some(x => x.id_camion === prev.id_camion) ? prev.id_camion : 0,
+            id_encargado_carga: opciones.encargados.some(x => x.id_usuario === prev.id_encargado_carga) ? prev.id_encargado_carga : null,
+            id_repartidor_asignado: opciones.repartidores.some(x => x.id_usuario === prev.id_repartidor_asignado) ? prev.id_repartidor_asignado : null,
+        }));
+    }, [opciones]);
+    useEffect(() => { if (opcionesError) toast.error(opcionesError); }, [opcionesError, toast]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (submitting) return;
+        if (submitting || loadingData || opcionesError) return;
         if (!form.id_ubigeo_origen || !form.id_ubigeo_destino || form.id_camion === 0 || !form.fecha_carga) {
             toast.error('Por favor, complete los campos obligatorios (Ubicación de origen, Camión y Fecha).');
             return;
@@ -115,7 +97,7 @@ export default function NuevaOperacionPage() {
         }
     };
 
-    if (loadingData) return <NuevaOperacionSkeleton />;
+    if (loadingData && !hasLoadedOptions) return <NuevaOperacionSkeleton />;
 
     return (
         <div className="mx-auto max-w-full space-y-4 pb-6">
@@ -135,6 +117,9 @@ export default function NuevaOperacionPage() {
             </div>
 
             <form onSubmit={handleSubmit}>
+                <div role="status" aria-live="polite" className="mb-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
+                    {loadingData ? 'Actualizando opciones disponibles…' : opcionesError ? 'No se pudieron actualizar las opciones. Vuelve a seleccionar el origen para reintentar.' : ''}
+                </div>
                 <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
                     <div className="grid divide-y divide-gray-100 md:grid-cols-2 dark:divide-gray-800">
                         <section className="p-4">
@@ -148,11 +133,11 @@ export default function NuevaOperacionPage() {
                             <select
                                 id="sede_origen"
                                 value={form.id_ubigeo_origen}
-                                onChange={e => setForm({ ...form, id_ubigeo_origen: e.target.value })}
+                                onChange={e => setForm({ ...form, id_ubigeo_origen: e.target.value, id_ubigeo_destino: '' })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 required
                             >
-                                <option value={0}>Selecciona una opción</option>
+                                <option value="">Selecciona una opción</option>
                                 {sedesOrigen.map(s => (
                                     <option key={s.id_ubigeo} value={s.id_ubigeo}>{s.nombre}</option>
                                 ))}
@@ -161,15 +146,17 @@ export default function NuevaOperacionPage() {
                                 {/* Ubicación de destino */}
                         <div className="space-y-1.5">
                             <Label htmlFor="sede_destino" className="text-sm font-medium">
-                                Ubicación de destino <span className="text-gray-400 text-xs">(opcional)</span>
+                                Ubicación de destino <span className="text-red-500">*</span>
                             </Label>
                             <select
                                 id="sede_destino"
+                                disabled={loadingData || !!opcionesError}
+                                aria-busy={loadingData}
                                 value={form.id_ubigeo_destino}
                                 onChange={e => setForm({ ...form, id_ubigeo_destino: e.target.value })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
-                                <option value={0}>Sin asignar</option>
+                                <option value="">Sin asignar</option>
                                 {sedesDestino.map(s => (
                                     <option key={s.id_ubigeo} value={s.id_ubigeo}>{s.nombre}</option>
                                 ))}
@@ -187,6 +174,8 @@ export default function NuevaOperacionPage() {
                             </Label>
                             <select
                                 id="camion"
+                                disabled={loadingData || !!opcionesError}
+                                aria-busy={loadingData}
                                 value={form.id_camion}
                                 onChange={e => setForm({ ...form, id_camion: Number(e.target.value) })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -232,6 +221,8 @@ export default function NuevaOperacionPage() {
                             </Label>
                             <select
                                 id="encargado"
+                                disabled={loadingData || !!opcionesError}
+                                aria-busy={loadingData}
                                 value={form.id_encargado_carga ?? 0}
                                 onChange={e => setForm({ ...form, id_encargado_carga: Number(e.target.value) || null })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -251,6 +242,8 @@ export default function NuevaOperacionPage() {
                             </Label>
                             <select
                                 id="repartidor"
+                                disabled={loadingData || !!opcionesError}
+                                aria-busy={loadingData}
                                 value={form.id_repartidor_asignado ?? 0}
                                 onChange={e => setForm({ ...form, id_repartidor_asignado: Number(e.target.value) || null })}
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -288,7 +281,7 @@ export default function NuevaOperacionPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400"><span className="font-semibold text-red-500">*</span> Obligatorio</p>
                     <div className="flex flex-col-reverse gap-3 sm:flex-row">
                         <Button type="button" variant="outline" onClick={() => router.push("/dashboard/operaciones-carga") } disabled={submitting}>Cancelar</Button>
-                        <Button type="submit" disabled={submitting}>
+                        <Button type="submit" disabled={submitting || loadingData || !!opcionesError}>
                             {submitting ? <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />Guardando...</> : <>Crear carga <ArrowRight size={16} aria-hidden="true" /></>}
                         </Button>
                     </div>

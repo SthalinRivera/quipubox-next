@@ -30,18 +30,19 @@ export function CalidadesProcesoModal({ detalle, editable, onClose, onSaved }: P
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    fetchWithAuth<typeof options>('calidades', { signal: controller.signal })
+    fetchWithAuth<typeof options>(`opciones-flujo/calidades?detalle=${detalle.id_detalle_carga}${editing ? `&calidad=${editing.id_detalle_carga_calidad}` : ''}`, { signal: controller.signal })
       .then((data) => { if (!controller.signal.aborted) setOptions(data); })
       .catch((e: unknown) => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'No se pudieron cargar las calidades.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [editable, retry]);
+  }, [editable, retry, detalle.id_detalle_carga, editing?.id_detalle_carga_calidad]);
   const total = rows.reduce((sum, row) => sum + row.cantidad, 0);
   const available = detalle.cantidad_jabas - total + (editing?.cantidad || 0);
   const reset = () => { setEditing(null); setForm({ id: '', cantidad: '', precio: '' }); };
   const refresh = async () => {
     const data = await fetchWithAuth<DetalleCalidad[]>(`detalle-carga/${detalle.id_detalle_carga}/calidades`);
     setRows(data);
+    setRetry(n => n + 1);
     await onSaved();
   };
   const save = async (event: React.FormEvent) => {
@@ -83,7 +84,7 @@ export function CalidadesProcesoModal({ detalle, editable, onClose, onSaved }: P
       {loading ? <OperationSkeleton variant="compact" heading={false} /> : editable && options.length > 0 && available > 0 && <form onSubmit={save} className="space-y-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800/40">
         <h3 className="text-sm font-semibold">{editing ? 'Editar calidad' : 'Agregar calidad'}</h3>
         <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-3">
-          <label className="text-xs font-medium">Calidad<select required value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} className={field}><option value="">Seleccionar</option>{options.filter((o) => !rows.some((row) => row.id_calidad === o.id_calidad && row.id_detalle_carga_calidad !== editing?.id_detalle_carga_calidad)).map((o) => <option key={o.id_calidad} value={o.id_calidad}>{o.nombre}</option>)}</select></label>
+          <label className="text-xs font-medium">Calidad<select required value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} className={field}><option value="">Seleccionar</option>{options.map((o) => <option key={o.id_calidad} value={o.id_calidad}>{o.nombre}</option>)}</select></label>
           <label className="text-xs font-medium">Cantidad de jabas<input required type="number" min={1} max={available} step={1} value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} className={field} /></label>
           <label className="text-xs font-medium">Precio unitario (opcional)<input type="number" min={0} step="0.01" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} className={field} /></label>
         </fieldset>
