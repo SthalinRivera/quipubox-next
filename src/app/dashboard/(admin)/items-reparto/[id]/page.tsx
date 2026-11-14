@@ -144,8 +144,12 @@ export default function OperacionDetallePage() {
       producto: item.producto,
     })),
   );
-  const guias = destinos.flatMap(item => item.guias_operativas.map(g => ({ ...g, cliente: item.clientes?.nombres })));
-  const faltanGuias = destinos.some(item => !guiaVigente(item));
+  const guias = destinos.flatMap(item => item.guias_operativas.map(g => ({
+    ...g,
+    cliente: item.clientes?.nombres,
+    saldoPendiente: saldoDestino(item),
+  })));
+  const faltanGuias = destinos.some(item => saldoDestino(item) > 0 && !guiaVigente(item));
   const totalJabas = op.resumen.jabasCargadas;
   const recibidas = entregas.filter(e => e.estado_entrega !== 'pendiente').reduce((sum,e) => sum + e.cantidad_entregada, 0);
   const porAsignar = op.detalle_carga.filter((d) => d.items_reparto.reduce((sum, item) => sum + item.cantidad_asignada, 0) !== d.cantidad_jabas);
@@ -153,6 +157,19 @@ export default function OperacionDetallePage() {
   const primerDestino = porAsignar[0];
   const abrirSeccion = (seccion: string) => { window.location.hash = seccion; };
   const habilitada = op.estado !== 'pendiente' && clasificacionCompleta(op);
+  const pasoActual = op.estado === 'completado'
+    ? 4
+    : op.estado === 'repartiendo'
+      ? 3
+      : op.estado === 'en_transito'
+        ? 2
+        : 1;
+  const pasosProceso = [
+    { numero: 1, titulo: 'Preparar destinos', ancla: 'destinos' },
+    { numero: 2, titulo: 'Revisar guías', ancla: 'guias' },
+    { numero: 3, titulo: 'Registrar entregas', ancla: 'entregar' },
+    { numero: 4, titulo: 'Cerrar operación', ancla: 'cierre' },
+  ];
   const siguiente = !habilitada
     ? { title: 'Carga pendiente de preparación', detail: 'Completa carga y calidades antes de gestionar entregas.', label: 'Ver carga', action: () => { window.location.href = '/dashboard/operaciones-carga/' + id; } }
     : primerDestino && editable
@@ -170,12 +187,17 @@ export default function OperacionDetallePage() {
                 : { title: 'Entregas completadas', detail: '', label: 'Ver registros', action: () => abrirSeccion('entregas') };
   return (
     <div className="mx-auto max-w-full space-y-4 pb-6">
-      <Link
-        href="/dashboard/items-reparto"
-        className="inline-flex items-center gap-2 text-sm text-gray-500"
-      >
-        <ArrowLeft size={16} /> Operaciones para entregar
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/dashboard/items-reparto"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-600 dark:hover:text-brand-300"
+        >
+          <ArrowLeft size={16} /> Volver al listado de operaciones
+        </Link>
+        <Link href="/dashboard/entregas" className={link}>
+          Ver entregas registradas
+        </Link>
+      </div>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-brand-600">
@@ -201,6 +223,37 @@ export default function OperacionDetallePage() {
           </div>
         ))}
       </dl>
+      {habilitada && (
+        <nav aria-label="Pasos del proceso de entrega" className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {pasosProceso.map((paso) => {
+            const actual = paso.numero === pasoActual;
+            const completado = paso.numero < pasoActual;
+            return (
+              <Link
+                key={paso.numero}
+                href={`#${paso.ancla}`}
+                aria-current={actual ? 'step' : undefined}
+                className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 transition-colors ${
+                  actual
+                    ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-500/10'
+                    : 'border-gray-200 bg-white hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900'
+                }`}
+              >
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                  completado
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    : actual
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                  {completado ? <CheckCircle size={16} aria-hidden="true" /> : paso.numero}
+                </span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{paso.titulo}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
       {(editable || op.detalle_carga.length > 0) && <div className="overflow-hidden rounded-xl border border-brand-200 bg-brand-50/60 dark:border-brand-500/25 dark:bg-brand-500/5">
         <div className="flex flex-wrap items-center justify-between gap-4 p-4">
           <div><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">{(op.estado === 'completado') ? 'Todo listo' : 'Qué falta · Siguiente paso'}</p><h2 className="text-base font-semibold text-gray-900 dark:text-white">{siguiente.title}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{siguiente.detail}</p></div>
@@ -305,7 +358,7 @@ export default function OperacionDetallePage() {
         <div className="mt-4 flex flex-wrap gap-3">
           {guias.map(g => <div key={g.id_guia} className="flex items-center gap-2">
             <Link className={link} href={`/dashboard/guias-operativas/${g.id_guia}`}>Guía {g.numero_guia} · {g.cliente} · {g.estado}</Link>
-            {!g.cobertura && <span className="text-xs text-amber-700">Revisar cobertura histórica</span>}
+            {!g.cobertura && <span className="text-xs text-amber-700 dark:text-amber-400">{g.saldoPendiente === 0 ? 'Documento histórico conservado · destino completo' : 'Guía histórica sin cobertura para el saldo pendiente'}</span>}
             {['en_transito','repartiendo'].includes(op.estado) && !['anulada','reemplazada'].includes(g.estado) && <button type="button" disabled={busy} title="Anular guía" aria-label={`Anular guía ${g.numero_guia}`} className="rounded-lg bg-red-50 p-2 text-red-600" onClick={() => { if (window.confirm('¿Anular esta guía? Solo es posible si aún no tiene entregas.')) void ejecutar(`guias-operativas/${g.id_guia}`, 'DELETE'); }}><Trash2 size={16}/></button>}
           </div>)}
           {!guias.length && (

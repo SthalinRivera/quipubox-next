@@ -2,7 +2,7 @@
 
 import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
@@ -19,6 +19,50 @@ interface ItemRepartoSimpleFormProps {
     defaultDetalleId?: number;
 }
 
+interface CalidadDisponible {
+    id_detalle_carga_calidad: number;
+    cantidad: number;
+    precio_unitario?: number | null;
+    calidades?: { nombre: string };
+}
+
+interface RepartoOpciones {
+    detalle: {
+        id_detalle_carga: number;
+        cantidad_jabas: number;
+        clientes?: { nombres: string };
+    };
+    calidades: CalidadDisponible[];
+    clientes: { id_cliente: number; nombres: string; apellidos?: string | null }[];
+    puestos: {
+        id_puesto: number;
+        codigo_puesto: string;
+        lugares_operativos?: { nombre: string } | null;
+    }[];
+}
+
+const normalizarOpciones = (opciones: RepartoOpciones): RepartoOpciones => ({
+    ...opciones,
+    detalle: {
+        ...opciones.detalle,
+        id_detalle_carga: Number(opciones.detalle.id_detalle_carga),
+        cantidad_jabas: Number(opciones.detalle.cantidad_jabas),
+    },
+    calidades: opciones.calidades.map((calidad) => ({
+        ...calidad,
+        id_detalle_carga_calidad: Number(calidad.id_detalle_carga_calidad),
+        cantidad: Number(calidad.cantidad),
+    })),
+    clientes: opciones.clientes.map((cliente) => ({
+        ...cliente,
+        id_cliente: Number(cliente.id_cliente),
+    })),
+    puestos: opciones.puestos.map((puesto) => ({
+        ...puesto,
+        id_puesto: Number(puesto.id_puesto),
+    })),
+});
+
 export default function ItemRepartoSimpleForm({
     isOpen,
     onClose,
@@ -28,10 +72,9 @@ export default function ItemRepartoSimpleForm({
 }: ItemRepartoSimpleFormProps) {
     const { createMultipleFromCalidades, loading } = useItemsReparto();
     const [detalleCargaId, setDetalleCargaId] = useState<number>(0);
-    const [detalleSeleccionado, setDetalleSeleccionado] = useState<any>(null);
-    const [calidades, setCalidades] = useState<any[]>([]);
-    const [calidadSeleccionadaId, setCalidadSeleccionadaId] = useState<number | null>(null);
-    const [cantidadAsignar, setCantidadAsignar] = useState<number>(0);
+    const [detalleSeleccionado, setDetalleSeleccionado] = useState<RepartoOpciones['detalle'] | null>(null);
+    const [calidades, setCalidades] = useState<CalidadDisponible[]>([]);
+    const [cantidadesPorCalidad, setCantidadesPorCalidad] = useState<Record<number, number>>({});
     const [idClienteReceptor, setIdClienteReceptor] = useState<number>(0);
     const [idPuesto, setIdPuesto] = useState<number>(0);
     const [precioUnitario, setPrecioUnitario] = useState<string>('');
@@ -42,33 +85,57 @@ export default function ItemRepartoSimpleForm({
 
     const modalInicializadoRef = useRef(false);
 
-    const { data: opciones, loading: loadingOptions, error: optionsError } = useOpcionesFlujo<{
-        detalle: any; calidades: any[]; clientes: any[]; puestos: any[];
-    }>('reparto', { operacion: operacionId, detalle: defaultDetalleId, cliente: idClienteReceptor, buscar: String(optionsRetry) }, isOpen && !!operacionId && !!defaultDetalleId);
-    const [lastOptions, setLastOptions] = useState<typeof opciones>();
+    const { data: opciones, loading: loadingOptions, error: optionsError } = useOpcionesFlujo<RepartoOpciones>(
+        'reparto',
+        { operacion: operacionId, detalle: defaultDetalleId, cliente: idClienteReceptor, buscar: String(optionsRetry) },
+        isOpen && !!operacionId && !!defaultDetalleId,
+    );
+    const opcionesNormalizadas = useMemo(
+        () => opciones ? normalizarOpciones(opciones) : undefined,
+        [opciones],
+    );
+    const [lastOptions, setLastOptions] = useState<typeof opcionesNormalizadas>();
     useEffect(() => {
         if (!isOpen) { modalInicializadoRef.current = false; setLastOptions(undefined); return; }
-        if (!opciones) return;
-        setLastOptions(opciones);
-        setDetalleCargaId(opciones.detalle.id_detalle_carga); setDetalleSeleccionado(opciones.detalle);
-        setCalidades(opciones.calidades);
-        setCalidadSeleccionadaId(prev => opciones.calidades.some(c => c.id_detalle_carga_calidad === prev) ? prev : opciones.calidades.length === 1 ? opciones.calidades[0].id_detalle_carga_calidad : null);
-        if (!modalInicializadoRef.current) { setCantidadAsignar(opciones.calidades.length === 1 ? opciones.calidades[0].cantidad : 0); modalInicializadoRef.current = true; }
-        setIdClienteReceptor(prev => opciones.clientes.some(c => c.id_cliente === prev) ? prev : 0);
-        setIdPuesto(prev => opciones.puestos.some(p => p.id_puesto === prev) ? prev : 0);
-    }, [opciones, isOpen]);
-    const clientesFiltrados = (opciones ?? lastOptions)?.clientes || [];
-    const puestosFiltrados = (opciones ?? lastOptions)?.puestos || [];
-
-    const calidadSeleccionada = calidades.find((c) => c.id_detalle_carga_calidad === calidadSeleccionadaId);
+        if (!opcionesNormalizadas) return;
+        const datos = opcionesNormalizadas;
+        setLastOptions(datos);
+        setDetalleCargaId(datos.detalle.id_detalle_carga);
+        setDetalleSeleccionado(datos.detalle);
+        setCalidades(datos.calidades);
+        const inicializarCalidadUnica = !modalInicializadoRef.current;
+        setCantidadesPorCalidad((prev) => {
+            const disponibles: Record<number, number> = {};
+            datos.calidades.forEach((calidad) => {
+                const id = calidad.id_detalle_carga_calidad;
+                if (prev[id] !== undefined) disponibles[id] = Math.min(prev[id], calidad.cantidad);
+            });
+            if (inicializarCalidadUnica && datos.calidades.length === 1) {
+                const calidad = datos.calidades[0];
+                disponibles[calidad.id_detalle_carga_calidad] = calidad.cantidad;
+            }
+            return disponibles;
+        });
+        if (!modalInicializadoRef.current) modalInicializadoRef.current = true;
+        setIdClienteReceptor(prev => datos.clientes.some(c => c.id_cliente === prev) ? prev : 0);
+        setIdPuesto(prev => datos.puestos.some(p => p.id_puesto === prev) ? prev : 0);
+    }, [opcionesNormalizadas, isOpen]);
+    const clientesFiltrados = (opcionesNormalizadas ?? lastOptions)?.clientes || [];
+    const puestosFiltrados = (opcionesNormalizadas ?? lastOptions)?.puestos || [];
+    const calidadesMarcadas = calidades.filter(
+        (calidad) => cantidadesPorCalidad[calidad.id_detalle_carga_calidad] !== undefined,
+    );
+    const cantidadesValidas = calidadesMarcadas.length > 0 && calidadesMarcadas.every((calidad) => {
+        const cantidad = cantidadesPorCalidad[calidad.id_detalle_carga_calidad];
+        return Number.isInteger(cantidad) && cantidad > 0 && cantidad <= calidad.cantidad;
+    });
 
     const resetForm = () => {
         setLastOptions(undefined);
         setDetalleCargaId(0);
         setDetalleSeleccionado(null);
         setCalidades([]);
-        setCalidadSeleccionadaId(null);
-        setCantidadAsignar(0);
+        setCantidadesPorCalidad({});
         setIdClienteReceptor(0);
         setIdPuesto(0);
         setPrecioUnitario('');
@@ -83,15 +150,23 @@ export default function ItemRepartoSimpleForm({
         onClose();
     };
 
-    const handleCalidadSelect = (id: number) => {
-        setCalidadSeleccionadaId(id);
-        const c = calidades.find((x) => x.id_detalle_carga_calidad === id);
-        setCantidadAsignar(c?.cantidad || 0);
+    const toggleCalidad = (id: number) => {
+        const calidad = calidades.find((item) => item.id_detalle_carga_calidad === id);
+        if (!calidad) return;
+        setError(null);
+        setCantidadesPorCalidad((actuales) => {
+            if (actuales[id] !== undefined) {
+                const siguientes = { ...actuales };
+                delete siguientes[id];
+                return siguientes;
+            }
+            return { ...actuales, [id]: calidad.cantidad };
+        });
     };
 
     const handleNextStep = () => {
-        if (!calidadSeleccionada || cantidadAsignar <= 0) {
-            setError('Seleccione una calidad y cantidad válida');
+        if (!cantidadesValidas) {
+            setError('Marca al menos una calidad y revisa la cantidad de cada una.');
             return;
         }
         setError(null);
@@ -102,16 +177,20 @@ export default function ItemRepartoSimpleForm({
         e.preventDefault();
         if (submitting || loading || loadingOptions || optionsError) return;
         setError(null);
-        if (!calidadSeleccionada) {
-            setError('Seleccione una calidad');
+        if (!calidadesMarcadas.length) {
+            setError('Marca al menos una calidad.');
             return;
         }
         if (!idClienteReceptor || !idPuesto) {
             setError('Seleccione cliente y puesto');
             return;
         }
-        if (!Number.isInteger(cantidadAsignar) || cantidadAsignar <= 0 || cantidadAsignar > calidadSeleccionada.cantidad) {
-            setError(`Cantidad debe ser entre 1 y ${calidadSeleccionada.cantidad}`);
+        const cantidadInvalida = calidadesMarcadas.find((calidad) => {
+            const cantidad = cantidadesPorCalidad[calidad.id_detalle_carga_calidad];
+            return !Number.isInteger(cantidad) || cantidad <= 0 || cantidad > calidad.cantidad;
+        });
+        if (cantidadInvalida) {
+            setError(`La cantidad de ${cantidadInvalida.calidades?.nombre || 'una calidad'} debe ser entre 1 y ${cantidadInvalida.cantidad}.`);
             return;
         }
         const payload = {
@@ -120,13 +199,11 @@ export default function ItemRepartoSimpleForm({
                 {
                     id_cliente_receptor: idClienteReceptor,
                     id_puesto: idPuesto,
-                    detalles: [
-                        {
-                            id_detalle_carga_calidad: calidadSeleccionada.id_detalle_carga_calidad,
-                            cantidad: cantidadAsignar,
-                            precio_unitario: precioUnitario ? parseFloat(precioUnitario) : undefined,
-                        },
-                    ],
+                    detalles: calidadesMarcadas.map((calidad) => ({
+                        id_detalle_carga_calidad: calidad.id_detalle_carga_calidad,
+                        cantidad: cantidadesPorCalidad[calidad.id_detalle_carga_calidad],
+                        precio_unitario: precioUnitario ? parseFloat(precioUnitario) : undefined,
+                    })),
                 },
             ],
         };
@@ -144,7 +221,7 @@ export default function ItemRepartoSimpleForm({
     const selectClassName = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm";
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} className="mx-4 max-h-[90dvh] max-w-lg overflow-y-auto" ariaLabel="Asignar receptor y puesto">
+        <Modal isOpen={isOpen} onClose={handleClose} className="mx-4 max-h-[90dvh] max-w-lg overflow-y-auto" ariaLabel="Asignar calidades y destino">
             <div className="p-5">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-5">
@@ -152,7 +229,7 @@ export default function ItemRepartoSimpleForm({
                         <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Asignar receptor y puesto</h2>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Asignar calidades y destino</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             {detalleSeleccionado
                                 ? `${detalleSeleccionado.clientes?.nombres} · ${detalleSeleccionado.cantidad_jabas} jabas`
@@ -182,7 +259,7 @@ export default function ItemRepartoSimpleForm({
                                     : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                             }`}>
                                 {step !== 'calidad' && <CheckCircle className="w-3.5 h-3.5" />}
-                                1. Calidad
+                                1. Calidades
                             </div>
                             <div className="w-6 h-px bg-gray-300 dark:bg-gray-600" />
                             <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${
@@ -203,76 +280,91 @@ export default function ItemRepartoSimpleForm({
                                     </div>
                                 ) : (
                                     <>
-                                        {/* Quality cards */}
-                                        <div className="grid gap-2">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Marca una o varias calidades y define cuántas jabas asignar de cada una.
+                                        </p>
+                                        <div className="grid gap-3 sm:grid-cols-2">
                                             {calidades.map((c) => {
-                                                const selected = c.id_detalle_carga_calidad === calidadSeleccionadaId;
-                                                const total = c.cantidad;
-                                                const porcentaje = total > 0 ? 100 : 0;
+                                                const id = c.id_detalle_carga_calidad;
+                                                const selected = cantidadesPorCalidad[id] !== undefined;
                                                 return (
-                                                    <button
-                                                        key={c.id_detalle_carga_calidad}
-                                                        type="button"
-                                                        onClick={() => handleCalidadSelect(c.id_detalle_carga_calidad)}
-                                                        className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                                                    <div
+                                                        key={id}
+                                                        className={`rounded-lg border p-3 transition-colors ${
                                                             selected
-                                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400'
+                                                                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
                                                                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                                         }`}
                                                     >
-                                                        <div className="flex items-center justify-between">
-                                                            <div>
+                                                        <label className="flex cursor-pointer items-start gap-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selected}
+                                                                onChange={() => toggleCalidad(id)}
+                                                                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <span className="min-w-0 flex-1">
                                                                 <p className="font-medium text-gray-900 dark:text-white text-sm">
                                                                     {c.calidades?.nombre}
                                                                 </p>
                                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                                    {total} jabas disponibles
+                                                                    {c.cantidad} jabas disponibles
                                                                 </p>
+                                                            </span>
+                                                            {selected && <CheckCircle className="h-5 w-5 shrink-0 text-blue-500 dark:text-blue-400" />}
+                                                        </label>
+                                                        {selected && (
+                                                            <div className="mt-3 flex items-end gap-3">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <Label htmlFor={`cantidad-calidad-${id}`} className="text-xs text-gray-600 dark:text-gray-300">
+                                                                        Jabas para este destino
+                                                                    </Label>
+                                                                    <Input
+                                                                        id={`cantidad-calidad-${id}`}
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max={String(c.cantidad)}
+                                                                        step={1}
+                                                                        value={cantidadesPorCalidad[id]}
+                                                                        onChange={(event) => {
+                                                                            const cantidad = Number(event.target.value);
+                                                                            setError(null);
+                                                                            setCantidadesPorCalidad((actuales) => ({ ...actuales, [id]: cantidad }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <span className="pb-2 text-xs text-gray-500 dark:text-gray-400">
+                                                                    de {c.cantidad}
+                                                                </span>
                                                             </div>
-                                                            {selected && (
-                                                                <CheckCircle className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                                                            )}
-                                                        </div>
-                                                    </button>
+                                                        )}
+                                                    </div>
                                                 );
                                             })}
                                         </div>
 
-                                        {/* Cantidad */}
-                                        {calidadSeleccionada && (
-                                            <div>
-                                                <Label className="text-gray-700 dark:text-gray-300 text-sm">Cantidad</Label>
-                                                <div className="flex items-center gap-3">
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        max={calidadSeleccionada.cantidad}
-                                                        value={cantidadAsignar}
-                                                        onChange={(e) => setCantidadAsignar(parseInt(e.target.value) || 0)}
-                                                        className="flex-1"
-                                                    />
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                        / {calidadSeleccionada.cantidad}
-                                                    </span>
-                                                </div>
-                                                {/* Barra de progreso */}
-                                                <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-blue-500 rounded-full transition-all"
-                                                        style={{ width: `${(cantidadAsignar / calidadSeleccionada.cantidad) * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
+                                        {calidadesMarcadas.some((calidad) => {
+                                            const cantidad = cantidadesPorCalidad[calidad.id_detalle_carga_calidad];
+                                            return !Number.isInteger(cantidad) || cantidad <= 0 || cantidad > calidad.cantidad;
+                                        }) && (
+                                            <p className="text-sm text-amber-700 dark:text-amber-400">
+                                                Revisa las cantidades: cada una debe estar entre 1 y las jabas disponibles.
+                                            </p>
                                         )}
 
-                                        {/* Next button */}
+                                        {error && (
+                                            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                                                {error}
+                                            </p>
+                                        )}
+
                                         <Button
                                             type="button"
                                             onClick={handleNextStep}
-                                            disabled={!calidadSeleccionada || cantidadAsignar <= 0}
+                                            disabled={!cantidadesValidas}
                                             className="w-full"
                                         >
-                                            Siguiente
+                                            Siguiente · {calidadesMarcadas.length} calidades
                                         </Button>
                                     </>
                                 )}
@@ -282,26 +374,29 @@ export default function ItemRepartoSimpleForm({
                         {/* STEP 2: Destino */}
                         {step === 'destino' && (
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Resumen de calidad seleccionada */}
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                                     <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                                         <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {calidadSeleccionada?.calidades?.nombre}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {cantidadAsignar} jabas
-                                        </p>
+                                    <div className="mt-2 flex items-start justify-between gap-3">
+                                        <div className="space-y-1">
+                                            {calidadesMarcadas.map((calidad) => (
+                                                <p key={calidad.id_detalle_carga_calidad} className="text-sm text-gray-700 dark:text-gray-200">
+                                                    {calidad.calidades?.nombre}: <strong>{cantidadesPorCalidad[calidad.id_detalle_carga_calidad]} jabas</strong>
+                                                </p>
+                                            ))}
+                                            <p className="pt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                                Total: {calidadesMarcadas.reduce((total, calidad) => total + (cantidadesPorCalidad[calidad.id_detalle_carga_calidad] || 0), 0)} jabas
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep('calidad')}
+                                            className="shrink-0 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                                        >
+                                            Cambiar
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep('calidad')}
-                                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                                    >
-                                        Cambiar
-                                    </button>
                                 </div>
 
                                 {/* Cliente */}
