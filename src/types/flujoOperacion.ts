@@ -7,14 +7,31 @@ export interface EntregaFlujo {
   nombre_recibe: string | null;
   fecha_entrega: string;
 }
+export interface CalidadRepartoFlujo {
+  nombre: string;
+  cantidad: number;
+}
 export interface DestinoFlujo {
   id_item_reparto: number;
   cantidad_asignada: number;
   clientes?: { nombres: string; apellidos?: string | null };
   puestos?: { codigo_puesto: string };
+  items_reparto_detalle?: {
+    id_detalle_carga_calidad: number;
+    cantidad: number;
+  }[];
   entregas: EntregaFlujo[];
   resoluciones_reparto?: { cantidad: number; tipo: string; motivo: string }[];
-  guias_operativas: { id_guia: number; numero_guia: string; estado: string; cobertura?: { cantidad: number; id_item_reparto: string } | null }[];
+  guias_operativas: {
+    id_guia: number;
+    numero_guia: string;
+    estado: string;
+    cobertura?: {
+      cantidad: number;
+      id_item_reparto: string;
+      calidades?: CalidadRepartoFlujo[];
+    } | null;
+  }[];
 }
 export interface OperacionFlujo {
   id_operacion: number;

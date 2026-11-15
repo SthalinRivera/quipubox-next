@@ -135,6 +135,15 @@ export default function OperacionDetallePage() {
       ...item,
       esReparto: d.es_reparto,
       producto: d.frutas?.nombre || 'Producto',
+      calidadesAsignadas: (item.items_reparto_detalle || []).map((asignacion) => ({
+        nombre:
+          d.detalle_carga_calidades?.find(
+            (calidad) =>
+              calidad.id_detalle_carga_calidad ===
+              asignacion.id_detalle_carga_calidad,
+          )?.calidades?.nombre || 'Calidad sin nombre',
+        cantidad: asignacion.cantidad,
+      })),
     })),
   );
   const entregas = destinos.flatMap((item) =>
@@ -147,6 +156,11 @@ export default function OperacionDetallePage() {
   const guias = destinos.flatMap(item => item.guias_operativas.map(g => ({
     ...g,
     cliente: item.clientes?.nombres,
+    puesto: item.puestos?.codigo_puesto,
+    producto: item.producto,
+    calidades: g.cobertura?.calidades?.length
+      ? g.cobertura.calidades
+      : item.calidadesAsignadas,
     saldoPendiente: saldoDestino(item),
   })));
   const faltanGuias = destinos.some(item => saldoDestino(item) > 0 && !guiaVigente(item));
@@ -355,12 +369,29 @@ export default function OperacionDetallePage() {
           <FileText size={20} /> 2. Guías
         </h2>
         {['en_transito', 'repartiendo'].includes(op.estado) && faltanGuias && <Button className="mt-3" disabled={busy || !op.resumen.preparada} onClick={emitirGuias}>Emitir pendientes</Button>}
-        <div className="mt-4 flex flex-wrap gap-3">
-          {guias.map(g => <div key={g.id_guia} className="flex items-center gap-2">
-            <Link className={link} href={`/dashboard/guias-operativas/${g.id_guia}`}>Guía {g.numero_guia} · {g.cliente} · {g.estado}</Link>
-            {!g.cobertura && <span className="text-xs text-amber-700 dark:text-amber-400">{g.saldoPendiente === 0 ? 'Documento histórico conservado · destino completo' : 'Guía histórica sin cobertura para el saldo pendiente'}</span>}
+        <div className="mt-4 space-y-3">
+          {guias.map(g => <article key={g.id_guia} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+            <div className="min-w-0 space-y-2">
+              <Link className={link} href={`/dashboard/guias-operativas/${g.id_guia}`}>Guía {g.numero_guia} · {g.cliente} · {g.estado}</Link>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{g.producto} · Puesto {g.puesto || 'sin asignar'}</p>
+              {g.calidades.length ? (
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Calidades incluidas</p>
+                  <ul className="mt-1 flex flex-wrap gap-2">
+                    {g.calidades.map((calidad, index) => (
+                      <li key={`${calidad.nombre}-${index}`} className="rounded-md bg-gray-100 px-2.5 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                        {calidad.nombre}: {calidad.cantidad} jabas
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 dark:text-gray-400">Sin desglose de calidades asociado.</p>
+              )}
+              {!g.cobertura && <p className="text-xs text-amber-700 dark:text-amber-400">{g.saldoPendiente === 0 ? 'Documento histórico conservado · destino completo' : 'Guía histórica sin cobertura para el saldo pendiente'}</p>}
+            </div>
             {['en_transito','repartiendo'].includes(op.estado) && !['anulada','reemplazada'].includes(g.estado) && <button type="button" disabled={busy} title="Anular guía" aria-label={`Anular guía ${g.numero_guia}`} className="rounded-lg bg-red-50 p-2 text-red-600" onClick={() => { if (window.confirm('¿Anular esta guía? Solo es posible si aún no tiene entregas.')) void ejecutar(`guias-operativas/${g.id_guia}`, 'DELETE'); }}><Trash2 size={16}/></button>}
-          </div>)}
+          </article>)}
           {!guias.length && (
             <p className="text-sm text-gray-500">
               Confirma la salida para emitir las guías.
