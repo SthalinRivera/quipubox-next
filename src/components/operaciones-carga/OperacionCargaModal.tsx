@@ -17,7 +17,6 @@ import { format } from "date-fns"; // npm install date-fns (o usar new Date().to
 interface Sede {
     id_ubigeo: string;
     nombre: string;
-    tipo_sede: "origen" | "destino" | "ambos" | null;
 }
 
 interface Camion {
@@ -123,6 +122,10 @@ export function OperacionCargaModal({
             toast.error("Complete los campos obligatorios");
             return;
         }
+        if (form.id_ubigeo_origen === form.id_ubigeo_destino) {
+            toast.error('El distrito de origen y el distrito de destino deben ser diferentes.');
+            return;
+        }
         setSubmitting(true);
         try {
             if (editingOperacion) {
@@ -165,7 +168,7 @@ export function OperacionCargaModal({
 
     const camionesOptions = camiones.map(c => ({ id: c.id_camion, label: c.placa }));
     const sedesOrigenOptions = sedesOrigen.map(s => ({ id: s.id_ubigeo, label: s.nombre }));
-    const sedesDestinoOptions = sedesDestino.map(s => ({ id: s.id_ubigeo, label: s.nombre }));
+    const sedesDestinoOptions = sedesDestino.filter(s => s.id_ubigeo !== form.id_ubigeo_origen).map(s => ({ id: s.id_ubigeo, label: s.nombre }));
     const encargadosOptions = encargados.map(u => ({ id: u.id_usuario, label: `${u.nombres} ${u.apellidos || ''}`.trim() }));
     const repartidoresOptions = repartidores.map(u => ({ id: u.id_usuario, label: `${u.nombres} ${u.apellidos || ''}`.trim() }));
 

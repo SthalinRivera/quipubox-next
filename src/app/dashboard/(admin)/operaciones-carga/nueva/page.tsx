@@ -20,7 +20,6 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 interface Sede {
     id_ubigeo: string;
     nombre: string;
-    tipo_sede: 'origen' | 'destino' | 'ambos' | null;
 }
 interface Camion { id_camion: number; placa: string; }
 interface Usuario { id_usuario: number; nombres: string; apellidos: string | null; usuarios_roles?: { roles_usuarios: { nombre: string } }[]; }
@@ -78,6 +77,10 @@ export default function NuevaOperacionPage() {
         if (submitting || loadingData || opcionesError) return;
         if (!form.id_ubigeo_origen || !form.id_ubigeo_destino || form.id_camion === 0 || !form.fecha_carga) {
             toast.error('Por favor, complete los campos obligatorios (Ubicación de origen, Camión y Fecha).');
+            return;
+        }
+        if (form.id_ubigeo_origen === form.id_ubigeo_destino) {
+            toast.error('El distrito de origen y el distrito de destino deben ser diferentes.');
             return;
         }
         setSubmitting(true);
@@ -157,7 +160,7 @@ export default function NuevaOperacionPage() {
                                 className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
                                 <option value="">Sin asignar</option>
-                                {sedesDestino.map(s => (
+                                {sedesDestino.filter(s => s.id_ubigeo !== form.id_ubigeo_origen).map(s => (
                                     <option key={s.id_ubigeo} value={s.id_ubigeo}>{s.nombre}</option>
                                 ))}
                             </select>

@@ -34,7 +34,7 @@ export default function CalidadesPage() {
     const [submitting, setSubmitting] = useState(false);
     const [operacionEstado, setOperacionEstado] = useState<string>('');
     const { setPasoCompletado, setCurrentStep } = useCreacionCargaStore();
-    const isLocked = !['pendiente', 'en_curso'].includes(operacionEstado) || detalle?.es_reparto === false;
+    const isLocked = !['pendiente', 'en_curso'].includes(operacionEstado);
 
     const loadData = async () => {
         try {

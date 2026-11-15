@@ -1,6 +1,7 @@
 // components/lugares-operativos/LugarOperativoTable.tsx
 'use client';
 
+import EmpresaLugaresPanel from './EmpresaLugaresPanel';
 import { useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
@@ -67,7 +68,7 @@ export default function LugarOperativoTable() {
         setIsModalOpen(false);
     };
 
-    if (loading) {
+    if (loading && !lugares.length) {
         return (
             <div className="p-4 text-center text-gray-700 dark:text-gray-300">
                 <TableSkeleton columns={7} rows={10} showActionButton={true} />;
@@ -77,6 +78,7 @@ export default function LugarOperativoTable() {
 
     return (
         <div className="space-y-4">
+            <EmpresaLugaresPanel onSaved={fetchAll} />
             {/* Barra de herramientas */}
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="relative">

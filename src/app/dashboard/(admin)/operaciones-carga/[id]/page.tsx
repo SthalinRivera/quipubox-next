@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Layers, Package, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft, CheckCircle, Layers, Package, Pencil, Plus, Trash2 } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api-client';
 import Button from '@/components/ui/button/Button';
 import { Stepper } from '@/components/ui/Stepper';
@@ -20,6 +20,7 @@ export default function OperacionDetallePage() {
   const [busy, setBusy] = useState(false);
   const [nuevoProducto, setNuevoProducto] = useState(false);
   const [calidadId, setCalidadId] = useState<number | null>(null);
+  const [orden, setOrden] = useState<number[] | null>(null);
   const [editar, setEditar] = useState<DetalleCarga | null>(null);
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -69,6 +70,23 @@ export default function OperacionDetallePage() {
     }
   };
 
+  const mover = (index: number, cambio: number) => {
+    setOrden(actual => {
+      if (!actual || index + cambio < 0 || index + cambio >= actual.length) return actual;
+      const siguiente = [...actual];
+      [siguiente[index], siguiente[index + cambio]] = [siguiente[index + cambio], siguiente[index]];
+      return siguiente;
+    });
+  };
+  const guardarOrden = async () => {
+    if (!orden || busy) return;
+    setBusy(true); setError('');
+    try {
+      await fetchWithAuth('operaciones-carga/' + id + '/detalles/orden', { method: 'PUT', body: { ids: orden } });
+      setOrden(null); await load();
+    } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo guardar el orden.'); }
+    finally { setBusy(false); }
+  };
   const terminarPreparacion = async () => {
     if (busy || !op || !cargaEditable(op.estado) || !clasificacionCompleta(op)) return;
     setBusy(true); setError('');
@@ -110,49 +128,42 @@ export default function OperacionDetallePage() {
               <Package size={20} /> 1. Carga
             </h2>
           </div>
-          {editable && (
-            <Button onClick={() => setNuevoProducto(true)}>
-              <Plus size={16} /> Agregar producto
-            </Button>
-          )}
+          {editable && <div className="flex flex-wrap gap-2">
+            {orden ? <>
+              <Button disabled={busy} variant="outline" onClick={() => setOrden(null)}>Cancelar</Button>
+              <Button disabled={busy} onClick={guardarOrden}>Guardar orden</Button>
+            </> : <>
+              {<Button disabled={busy || op.detalle_carga.length < 2} variant="outline" onClick={() => setOrden(op.detalle_carga.map(d => d.id_detalle_carga))}><ArrowUpDown size={16} /> Reordenar</Button>}
+              <Button disabled={busy} onClick={() => setNuevoProducto(true)}><Plus size={16} /> Agregar producto</Button>
+            </>}
+          </div>}
         </div>
         {!op.detalle_carga.length ? (
           <p className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500">
             Agrega un producto para comenzar. Luego podrás completar sus calidades.
           </p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {op.detalle_carga.map((d) => (
-              <article
-                key={d.id_detalle_carga}
-                className="flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-900"
-                aria-label={`${d.frutas?.nombre || 'Producto'} · ${d.cantidad_jabas} jabas`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300"><Package size={20} aria-hidden="true" /></span>
-                    <div className="min-w-0">
-                      <h3 className="break-words text-base font-semibold text-gray-900 dark:text-white">{d.frutas?.nombre || 'Producto'}</h3>
-                      {d.variedades?.nombre && <p className="break-words text-xs text-gray-500 dark:text-gray-400">{d.variedades.nombre}</p>}
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-xs tabular-nums text-gray-400">#{d.id_detalle_carga}</span>
-                </div>
-                <p className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><UserRound size={14} className="shrink-0 text-gray-400" aria-hidden="true" /><span className="break-words">{d.clientes?.nombres || 'Sin emisor'}</span></p>
-                <div className="my-3 flex items-end justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-gray-800/60">
-                  <p className="text-gray-900 dark:text-white"><span className="text-2xl font-semibold tabular-nums tracking-tight">{d.cantidad_jabas}</span><span className="ml-1.5 text-xs text-gray-500 dark:text-gray-400">jabas</span></p>
-                  <span className="pb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{d.tipos_jaba?.nombre || '—'}</span>
-                </div>
-                <div className="mt-auto flex items-center justify-between gap-3">
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${d.es_reparto ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' : 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300'}`}>{d.es_reparto ? 'Reparto' : 'Directa'}</span>
-                  {editable && <div className="flex gap-1.5">
-                    <button type="button" disabled={busy} onClick={() => setEditar(d)} title="Editar producto" aria-label={`Editar ${d.frutas?.nombre || 'producto'} #${d.id_detalle_carga}`} className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"><Pencil size={17} aria-hidden="true" /></button>
-                    <button type="button" disabled={busy} onClick={() => eliminar(d)} title="Eliminar producto" aria-label={`Eliminar ${d.frutas?.nombre || 'producto'} #${d.id_detalle_carga}`} className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"><Trash2 size={17} aria-hidden="true" /></button>
-                  </div>}
-                </div>
-              </article>
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            {(orden ? orden.map(detalleId => op.detalle_carga.find(d => d.id_detalle_carga === detalleId)!).filter(Boolean) : op.detalle_carga).map((d, index) => (
+              <li key={d.id_detalle_carga} className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-sm">
+                <span className="w-6 shrink-0 text-gray-400">{index + 1}.</span>
+                <div className="min-w-36 flex-1"><span className="font-medium text-gray-900 dark:text-white">{d.frutas?.nombre || 'Producto'}</span> <span className="text-xs text-gray-400">#{d.id_detalle_carga}</span>{d.variedades?.nombre && <span className="ml-2 text-gray-500">{d.variedades.nombre}</span>}</div>
+                <span className="min-w-24 text-gray-600 dark:text-gray-300">{d.clientes?.nombres || 'Sin emisor'}</span>
+                <span className="min-w-24 tabular-nums"><strong>{d.cantidad_jabas}</strong> jabas</span>
+                <span className="min-w-24 text-gray-500">{d.tipos_jaba?.nombre || '—'}</span>
+                <span className="min-w-16 text-gray-500">{d.es_reparto ? 'Reparto' : 'Directa'}</span>
+                {editable && <div className="flex gap-2">
+                  {orden ? <>
+                    <button type="button" disabled={busy || index === 0} onClick={() => mover(index, -1)} aria-label={'Subir producto #' + d.id_detalle_carga} className="rounded-lg border p-2 disabled:opacity-30"><ArrowUp size={16} /></button>
+                    <button type="button" disabled={busy || index === orden.length - 1} onClick={() => mover(index, 1)} aria-label={'Bajar producto #' + d.id_detalle_carga} className="rounded-lg border p-2 disabled:opacity-30"><ArrowDown size={16} /></button>
+                  </> : <>
+                    <button type="button" disabled={busy} onClick={() => setEditar(d)} aria-label={'Editar producto #' + d.id_detalle_carga} className="rounded-lg p-2 text-blue-600"><Pencil size={16} /></button>
+                    <button type="button" disabled={busy} onClick={() => eliminar(d)} aria-label={'Eliminar producto #' + d.id_detalle_carga} className="rounded-lg p-2 text-red-600"><Trash2 size={16} /></button>
+                  </>}
+                </div>}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </section>
 
@@ -161,12 +172,11 @@ export default function OperacionDetallePage() {
       <div className="mt-4 space-y-3">
         {op.detalle_carga.map(d => {
           const total = (d.detalle_carga_calidades || []).reduce((sum,c) => sum + c.cantidad, 0);
-          const requiere = d.es_reparto || (d.detalle_carga_calidades?.length || 0) > 0;
-          const listo = !requiere || total === d.cantidad_jabas;
+          const listo = total === d.cantidad_jabas;
           return <div key={d.id_detalle_carga} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50">
-            <div><p className="font-medium text-gray-900 dark:text-white">{d.frutas?.nombre} · {d.cantidad_jabas} jabas</p><p className="mt-1 text-sm text-gray-500">{requiere ? total + ' de ' + d.cantidad_jabas + ' jabas clasificadas' : 'Entrega directa: no requiere clasificación'}</p></div>
+            <div><p className="font-medium text-gray-900 dark:text-white">{d.frutas?.nombre} · {d.cantidad_jabas} jabas</p><p className="mt-1 text-sm text-gray-500">{total + ' de ' + d.cantidad_jabas + ' jabas clasificadas'}</p></div>
             <div className="flex items-center gap-3">
-              {requiere && <Button variant="outline" onClick={() => setCalidadId(d.id_detalle_carga)}>{listo || !editable ? 'Ver calidades' : 'Completar calidades'}</Button>}
+              {<Button variant="outline" onClick={() => setCalidadId(d.id_detalle_carga)}>{listo || !editable ? 'Ver calidades' : 'Completar calidades'}</Button>}
               {listo && <span className="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400"><CheckCircle size={16} /> Completo</span>}
             </div>
           </div>;
@@ -175,7 +185,7 @@ export default function OperacionDetallePage() {
       </div>
       <div className="mt-5 space-y-3 border-t border-gray-100 pt-5 dark:border-gray-800">
         <p role="status" className="text-sm text-gray-600 dark:text-gray-300">{!completa ? 'Completa la carga y la clasificación de todas las jabas.' : editable ? 'Carga y calidades completas. Termina la preparación para pasar la operación a En tránsito.' : 'Preparación completa. Las entregas se gestionan desde Entregar.'}</p>
-        {editable && <Button disabled={busy || !completa} onClick={terminarPreparacion}>{busy ? 'Guardando…' : 'Terminar carga y calidades'}</Button>}
+        {editable && <Button disabled={busy || !!orden || !completa} onClick={terminarPreparacion}>{busy ? 'Guardando…' : 'Terminar carga y calidades'}</Button>}
       </div>
     </section>
       {calidadId !== null && op.detalle_carga.find((d) => d.id_detalle_carga === calidadId) && (
@@ -193,10 +203,11 @@ export default function OperacionDetallePage() {
           operacionId={id}
           editingDetalle={editar}
           onClose={() => { setEditar(null); setNuevoProducto(false); }}
-          onSaved={() => {
+          onSaved={async (guardado) => {
             setEditar(null);
             setNuevoProducto(false);
-            void load();
+            await load();
+            if (guardado) setCalidadId(guardado.id_detalle_carga);
           }}
         />
       )}

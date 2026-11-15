@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
+import { seleccionarDestino, type DestinoDisponible } from '@/lib/destinos-carga';
 import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 import { useItemsReparto } from '@/hooks/useItemsReparto';
 import { Package, User, MapPin, DollarSign, CheckCircle } from 'lucide-react';
@@ -27,6 +28,7 @@ interface CalidadDisponible {
 }
 
 interface RepartoOpciones {
+    destinos: DestinoDisponible[];
     detalle: {
         id_detalle_carga: number;
         cantidad_jabas: number;
@@ -76,6 +78,7 @@ export default function ItemRepartoSimpleForm({
     const [calidades, setCalidades] = useState<CalidadDisponible[]>([]);
     const [cantidadesPorCalidad, setCantidadesPorCalidad] = useState<Record<number, number>>({});
     const [idClienteReceptor, setIdClienteReceptor] = useState<number>(0);
+    const [idSeccion, setIdSeccion] = useState<string | null>(null);
     const [idPuesto, setIdPuesto] = useState<number>(0);
     const [precioUnitario, setPrecioUnitario] = useState<string>('');
     const [optionsRetry, setOptionsRetry] = useState(0);
@@ -87,7 +90,7 @@ export default function ItemRepartoSimpleForm({
 
     const { data: opciones, loading: loadingOptions, error: optionsError } = useOpcionesFlujo<RepartoOpciones>(
         'reparto',
-        { operacion: operacionId, detalle: defaultDetalleId, cliente: idClienteReceptor, buscar: String(optionsRetry) },
+        { operacion: operacionId, detalle: defaultDetalleId, buscar: String(optionsRetry) },
         isOpen && !!operacionId && !!defaultDetalleId,
     );
     const opcionesNormalizadas = useMemo(
@@ -118,10 +121,18 @@ export default function ItemRepartoSimpleForm({
         });
         if (!modalInicializadoRef.current) modalInicializadoRef.current = true;
         setIdClienteReceptor(prev => datos.clientes.some(c => c.id_cliente === prev) ? prev : 0);
-        setIdPuesto(prev => datos.puestos.some(p => p.id_puesto === prev) ? prev : 0);
+
     }, [opcionesNormalizadas, isOpen]);
     const clientesFiltrados = (opcionesNormalizadas ?? lastOptions)?.clientes || [];
-    const puestosFiltrados = (opcionesNormalizadas ?? lastOptions)?.puestos || [];
+    const destinosDisponibles = (opcionesNormalizadas ?? lastOptions)?.destinos;
+    const destino = seleccionarDestino(destinosDisponibles || [], idClienteReceptor, idPuesto, idSeccion);
+    const puestosFiltrados = destino.puestos;
+    useEffect(() => {
+        if (!destinosDisponibles) return;
+        const selected = seleccionarDestino(destinosDisponibles, idClienteReceptor, idPuesto, idSeccion);
+        setIdPuesto(selected.idPuesto || 0);
+        setIdSeccion(selected.idSeccion);
+    }, [destinosDisponibles, idClienteReceptor, idPuesto, idSeccion]);
     const calidadesMarcadas = calidades.filter(
         (calidad) => cantidadesPorCalidad[calidad.id_detalle_carga_calidad] !== undefined,
     );
@@ -138,6 +149,7 @@ export default function ItemRepartoSimpleForm({
         setCantidadesPorCalidad({});
         setIdClienteReceptor(0);
         setIdPuesto(0);
+        setIdSeccion(null);
         setPrecioUnitario('');
         setError(null);
         setStep('calidad');
@@ -193,12 +205,14 @@ export default function ItemRepartoSimpleForm({
             setError(`La cantidad de ${cantidadInvalida.calidades?.nombre || 'una calidad'} debe ser entre 1 y ${cantidadInvalida.cantidad}.`);
             return;
         }
+        if (destino.secciones.length > 1 && !idSeccion) { setError('Selecciona una sección para este puesto.'); return; }
         const payload = {
             id_detalle_carga: detalleCargaId,
             asignaciones: [
                 {
                     id_cliente_receptor: idClienteReceptor,
                     id_puesto: idPuesto,
+                    seccion: idSeccion || undefined,
                     detalles: calidadesMarcadas.map((calidad) => ({
                         id_detalle_carga_calidad: calidad.id_detalle_carga_calidad,
                         cantidad: cantidadesPorCalidad[calidad.id_detalle_carga_calidad],
@@ -449,6 +463,13 @@ export default function ItemRepartoSimpleForm({
                                     </select>
                                 </div>
 
+                                {destino.secciones.length > 0 && <div className="space-y-2">
+                                    <Label htmlFor="seccion-reparto">Sección</Label>
+                                    <select id="seccion-reparto" value={idSeccion || ''} onChange={e => setIdSeccion(e.target.value || null)} className={selectClassName}>
+                                        <option value="">Selecciona una sección</option>
+                                        {destino.secciones.map(s => <option key={s.id_seccion} value={s.id_seccion}>{s.nombre_seccion}</option>)}
+                                    </select>
+                                </div>}
                                 {/* Precio */}
                                 <div>
                                     <Label className="text-gray-700 dark:text-gray-300 text-sm flex items-center gap-1.5">

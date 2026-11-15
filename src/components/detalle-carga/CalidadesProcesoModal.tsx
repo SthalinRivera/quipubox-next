@@ -30,21 +30,17 @@ export function CalidadesProcesoModal({ detalle, editable, onClose, onSaved }: P
     const controller = new AbortController();
     setLoading(true);
     setError('');
-    fetchWithAuth<typeof options>(`opciones-flujo/calidades?detalle=${detalle.id_detalle_carga}${editing ? `&calidad=${editing.id_detalle_carga_calidad}` : ''}`, { signal: controller.signal })
+    fetchWithAuth<typeof options>(`opciones-flujo/calidades?detalle=${detalle.id_detalle_carga}`, { signal: controller.signal })
       .then((data) => { if (!controller.signal.aborted) setOptions(data); })
       .catch((e: unknown) => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'No se pudieron cargar las calidades.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [editable, retry, detalle.id_detalle_carga, editing?.id_detalle_carga_calidad]);
+  }, [editable, retry, detalle.id_detalle_carga]);
   const total = rows.reduce((sum, row) => sum + row.cantidad, 0);
   const available = detalle.cantidad_jabas - total + (editing?.cantidad || 0);
   const reset = () => { setEditing(null); setForm({ id: '', cantidad: '', precio: '' }); };
-  const refresh = async () => {
-    const data = await fetchWithAuth<DetalleCalidad[]>(`detalle-carga/${detalle.id_detalle_carga}/calidades`);
-    setRows(data);
-    setRetry(n => n + 1);
-    await onSaved();
-  };
+  const disponibles = [...new Map([...options, ...rows.map(r => ({ id_calidad: r.id_calidad, nombre: r.calidades?.nombre || 'Calidad ' + r.id_calidad }))].map(o => [o.id_calidad, o])).values()]
+    .filter(o => !rows.some(r => r.id_calidad === o.id_calidad && r.id_detalle_carga_calidad !== editing?.id_detalle_carga_calidad));
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy || !editable) return;
@@ -56,11 +52,13 @@ export function CalidadesProcesoModal({ detalle, editable, onClose, onSaved }: P
     }
     setBusy(true); setError('');
     try {
-      await fetchWithAuth(editing ? `detalle-carga/calidades/${editing.id_detalle_carga_calidad}` : `detalle-carga/${detalle.id_detalle_carga}/calidades`, {
+      const guardada = await fetchWithAuth<DetalleCalidad>(editing ? `detalle-carga/calidades/${editing.id_detalle_carga_calidad}` : `detalle-carga/${detalle.id_detalle_carga}/calidades`, {
         method: editing ? 'PUT' : 'POST', body: { id_calidad: Number(form.id), cantidad, precio_unitario: precio },
       });
+      if (editing) setOptions(prev => [...prev, { id_calidad: editing.id_calidad, nombre: editing.calidades?.nombre || 'Calidad ' + editing.id_calidad }]);
+      setRows(prev => editing ? prev.map(r => r.id_detalle_carga_calidad === editing.id_detalle_carga_calidad ? guardada : r) : [...prev, guardada]);
       reset();
-      await refresh();
+      await onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo guardar.'); }
     finally { setBusy(false); }
   };
@@ -71,7 +69,10 @@ export function CalidadesProcesoModal({ detalle, editable, onClose, onSaved }: P
       await fetchWithAuth(`detalle-carga/calidades/${id}`, { method: 'DELETE' });
       setRemoving(null);
       if (editing?.id_detalle_carga_calidad === id) reset();
-      await refresh();
+      const eliminada = rows.find(r => r.id_detalle_carga_calidad === id);
+      if (eliminada) setOptions(prev => [...prev, { id_calidad: eliminada.id_calidad, nombre: eliminada.calidades?.nombre || 'Calidad ' + eliminada.id_calidad }]);
+      setRows(prev => prev.filter(r => r.id_detalle_carga_calidad !== id));
+      await onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo eliminar.'); }
     finally { setBusy(false); }
   };
@@ -79,12 +80,13 @@ export function CalidadesProcesoModal({ detalle, editable, onClose, onSaved }: P
     <div className="space-y-4 p-5 text-gray-900 sm:p-6 dark:text-white">
       <header className="pr-12"><h2 className="text-lg font-semibold">Calidades del producto</h2><p className="mt-1 text-sm text-gray-500">{detalle.frutas?.nombre} · {detalle.cantidad_jabas} jabas</p></header>
       <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"><div className="flex justify-between gap-3 text-sm"><span>{total} de {detalle.cantidad_jabas} jabas clasificadas</span><strong>{Math.max(0, detalle.cantidad_jabas - total)} pendientes</strong></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-full bg-brand-500" style={{ width: `${Math.min(100, detalle.cantidad_jabas ? total / detalle.cantidad_jabas * 100 : 0)}%` }} /></div></div>
+      {!detalle.es_reparto && <p className="text-sm text-gray-500">Las calidades se asignan automáticamente al destino de esta entrega directa.</p>}
       {!editable && <p className="text-sm text-gray-500">Consulta las calidades registradas. Esta carga ya no permite cambios.</p>}
       {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">{error}{!options.length && editable && <button type="button" className="ml-2 underline" onClick={() => setRetry((n) => n + 1)}>Reintentar</button>}</div>}
-      {loading ? <OperationSkeleton variant="compact" heading={false} /> : editable && options.length > 0 && available > 0 && <form onSubmit={save} className="space-y-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800/40">
+      {loading ? <OperationSkeleton variant="compact" heading={false} /> : editable && disponibles.length > 0 && available > 0 && <form onSubmit={save} className="space-y-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800/40">
         <h3 className="text-sm font-semibold">{editing ? 'Editar calidad' : 'Agregar calidad'}</h3>
         <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-3">
-          <label className="text-xs font-medium">Calidad<select required value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} className={field}><option value="">Seleccionar</option>{options.map((o) => <option key={o.id_calidad} value={o.id_calidad}>{o.nombre}</option>)}</select></label>
+          <label className="text-xs font-medium">Calidad<select required value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} className={field}><option value="">Seleccionar</option>{disponibles.map((o) => <option key={o.id_calidad} value={o.id_calidad}>{o.nombre}</option>)}</select></label>
           <label className="text-xs font-medium">Cantidad de jabas<input required type="number" min={1} max={available} step={1} value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} className={field} /></label>
           <label className="text-xs font-medium">Precio unitario (opcional)<input type="number" min={0} step="0.01" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} className={field} /></label>
         </fieldset>

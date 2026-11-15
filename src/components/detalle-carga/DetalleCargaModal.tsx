@@ -10,6 +10,7 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import type { DetalleCarga, CreateDetalleCargaDto } from "@/types/detalleCarga";
+import { seleccionarDestino, type DestinoDisponible } from '@/lib/destinos-carga';
 import { useOpcionesFlujo } from '@/hooks/useOpcionesFlujo';
 
 interface Cliente {
@@ -35,7 +36,7 @@ interface DetalleCargaModalProps {
     onClose: () => void;
     operacionId: number;
     editingDetalle?: DetalleCarga | null;
-    onSaved: () => void;
+    onSaved: (detalle?: DetalleCarga) => void;
 }
 
 export function DetalleCargaModal({
@@ -57,7 +58,7 @@ export function DetalleCargaModal({
     const [clientesReceptores, setClientesReceptores] = useState<Cliente[]>([]);
     const [frutas, setFrutas] = useState<{ id_fruta: number; nombre: string }[]>([]);
     const [tiposJaba, setTiposJaba] = useState<{ id_tipo_jaba: number; nombre: string }[]>([]);
-    const [filteredVariedades, setFilteredVariedades] = useState<{ id_variedad: number; nombre: string }[]>([]);
+    const [filteredVariedades, setFilteredVariedades] = useState<{ id_variedad: number; id_fruta: number; nombre: string }[]>([]);
 
     // Datos para entrega manual
     const [puestos, setPuestos] = useState<Puesto[]>([]);
@@ -86,34 +87,40 @@ export function DetalleCargaModal({
 
     const { data: opciones, loading: loadingData, error: opcionesError } = useOpcionesFlujo<{
         emisores: Cliente[]; receptores: Cliente[]; frutas: typeof frutas; variedades: typeof filteredVariedades;
-        tiposJaba: typeof tiposJaba; puestos: Puesto[]; secciones: Seccion[];
-    }>('carga', { operacion: operacionId, fruta: form.id_fruta, cliente: form.es_reparto ? null : form.id_cliente_receptor, puesto: form.es_reparto ? null : form.id_puesto, buscar: String(optionsRetry) }, isOpen);
+        destinos: DestinoDisponible[]; tiposJaba: typeof tiposJaba; puestos: Puesto[]; secciones: Seccion[];
+    }>('carga', { operacion: operacionId, buscar: String(optionsRetry) }, isOpen);
     useEffect(() => {
         if (!opciones) return;
         setHasLoadedOptions(true);
         setClientesEmisores(opciones.emisores); setClientesReceptores(opciones.receptores);
-        setFrutas(opciones.frutas); setFilteredVariedades(opciones.variedades); setTiposJaba(opciones.tiposJaba);
-        setPuestos(opciones.puestos); setSecciones(opciones.secciones);
+        setFrutas(opciones.frutas); setTiposJaba(opciones.tiposJaba);
+        const variedades = opciones.variedades.filter(v => v.id_fruta === form.id_fruta);
+        setFilteredVariedades(variedades);
+        const destino = seleccionarDestino(opciones.destinos, form.id_cliente_receptor, form.id_puesto, form.id_seccion);
+        setPuestos(destino.puestos); setSecciones(destino.secciones);
         setForm(prev => ({...prev,
             id_cliente_emisor: opciones.emisores.some(x => x.id_cliente === prev.id_cliente_emisor) ? prev.id_cliente_emisor : 0,
             id_fruta: opciones.frutas.some(x => x.id_fruta === prev.id_fruta) ? prev.id_fruta : 0,
             id_tipo_jaba: opciones.tiposJaba.some(x => x.id_tipo_jaba === prev.id_tipo_jaba) ? prev.id_tipo_jaba : 0,
-            id_variedad: opciones.variedades.some(x => x.id_variedad === prev.id_variedad) ? prev.id_variedad : null,
+            id_variedad: variedades.some(x => x.id_variedad === prev.id_variedad) ? prev.id_variedad : null,
             id_cliente_receptor: opciones.receptores.some(x => x.id_cliente === prev.id_cliente_receptor) ? prev.id_cliente_receptor : null,
-            id_puesto: opciones.puestos.some(x => x.id_puesto === prev.id_puesto) ? prev.id_puesto : null,
-            id_seccion: opciones.secciones.some(x => x.id_seccion === prev.id_seccion) ? prev.id_seccion : null,
+            id_puesto: form.es_reparto ? null : destino.idPuesto,
+            id_seccion: form.es_reparto ? null : destino.idSeccion,
         }));
-    }, [opciones]);
+    }, [opciones, form.id_fruta, form.id_cliente_receptor, form.id_puesto, form.id_seccion, form.es_reparto]);
     useEffect(() => { if (opcionesError) toast.error(opcionesError); }, [opcionesError, toast]);
 
     // 2. Resetear formulario al editar
     useEffect(() => {
         if (!isOpen) return;
         if (editingDetalle) {
+            const detalle = editingDetalle as DetalleCarga & {
+                items_reparto?: { id_cliente_receptor?: number | null; id_puesto?: number | null; seccion?: string | null }[];
+                id_cliente_receptor?: number | null; id_puesto?: number | null; id_seccion?: string | null;
+            };
             setForm({
-                orden_carga: editingDetalle.orden_carga,
                 id_cliente_emisor: editingDetalle.id_cliente_emisor,
-                id_cliente_receptor: (editingDetalle as any).items_reparto?.[0]?.id_cliente_receptor ?? (editingDetalle as any).id_cliente_receptor ?? null,
+                id_cliente_receptor: detalle.items_reparto?.[0]?.id_cliente_receptor ?? detalle.id_cliente_receptor ?? null,
                 id_fruta: editingDetalle.id_fruta,
                 id_variedad: editingDetalle.id_variedad || null,
                 id_tipo_jaba: editingDetalle.id_tipo_jaba,
@@ -122,8 +129,8 @@ export function DetalleCargaModal({
                 instruccion_reparto: editingDetalle.instruccion_reparto || "",
                 observaciones: editingDetalle.observaciones || "",
                 requiere_retorno_jabas: editingDetalle.requiere_retorno_jabas ?? true,
-                id_puesto: (editingDetalle as any).items_reparto?.[0]?.id_puesto ?? (editingDetalle as any).id_puesto ?? null,
-                id_seccion: (editingDetalle as any).items_reparto?.[0]?.seccion ?? (editingDetalle as any).id_seccion ?? null,
+                id_puesto: detalle.items_reparto?.[0]?.id_puesto ?? detalle.id_puesto ?? null,
+                id_seccion: detalle.items_reparto?.[0]?.seccion ?? detalle.id_seccion ?? null,
             });
         } else {
             setForm({
@@ -161,6 +168,7 @@ export function DetalleCargaModal({
                 return;
             }
         }
+        if (!form.es_reparto && secciones.length > 1 && !form.id_seccion) { toast.error('Selecciona una sección para este puesto.'); return; }
         setSubmitting(true);
         try {
             const payload = { ...form };
@@ -169,17 +177,18 @@ export function DetalleCargaModal({
                 delete payload.id_puesto;
                 delete payload.id_seccion;
             }
+            let guardado: DetalleCarga;
             if (editingDetalle) {
-                await updateDetalle(editingDetalle.id_detalle_carga, payload);
+                guardado = await updateDetalle(editingDetalle.id_detalle_carga, payload);
                 toast.success("Detalle actualizado");
             } else {
-                await createDetalle(payload);
+                guardado = await createDetalle(payload);
                 toast.success("Detalle creado");
             }
-            onSaved();
+            onSaved(guardado);
             onClose();
-        } catch (err: any) {
-            toast.error(err.message || "Error al guardar");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Error al guardar");
         } finally {
             setSubmitting(false);
         }
@@ -193,7 +202,7 @@ export function DetalleCargaModal({
                     {editingDetalle ? "Editar producto" : "Agregar producto a la carga"}
                 </h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Indica el producto, las jabas y cómo se entregará. Al guardar volverás a esta carga.
+                    Indica el producto, las jabas y cómo se entregará. Después de guardar, continúa con las calidades.
                 </p>
 
                 <div role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-gray-500 dark:text-gray-400">
@@ -310,11 +319,12 @@ export function DetalleCargaModal({
                                     <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                         <input
                                             type="checkbox"
+                                            disabled={!!editingDetalle}
                                             checked={form.es_reparto}
                                             onChange={(e) => setForm({ ...form, es_reparto: e.target.checked, id_cliente_receptor: null, id_puesto: null, id_seccion: null })}
                                             className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
-                                        Requiere reparto
+                                        Requiere reparto por puestos
                                     </label>
                                     <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                         <input
@@ -425,7 +435,6 @@ export function DetalleCargaModal({
                                 </div>
                             </div>
 
-                            <div className="max-w-32"><Label htmlFor="orden-carga">Orden</Label><Input id="orden-carga" type="number" min="1" step={1} value={form.orden_carga ?? ''} placeholder="Automático" onChange={e => setForm({ ...form, orden_carga: e.target.value ? Number(e.target.value) : undefined })} /></div>
                         <div className="flex justify-end gap-3 pt-4">
                                 <Button
                                     type="button"
