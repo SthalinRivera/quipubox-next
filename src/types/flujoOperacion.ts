@@ -13,6 +13,7 @@ export interface CalidadRepartoFlujo {
 }
 export interface DestinoFlujo {
   id_item_reparto: number;
+  id_detalle_carga: number;
   cantidad_asignada: number;
   clientes?: { nombres: string; apellidos?: string | null };
   puestos?: { codigo_puesto: string };
@@ -73,7 +74,7 @@ export const estadoOperacion: Record<string, string> = {
   pendiente: 'Pendiente',
   en_curso: 'En curso',
   en_transito: 'En tránsito',
-  repartiendo: 'Repartiendo',
+  repartiendo: 'Entregando',
   completado: 'Completado',
 };
 

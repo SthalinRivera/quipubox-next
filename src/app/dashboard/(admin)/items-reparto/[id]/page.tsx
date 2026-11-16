@@ -9,12 +9,14 @@ import {
   ArrowLeft,
   Truck,
   FileText,
+  MapPin,
   Trash2,
 } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api-client';
 
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import ItemRepartoSimpleForm from '@/components/items-reparto/ItemRepartoSimpleForm';
 import ResolucionRepartoModal from '@/components/entregas/ResolucionRepartoModal';
 import EntregaProcesoModal from '@/components/entregas/EntregaProcesoModal';
@@ -44,6 +46,7 @@ export default function OperacionDetallePage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
+  const [confirmarFinalizacion, setConfirmarFinalizacion] = useState(false);
   const [asignar, setAsignar] = useState<number | null>(null);
   const [resolver, setResolver] = useState<DestinoFlujo | null>(null);
   const [entregar, setEntregar] = useState<DestinoFlujo | null>(null);
@@ -94,7 +97,7 @@ export default function OperacionDetallePage() {
   };
   const avanzar = (estado: string) => ejecutar(`operaciones-carga/${id}/estado`, 'PATCH', { estado });
   const emitirGuias = () => ejecutar(`operaciones-carga/${id}/generar-guias`, 'POST');
-  const cerrar = () => { if (window.confirm('¿Cerrar esta operación? Quedará disponible solo para consulta.')) void avanzar('completado'); };
+  const cerrar = () => { setError(''); setConfirmarFinalizacion(true); };
   const quitarDestino = async (itemId: number) => {
     if (
       !window.confirm(
@@ -153,52 +156,10 @@ export default function OperacionDetallePage() {
       producto: item.producto,
     })),
   );
-  const guias = destinos.flatMap(item => item.guias_operativas.map(g => ({
-    ...g,
-    cliente: item.clientes?.nombres,
-    puesto: item.puestos?.codigo_puesto,
-    producto: item.producto,
-    calidades: g.cobertura?.calidades?.length
-      ? g.cobertura.calidades
-      : item.calidadesAsignadas,
-    saldoPendiente: saldoDestino(item),
-  })));
   const faltanGuias = destinos.some(item => saldoDestino(item) > 0 && !guiaVigente(item));
   const totalJabas = op.resumen.jabasCargadas;
   const recibidas = entregas.filter(e => e.estado_entrega !== 'pendiente').reduce((sum,e) => sum + e.cantidad_entregada, 0);
-  const porAsignar = op.detalle_carga.filter((d) => d.items_reparto.reduce((sum, item) => sum + item.cantidad_asignada, 0) !== d.cantidad_jabas);
-  const siguienteDestino = destinos.find((item) => saldoDestino(item) > 0);
-  const primerDestino = porAsignar[0];
-  const abrirSeccion = (seccion: string) => { window.location.hash = seccion; };
   const habilitada = op.estado !== 'pendiente' && clasificacionCompleta(op);
-  const pasoActual = op.estado === 'completado'
-    ? 4
-    : op.estado === 'repartiendo'
-      ? 3
-      : op.estado === 'en_transito'
-        ? 2
-        : 1;
-  const pasosProceso = [
-    { numero: 1, titulo: 'Preparar destinos', ancla: 'destinos' },
-    { numero: 2, titulo: 'Revisar guías', ancla: 'guias' },
-    { numero: 3, titulo: 'Registrar entregas', ancla: 'entregar' },
-    { numero: 4, titulo: 'Cerrar operación', ancla: 'cierre' },
-  ];
-  const siguiente = !habilitada
-    ? { title: 'Carga pendiente de preparación', detail: 'Completa carga y calidades antes de gestionar entregas.', label: 'Ver carga', action: () => { window.location.href = '/dashboard/operaciones-carga/' + id; } }
-    : primerDestino && editable
-      ? { title: 'Asigna los receptores', detail: primerDestino.frutas?.nombre || '', label: 'Asignar', action: () => primerDestino.es_reparto ? setAsignar(primerDestino.id_detalle_carga) : setEditar(primerDestino) }
-      : preparando
-        ? { title: op.resumen.preparada ? 'Destinos preparados' : 'Revisa los destinos', detail: '', label: op.resumen.preparada ? 'Confirmar salida' : 'Revisar', action: () => op.resumen.preparada ? setConfirmar(true) : abrirSeccion('destinos') }
-        : ['en_transito', 'repartiendo'].includes(op.estado) && faltanGuias
-          ? { title: 'Emite las guías pendientes', detail: '', label: 'Emitir guías', action: emitirGuias }
-          : op.estado === 'en_transito'
-            ? { title: 'Listo para comenzar el reparto', detail: '', label: 'Iniciar reparto', action: () => avanzar('repartiendo') }
-            : op.estado === 'repartiendo' && op.resumen.conciliada
-              ? { title: 'Entregas conciliadas', detail: 'El responsable puede cerrar la operación.', label: 'Cerrar operación', action: cerrar }
-              : op.estado === 'repartiendo' && siguienteDestino
-                ? { title: 'Registra la recepción', detail: siguienteDestino.clientes?.nombres || '', label: 'Registrar entrega', action: () => setEntregar(siguienteDestino) }
-                : { title: 'Entregas completadas', detail: '', label: 'Ver registros', action: () => abrirSeccion('entregas') };
   return (
     <div className="mx-auto max-w-full space-y-4 pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -207,9 +168,6 @@ export default function OperacionDetallePage() {
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-600 dark:hover:text-brand-300"
         >
           <ArrowLeft size={16} /> Volver al listado de operaciones
-        </Link>
-        <Link href="/dashboard/entregas" className={link}>
-          Ver entregas registradas
         </Link>
       </div>
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -237,43 +195,6 @@ export default function OperacionDetallePage() {
           </div>
         ))}
       </dl>
-      {habilitada && (
-        <nav aria-label="Pasos del proceso de entrega" className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {pasosProceso.map((paso) => {
-            const actual = paso.numero === pasoActual;
-            const completado = paso.numero < pasoActual;
-            return (
-              <Link
-                key={paso.numero}
-                href={`#${paso.ancla}`}
-                aria-current={actual ? 'step' : undefined}
-                className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 transition-colors ${
-                  actual
-                    ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-500/10'
-                    : 'border-gray-200 bg-white hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900'
-                }`}
-              >
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                  completado
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                    : actual
-                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300'
-                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                }`}>
-                  {completado ? <CheckCircle size={16} aria-hidden="true" /> : paso.numero}
-                </span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{paso.titulo}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
-      {(editable || op.detalle_carga.length > 0) && <div className="overflow-hidden rounded-xl border border-brand-200 bg-brand-50/60 dark:border-brand-500/25 dark:bg-brand-500/5">
-        <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-          <div><p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">{(op.estado === 'completado') ? 'Todo listo' : 'Qué falta · Siguiente paso'}</p><h2 className="text-base font-semibold text-gray-900 dark:text-white">{siguiente.title}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{siguiente.detail}</p></div>
-          <Button disabled={busy} onClick={siguiente.action}>{siguiente.label}<span aria-hidden="true">→</span></Button>
-        </div>
-      </div>}
       {error && (
         <div
           role="alert"
@@ -288,11 +209,24 @@ export default function OperacionDetallePage() {
           <strong>Entregas completadas</strong>
         </div>
       )}
+      {!habilitada && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-900/10 dark:text-amber-200">
+          <span>Completa la carga y la clasificación antes de gestionar las entregas.</span>
+          <Link className={link} href={`/dashboard/operaciones-carga/${id}`}>Abrir carga</Link>
+        </div>
+      )}
       {habilitada && <>
       <section id="destinos" className={card}>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <Truck size={20} /> 1. Receptores y puestos
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+            <Truck size={20} /> Entregas de la carga
+          </h2>
+          {['en_transito', 'repartiendo'].includes(op.estado) && faltanGuias && (
+            <Button disabled={busy || !op.resumen.preparada} onClick={emitirGuias}>
+              Emitir guías pendientes
+            </Button>
+          )}
+        </div>
         <div className="mt-4 space-y-3">
           {op.detalle_carga.map((d) => {
             const clasificado =
@@ -305,40 +239,171 @@ export default function OperacionDetallePage() {
               0,
             );
             const listo = !d.es_reparto || clasificado === d.cantidad_jabas;
+            const destinosDelProducto = destinos.filter(
+              (item) => item.id_detalle_carga === d.id_detalle_carga,
+            );
             return (
               <div
                 key={d.id_detalle_carga}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50"
+                className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50"
               >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {d.frutas?.nombre} · {d.cantidad_jabas} jabas
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {d.es_reparto
-                      ? `Calidad: ${clasificado} de ${d.cantidad_jabas} jabas`
-                      : 'No requiere calidad'}{' '}
-                    · Con receptor: {asignado} de {d.cantidad_jabas}
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {d.frutas?.nombre} · {d.cantidad_jabas} jabas
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {d.es_reparto
+                        ? `Clasificadas: ${clasificado} de ${d.cantidad_jabas} jabas`
+                        : 'No requiere clasificación por calidad'}{' '}
+                      · Asignadas a receptores: {asignado} de {d.cantidad_jabas}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editable && d.es_reparto && asignado < d.cantidad_jabas && (
+                      <Button
+                        size="sm"
+                        disabled={!listo}
+                        onClick={() => setAsignar(d.id_detalle_carga)}
+                      >
+                        Asignar receptor
+                      </Button>
+                    )}
+                    {editable && !d.es_reparto && asignado !== d.cantidad_jabas && <Button onClick={() => setEditar(d)}>Completar receptor</Button>}
+                    {editable && !listo && <span className="w-full text-xs text-amber-700 dark:text-amber-400">Completa la clasificación antes de asignar receptores.</span>}
+                    {listo && asignado === d.cantidad_jabas && (
+                      <span className="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400">
+                        <CheckCircle size={16} /> Completo
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {editable && d.es_reparto && asignado < d.cantidad_jabas && (
-                    <Button
-                      size="sm"
-                      disabled={!listo}
-                      onClick={() => setAsignar(d.id_detalle_carga)}
-                    >
-                      Asignar receptor
-                    </Button>
-                  )}
-                  {editable && !d.es_reparto && asignado !== d.cantidad_jabas && <Button onClick={() => setEditar(d)}>Completar receptor</Button>}
-                  {editable && !listo && <span className="w-full text-xs text-amber-700 dark:text-amber-400">La clasificación debe estar completa antes de asignar receptores.</span>}
-                  {listo && asignado === d.cantidad_jabas && (
-                    <span className="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400">
-                      <CheckCircle size={16} /> Completo
-                    </span>
-                  )}
-                </div>
+                {destinosDelProducto.length > 0 && (
+                  <div className="mt-3 space-y-2 border-t border-gray-200 pt-3 dark:border-gray-700">
+                    {destinosDelProducto.map((item) => {
+                      const recibidasItem = item.entregas
+                        .filter((entrega) => entrega.estado_entrega !== 'pendiente')
+                        .reduce((sum, entrega) => sum + entrega.cantidad_entregada, 0);
+                      const resueltasItem = (item.resoluciones_reparto || [])
+                        .reduce((sum, resolucion) => sum + resolucion.cantidad, 0);
+                      const pendienteItem = saldoDestino(item);
+                      const entregasActivas = item.entregas.filter((entrega) => entrega.estado_entrega !== 'pendiente');
+                      return (
+                      <div key={item.id_item_reparto} className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            <MapPin size={15} aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                              {item.clientes?.nombres || 'Receptor sin asignar'} · Puesto {item.puestos?.codigo_puesto || 'sin asignar'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {item.cantidad_asignada} jabas asignadas
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-2 space-y-1.5 pl-10">
+                          {item.guias_operativas.map((g) => {
+                            const calidadesGuia = g.cobertura?.calidades?.length
+                              ? g.cobertura.calidades
+                              : item.calidadesAsignadas;
+                            return (
+                              <div key={g.id_guia} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md bg-gray-50 px-2.5 py-2 dark:bg-gray-800/70">
+                                <Link className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-300" href={`/dashboard/guias-operativas/${g.id_guia}`}>
+                                  <FileText size={15} aria-hidden="true" />
+                                  Guía {g.numero_guia}
+                                </Link>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium capitalize text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                  {g.estado}
+                                </span>
+                                {calidadesGuia.length > 0 ? (
+                                  <ul className="flex flex-wrap gap-1">
+                                    {calidadesGuia.map((calidad, index) => (
+                                      <li key={`${calidad.nombre}-${index}`} className="rounded-md bg-white px-2 py-1 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                                        {calidad.nombre} · {calidad.cantidad} jabas
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">Sin desglose por calidad</span>
+                                )}
+                                {!g.cobertura && <span className="text-xs text-amber-700 dark:text-amber-400">Histórica{saldoDestino(item) === 0 ? ' · destino completo' : ' · sin cobertura vigente'}</span>}
+                                {['en_transito','repartiendo'].includes(op.estado) && !['anulada','reemplazada'].includes(g.estado) && <button type="button" disabled={busy} title="Anular guía" aria-label={`Anular guía ${g.numero_guia}`} className="ml-auto rounded-md p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50" onClick={() => { if (window.confirm('¿Anular esta guía? Solo es posible si aún no tiene entregas.')) void ejecutar(`guias-operativas/${g.id_guia}`, 'DELETE'); }}><Trash2 size={15}/></button>}
+                              </div>
+                            );
+                          })}
+                          {item.guias_operativas.length === 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {['en_transito', 'repartiendo'].includes(op.estado)
+                                ? 'Guía pendiente de emisión.'
+                                : 'La guía se emitirá al confirmar la salida.'}
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Recibidas: {recibidasItem}
+                            {resueltasItem > 0 && ` · Resueltas: ${resueltasItem}`}
+                            {` · Pendientes: ${pendienteItem}`}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {editable && item.esReparto && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busy}
+                                onClick={() => quitarDestino(item.id_item_reparto)}
+                              >
+                                Quitar destino
+                              </Button>
+                            )}
+                            {['en_transito', 'repartiendo'].includes(op.estado) && pendienteItem > 0 && (
+                              <>
+                                {op.estado === 'repartiendo' && <Button size="sm" variant="outline" disabled={busy} onClick={() => setResolver(item)}>
+                                  Resolver faltante
+                                </Button>}
+                                <Button
+                                  size="sm"
+                                  disabled={!guiaVigente(item) || busy || (op.estado === 'en_transito' && (faltanGuias || !op.resumen.preparada))}
+                                  onClick={() => setEntregar(item)}
+                                >
+                                  Registrar recepción
+                                </Button>
+                              </>
+                            )}
+                            {pendienteItem === 0 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+                                <CheckCircle size={14} /> Completo
+                              </span>
+                            )}
+                            {op.estado === 'en_transito' && pendienteItem > 0 && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Al emitir la guía o guardar la recepción, la carga pasará a Entregando
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {entregasActivas.length > 0 && (
+                          <details className="mt-2 pl-10 text-xs text-gray-500 dark:text-gray-400">
+                            <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-200">
+                              Ver {entregasActivas.length} recepción{entregasActivas.length === 1 ? '' : 'es'}
+                            </summary>
+                            <ul className="mt-2 space-y-1">
+                              {entregasActivas.map((entrega) => (
+                                <li key={entrega.id_entrega}>
+                                  {entrega.fecha_entrega.slice(0, 10).split('-').reverse().join('/')} · {entrega.cantidad_entregada} recibidas · {entrega.cantidad_rechazada || 0} rechazadas
+                                  {entrega.nombre_recibe ? ` · Recibió: ${entrega.nombre_recibe}` : ''}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -346,14 +411,16 @@ export default function OperacionDetallePage() {
         {preparando && (
           <div className="mt-5 border-t border-gray-100 pt-5 dark:border-gray-800">
             {op.flujo.pendientes.length > 0 && (
-              <div className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                <p className="font-semibold">Pendientes</p>
+              <details className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                <summary className="cursor-pointer font-semibold">
+                  Ver lo que falta ({op.flujo.pendientes.length})
+                </summary>
                 <ul className="mt-2 list-inside list-disc space-y-1">
                   {op.flujo.pendientes.map((p) => (
                     <li key={p}>{p}</li>
                   ))}
                 </ul>
-              </div>
+              </details>
             )}
             <Button
               disabled={!op.resumen.preparada || op.estado !== 'en_curso' || busy}
@@ -363,168 +430,34 @@ export default function OperacionDetallePage() {
             </Button>
           </div>
         )}
-      </section>
-      <section id="guias" className={card}>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <FileText size={20} /> 2. Guías
-        </h2>
-        {['en_transito', 'repartiendo'].includes(op.estado) && faltanGuias && <Button className="mt-3" disabled={busy || !op.resumen.preparada} onClick={emitirGuias}>Emitir pendientes</Button>}
-        <div className="mt-4 space-y-3">
-          {guias.map(g => <article key={g.id_guia} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-            <div className="min-w-0 space-y-2">
-              <Link className={link} href={`/dashboard/guias-operativas/${g.id_guia}`}>Guía {g.numero_guia} · {g.cliente} · {g.estado}</Link>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{g.producto} · Puesto {g.puesto || 'sin asignar'}</p>
-              {g.calidades.length ? (
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Calidades incluidas</p>
-                  <ul className="mt-1 flex flex-wrap gap-2">
-                    {g.calidades.map((calidad, index) => (
-                      <li key={`${calidad.nombre}-${index}`} className="rounded-md bg-gray-100 px-2.5 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        {calidad.nombre}: {calidad.cantidad} jabas
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <p className="text-xs text-gray-500 dark:text-gray-400">Sin desglose de calidades asociado.</p>
-              )}
-              {!g.cobertura && <p className="text-xs text-amber-700 dark:text-amber-400">{g.saldoPendiente === 0 ? 'Documento histórico conservado · destino completo' : 'Guía histórica sin cobertura para el saldo pendiente'}</p>}
+        {op.estado === 'repartiendo' && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {op.resumen.itemsResueltos} de {op.resumen.totalItems} destinos completos
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {op.resumen.saldoEntrega} jabas pendientes
+              </p>
             </div>
-            {['en_transito','repartiendo'].includes(op.estado) && !['anulada','reemplazada'].includes(g.estado) && <button type="button" disabled={busy} title="Anular guía" aria-label={`Anular guía ${g.numero_guia}`} className="rounded-lg bg-red-50 p-2 text-red-600" onClick={() => { if (window.confirm('¿Anular esta guía? Solo es posible si aún no tiene entregas.')) void ejecutar(`guias-operativas/${g.id_guia}`, 'DELETE'); }}><Trash2 size={16}/></button>}
-          </article>)}
-          {!guias.length && (
-            <p className="text-sm text-gray-500">
-              Confirma la salida para emitir las guías.
-            </p>
-          )}
-        </div>
-      </section>
-      <section id="entregar" className={card}>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <Truck size={20} /> 3. Entregas
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          {op.estado === 'repartiendo' ? 'Registra lo recibido en cada destino.' : 'Emite las guías e inicia el reparto para entregar.'}
-        </p>
-        <div className="mt-4 space-y-3">
-          {destinos.map((item) => (
-            <div
-              key={item.id_item_reparto}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700"
-            >
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {item.clientes?.nombres} · Puesto{' '}
-                  {item.puestos?.codigo_puesto}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  {item.producto} · {item.cantidad_asignada} asignadas ·{' '}
-                  {saldoDestino(item)} pendientes
-                </p>
-              </div>
-              {editable && item.esReparto && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => quitarDestino(item.id_item_reparto)}
-                >
-                  Quitar
-                </Button>
-              )}
-              {op.estado === 'repartiendo' && saldoDestino(item) > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => setResolver(item)}>Resolver saldo</Button>}
-              {saldoDestino(item) > 0 ? (
-                <Button
-                  disabled={op.estado !== 'repartiendo' || !guiaVigente(item) || busy}
-                  onClick={() => setEntregar(item)}
-                >
-                  Registrar entrega
-                </Button>
-              ) : (
-                <span className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-                  <CheckCircle size={16} /> Entrega completa
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-      <section id="entregas" className={card}>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Entregas registradas
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          {op.resumen.itemsResueltos} de {op.resumen.totalItems} destinos completados.
-        </p>
-        {!entregas.length ? (
-          <p className="mt-4 text-sm text-gray-500">
-            Las entregas aparecerán aquí después de registrarlas.
-          </p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-gray-500">
-                <tr>
-                  {[
-                    'Receptor',
-                    'Fecha',
-                    'Recibidas',
-                    'Rechazadas',
-                    'Recibido por',
-                    'Estado',
-                  ].map((h) => (
-                    <th key={h} className="whitespace-nowrap p-3 font-medium">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-gray-800 dark:divide-gray-800 dark:text-gray-200">
-                {entregas.map((e) => (
-                  <tr key={e.id_entrega}>
-                    <td className="p-3">
-                      {e.cliente}
-                      <span className="block text-xs text-gray-500">
-                        {e.producto}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {e.fecha_entrega
-                        .slice(0, 10)
-                        .split('-')
-                        .reverse()
-                        .join('/')}
-                    </td>
-                    <td className="p-3">{e.cantidad_entregada}</td>
-                    <td className="p-3">{e.cantidad_rechazada || 0}</td>
-                    <td className="p-3">
-                      {e.nombre_recibe || 'Sin registrar'}
-                    </td>
-                    <td className="p-3">
-                      {(
-                        {
-                          entregado_total: 'Completa',
-                          entregado_parcial: 'Parcial',
-                          rechazado: 'Rechazada',
-                          pendiente: 'Pendiente',
-                          observado: 'Observada',
-                        } as Record<string, string>
-                      )[e.estado_entrega] || e.estado_entrega}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Button disabled={busy || !op.resumen.conciliada} onClick={cerrar}>
+              Finalizar carga
+            </Button>
           </div>
         )}
       </section>
-      <section id="cierre" className={card}>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">4. Cierre</h2>
-        <p className="my-3 text-sm text-gray-500">{op.resumen.itemsResueltos}/{op.resumen.totalItems} destinos resueltos · {op.resumen.saldoEntrega} jabas pendientes · {op.resumen.jabasSinAsignar} sin asignar</p>
-        {op.estado === 'repartiendo' && <Button disabled={busy || !op.resumen.conciliada} onClick={cerrar}>Cerrar operación</Button>}
-        {op.estado === 'completado' && <p className="text-sm text-green-700">Operación completada</p>}
-      </section>
       </>}
+      <ConfirmDialog
+        isOpen={confirmarFinalizacion}
+        onClose={() => { if (!busy) setConfirmarFinalizacion(false); }}
+        onConfirm={() => avanzar('completado')}
+        title="Finalizar entregas"
+        message={`¿Finalizar las entregas de la carga #${id}? La operación quedará completada y disponible solo para consulta.`}
+        confirmText="Finalizar entregas"
+        cancelText="Cancelar"
+        variant="success"
+        icon={<CheckCircle size={24} />}
+      />
       {confirmar && (
         <Modal
           isOpen

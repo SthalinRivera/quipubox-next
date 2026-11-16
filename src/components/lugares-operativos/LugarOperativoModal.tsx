@@ -10,7 +10,7 @@ import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import Select from '@/components/form/Select';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
-import { useUbicaciones } from '@/hooks/useUbicaciones';
+import DistritoSelector from '@/components/form/DistritoSelector';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';
 import { TipoLugar, TIPOS_LUGAR } from '@/types/enums';
@@ -32,11 +32,11 @@ interface LugarOperativoModalProps {
     onOpenChange: (open: boolean) => void;
     editingMercado?: LugarOperativo | null;
     onSaved: () => void;
+    initialUbigeo?: string;
 }
 
-export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSaved }: LugarOperativoModalProps) {
+export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSaved, initialUbigeo = '' }: LugarOperativoModalProps) {
     const { create, update } = useLugarOperativo();
-    const { ubicaciones, fetchAll: fetchUbicaciones } = useUbicaciones();
     const toast = useToast();
     const user = useAuthStore((s) => s.user);
 
@@ -48,7 +48,7 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
     } = useForm<LugarOperativoFormData>({
         resolver: zodResolver(lugarOperativoSchema) as any,
         defaultValues: {
-            id_ubigeo: '',
+            id_ubigeo: editingMercado?.id_ubigeo || initialUbigeo,
             nombre: '',
             direccion_referencia: '',
             observaciones: '',
@@ -57,10 +57,6 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
         },
         mode: 'onChange',
     });
-
-    useEffect(() => {
-        if (open) fetchUbicaciones();
-    }, [open, fetchUbicaciones]);
 
     useEffect(() => {
         if (open) {
@@ -74,15 +70,10 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                     estado: editingMercado.estado,
                 });
             } else {
-                reset({ id_ubigeo: '', nombre: '', direccion_referencia: '', observaciones: '', tipo_lugar: TipoLugar.MERCADO, estado: true });
+                reset({ id_ubigeo: initialUbigeo, nombre: '', direccion_referencia: '', observaciones: '', tipo_lugar: TipoLugar.MERCADO, estado: true });
             }
         }
-    }, [open, editingMercado, reset]);
-
-    const sedesOptions = ubicaciones.map(s => ({
-        value: s.id_ubigeo.toString(),
-        label: s.nombre,
-    }));
+    }, [open, editingMercado, initialUbigeo, reset]);
 
     const tipoLugarOptions = TIPOS_LUGAR.map(valor => ({
         value: valor,
@@ -141,11 +132,10 @@ export function LugarOperativoModal({ open, onOpenChange, editingMercado, onSave
                             name="id_ubigeo"
                             control={control}
                             render={({ field }) => (
-                                <Select
-                                    options={sedesOptions}
-                                    placeholder="Seleccionar ubicación"
-                                    value={field.value ? field.value.toString() : ''}
-                                    onChange={(val) => field.onChange(val)}
+                                <DistritoSelector
+                                    value={field.value || ''}
+                                    onChange={field.onChange}
+                                    disabled={isSubmitting}
                                 />
                             )}
                         />

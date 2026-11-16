@@ -2,6 +2,8 @@
 'use client';
 
 import EmpresaLugaresPanel from './EmpresaLugaresPanel';
+import { Modal } from '@/components/ui/modal';
+import { useAuthStore } from '@/stores/authStore';
 import { useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
@@ -24,9 +26,13 @@ import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 export default function LugarOperativoTable() {
     const { lugares, loading, fetchAll, toggleEstado } = useLugarOperativo();
     const toast = useToast();
+    const roles = useAuthStore(state => state.roles);
+    const admin = roles.some(role => ['admin', 'administrador', 'superadmin', 'super_admin'].includes(role.toLowerCase()));
+    const [assignmentOpen, setAssignmentOpen] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [initialUbigeo, setInitialUbigeo] = useState('');
     const [selectedMercado, setSelectedMercado] = useState<LugarOperativo | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ item: LugarOperativo; nuevoEstado: boolean } | null>(null);
@@ -39,7 +45,9 @@ export default function LugarOperativoTable() {
         item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleCreate = () => {
+    const handleCreate = (ubigeo = '') => {
+        setAssignmentOpen(false);
+        setInitialUbigeo(ubigeo);
         setSelectedMercado(null);
         setIsModalOpen(true);
     };
@@ -78,7 +86,6 @@ export default function LugarOperativoTable() {
 
     return (
         <div className="space-y-4">
-            <EmpresaLugaresPanel onSaved={fetchAll} />
             {/* Barra de herramientas */}
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="relative">
@@ -91,13 +98,18 @@ export default function LugarOperativoTable() {
                     />
                     <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 </div>
+                <div className="flex flex-wrap gap-2">
+                {admin && <Button size="sm" variant="outline" onClick={() => setAssignmentOpen(true)}>
+                    Asignar establecimiento existente
+                </Button>}
                 <Button
                     size="sm"
-                    onClick={handleCreate}
+                    onClick={() => handleCreate()}
                     startIcon={<PlusIcon className="h-4 w-4" />}
                 >
                     Nuevo Lugar Operativo
                 </Button>
+                </div>
             </div>
 
             {/* Tabla */}
@@ -165,12 +177,17 @@ export default function LugarOperativoTable() {
                 </div>
             </div>
 
-            <LugarOperativoModal
+            {assignmentOpen && <Modal isOpen={assignmentOpen} onClose={() => setAssignmentOpen(false)} className="max-w-[640px] p-5 lg:p-8">
+                <EmpresaLugaresPanel onSaved={fetchAll} onCreate={handleCreate} />
+            </Modal>}
+
+            {isModalOpen && <LugarOperativoModal
+                initialUbigeo={initialUbigeo}
                 open={isModalOpen}
                 onOpenChange={setIsModalOpen}
                 editingMercado={selectedMercado}
                 onSaved={handleSaved}
-            />
+            />}
 
             <ConfirmDialog
                 isOpen={confirmOpen}
