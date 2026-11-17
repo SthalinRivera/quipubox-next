@@ -1,10 +1,11 @@
 'use client';
 
 import { OperationSkeleton } from '@/components/ui/skeleton/OperationSkeleton';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Truck, ArrowRight, RefreshCw } from 'lucide-react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { usePaginatedResource } from '@/hooks/usePaginatedResource';
+import PaginationControls from '@/components/tables/PaginationControls';
 import { estadoOperacion } from '@/types/flujoOperacion';
 import Button from '@/components/ui/button/Button';
 
@@ -25,33 +26,9 @@ const enlaceSecundario =
   'inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800';
 
 export default function EntregarPage() {
-  const [cargas, setCargas] = useState<Carga[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [buscar, setBuscar] = useState('');
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    try {
-      const data = await fetchWithAuth<Carga[]>(`opciones-flujo/operaciones?proceso=entrega&buscar=${encodeURIComponent(buscar)}`, { signal });
-      if (signal?.aborted) return;
-      setCargas(data);
-      setError('');
-    } catch (e) {
-      if (signal?.aborted) return;
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'No se pudieron cargar las operaciones.',
-      );
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [buscar]);
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => void load(controller.signal), 200);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [load]);
+  const pagination = usePaginatedResource<Carga>('opciones-flujo/operaciones', { proceso: 'entrega', buscar });
+  const { data: cargas, loading, error, reload: load } = pagination;
   return (
     <div className="mx-auto max-w-full space-y-4 pb-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -150,6 +127,7 @@ export default function EntregarPage() {
           )}
         </div>
       )}
+      <PaginationControls {...pagination} />
     </div>
   );
 }

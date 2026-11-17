@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type {
   ReportFilters,
   ReporteCargaPorFecha,
@@ -48,7 +48,7 @@ export const useReportes = () => {
     setLoading(true);
     try {
       const query = buildQuery(filters);
-      return await fetchWithAuth<ReporteCargaPorFecha[]>(`reportes/cargas-por-fecha${query}`);
+      return await fetchAllWithAuth<ReporteCargaPorFecha>(`reportes/cargas-por-fecha${query}`);
     } catch (error) {
       console.error('Error fetching reporte cargas:', error);
       return [];
@@ -61,7 +61,7 @@ export const useReportes = () => {
     setLoading(true);
     try {
       const query = buildQuery(filters);
-      return await fetchWithAuth<ReporteDetalleCarga[]>(`reportes/detalle-carga-por-operacion${query}`);
+      return await fetchAllWithAuth<ReporteDetalleCarga>(`reportes/detalle-carga-por-operacion${query}`);
     } catch (error) {
       console.error('Error fetching reporte detalle carga:', error);
       return [];
@@ -74,7 +74,7 @@ export const useReportes = () => {
     setLoading(true);
     try {
       const query = buildQuery(filters);
-      return await fetchWithAuth<ReporteItemsReparto[]>(`reportes/items-reparto-por-detalle${query}`);
+      return await fetchAllWithAuth<ReporteItemsReparto>(`reportes/items-reparto-por-detalle${query}`);
     } catch (error) {
       console.error('Error fetching reporte items reparto:', error);
       return [];
@@ -178,7 +178,7 @@ export const useReportes = () => {
     setLoading(true);
     try {
       const query = buildQuery(filters);
-      return await fetchWithAuth<ReporteClientesPorUbicacion[]>(`reportes/clientes-por-ubicacion${query}`);
+      return await fetchAllWithAuth<ReporteClientesPorUbicacion>(`reportes/clientes-por-ubicacion${query}`);
     } catch (error) {
       console.error('Error fetching reporte clientes por ubicación:', error);
       return [];
@@ -191,7 +191,7 @@ export const useReportes = () => {
     setLoading(true);
     try {
       const query = buildQuery(filters);
-      return await fetchWithAuth<ReporteClientesPorPuesto[]>(`reportes/clientes-por-puesto${query}`);
+      return await fetchAllWithAuth<ReporteClientesPorPuesto>(`reportes/clientes-por-puesto${query}`);
     } catch (error) {
       console.error('Error fetching reporte clientes por puesto:', error);
       return [];

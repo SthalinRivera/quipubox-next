@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type { DetalleCarga, CreateDetalleCargaDto, DetalleCalidad, CreateDetalleCalidadDto } from '@/types/detalleCarga';
 
 export const useDetallesCarga = (operacionId: number) => {
@@ -9,14 +9,8 @@ export const useDetallesCarga = (operacionId: number) => {
     const fetchDetalles = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>(`operaciones-carga/${operacionId}/detalles`);
-            if (Array.isArray(data)) {
-                setDetalles(data);
-            } else if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
-                setDetalles(data.data);
-            } else {
-                setDetalles([]);
-            }
+            const data = await fetchAllWithAuth<any>(`operaciones-carga/${operacionId}/detalles`);
+            setDetalles(data);
         } catch (error) {
             console.error('Error fetching detalles:', error);
             setDetalles([]);
@@ -48,7 +42,7 @@ export const useDetallesCarga = (operacionId: number) => {
 
     // Calidades
     const fetchCalidades = async (detalleId: number) => {
-        return await fetchWithAuth<DetalleCalidad[]>(`detalle-carga/${detalleId}/calidades`);
+        return await fetchAllWithAuth<DetalleCalidad>(`detalle-carga/${detalleId}/calidades`);
     };
 
     const addCalidad = async (detalleId: number, dto: CreateDetalleCalidadDto) => {

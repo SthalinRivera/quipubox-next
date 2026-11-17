@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type { ModuloAsignado } from '@/types/configuracion';
 
 export const useRolesModulos = () => {
@@ -11,7 +11,7 @@ export const useRolesModulos = () => {
     const fetchByRol = useCallback(async (rolId: number) => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<ModuloAsignado[]>(`roles-modulos/rol/${rolId}`);
+            const data = await fetchAllWithAuth<ModuloAsignado>(`roles-modulos/rol/${rolId}`);
             setModulosAsignados(data);
             return data;
         } finally {

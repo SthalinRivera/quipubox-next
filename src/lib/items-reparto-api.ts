@@ -1,5 +1,5 @@
 // lib/items-reparto-api.ts
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 
 export interface ItemReparto {
     id_item_reparto: number;
@@ -72,7 +72,7 @@ export async function getItemsReparto(params?: {
     if (params?.seccion) query.append('seccion', params.seccion);
 
     const url = `/items-reparto?${query.toString()}`;
-    return fetchWithAuth<ItemReparto[]>(url);
+    return fetchAllWithAuth<ItemReparto>(url);
 }
 
 // Obtener un item por ID
@@ -125,7 +125,7 @@ export async function addDetalleToItem(itemId: number, data: {
 
 // Obtener detalles de un item
 export async function getDetallesByItem(itemId: number) {
-    return fetchWithAuth<ItemRepartoDetalle[]>(`/items-reparto/${itemId}/detalle`);
+    return fetchAllWithAuth<ItemRepartoDetalle>(`/items-reparto/${itemId}/detalle`);
 }
 
 // Actualizar detalle

@@ -1,7 +1,9 @@
 // components/frutas/FrutasTable.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
@@ -21,7 +23,7 @@ import type { Fruta } from '@/types/fruta';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function FrutasTable() {
-    const { frutas, loading, fetchAll, toggleEstado } = useFrutas();
+    const { toggleEstado } = useFrutas();
     const toast = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,9 +32,8 @@ export default function FrutasTable() {
     const [pendingAction, setPendingAction] = useState<{ fruta: Fruta; nuevoEstado: boolean } | null>(null);
 
     // Carga inicial
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<Fruta>('frutas', {});
+    const { data: frutas, loading, error, reload: fetchAll } = pagination;
 
     const handleCreate = () => {
         setSelectedFruta(null);
@@ -135,6 +136,8 @@ export default function FrutasTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <FrutaModal
                 open={isModalOpen}

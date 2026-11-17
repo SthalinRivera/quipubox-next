@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useLugaresOperativosStore } from '@/stores/lugaresOperativosStore';
 import type { LugarOperativo } from '@/types/lugarOperativo';
 
@@ -13,8 +13,8 @@ export const useLugarOperativo = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>('lugares-operativos');
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>('lugares-operativos');
+            const list = data;
             setLugares(list);
             return list;
         } catch (err) {

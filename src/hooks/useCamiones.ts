@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useCamionesStore } from '@/stores/camionesStore';
 import type { Camion } from '@/types/camion';
 
@@ -13,8 +13,8 @@ export const useCamiones = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>('camiones');
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>('camiones');
+            const list = data;
             setCamiones(list);
         } catch (err) {
             setError(err);

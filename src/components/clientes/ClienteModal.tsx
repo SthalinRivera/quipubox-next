@@ -10,7 +10,7 @@ import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { usePuestos } from '@/hooks/usePuestos';
 import { useToast } from '@/hooks/useToast';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { Modal } from '@/components/ui/modal';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
@@ -179,7 +179,7 @@ export function ClienteModal({ open, onOpenChange, editingCliente, onSaved }: Pr
             const cargar = async () => {
                 setCargandoPuestosMercado(true);
                 try {
-                    const data = await fetchWithAuth<Puesto[]>(`puestos/mercado/${selectedMercadoId}`);
+                    const data = await fetchAllWithAuth<Puesto>(`puestos/mercado/${selectedMercadoId}`);
                     setPuestosPorMercado(data);
                 } catch (error) {
                     console.error(error);

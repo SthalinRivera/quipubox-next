@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { usePuestosStore } from '@/stores/puestosStore';
 import type { Puesto } from '@/types/puesto';
 
@@ -13,8 +13,8 @@ export const usePuestos = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>('puestos');
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>('puestos');
+            const list = data;
             setPuestos(list);
             return list;
         } catch (err) {
@@ -28,8 +28,8 @@ export const usePuestos = () => {
     const fetchByMercado = useCallback(async (mercadoId: number) => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>(`puestos/mercado/${mercadoId}`);
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>(`puestos/mercado/${mercadoId}`);
+            const list = data;
             setPuestos(list);
             return list;
         } catch (err) {
@@ -43,8 +43,8 @@ export const usePuestos = () => {
     const fetchByCliente = useCallback(async (clienteId: number) => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>(`clientes/${clienteId}/puestos`);
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>(`clientes/${clienteId}/puestos`);
+            const list = data;
             setPuestos(list);
             return list;
         } catch (err) {

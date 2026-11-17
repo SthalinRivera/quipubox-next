@@ -1,4 +1,7 @@
 'use client';
+import { useCollectionPagination } from '@/hooks/useCollectionPagination';
+import PaginationControls from '@/components/tables/PaginationControls';
+
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Button from '@/components/ui/button/Button';
@@ -158,6 +161,7 @@ export default function CategoriasPage() {
     const [localCats, setLocalCats] = useState<Categoria[] | null>(null);
     const localCatsRef = useRef<Categoria[]>([]);
     const displayedCats = localCats ?? categorias;
+    const pagination = useCollectionPagination(displayedCats);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -268,12 +272,12 @@ export default function CategoriasPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {displayedCats.map((cat, index) => (
-                                        <DragRow key={cat.id_categoria} index={index} moveRow={moveRow} onDrop={handleDrop}>
+                                    {pagination.data.map((cat, pageIndex) => (
+                                        <DragRow key={cat.id_categoria} index={(pagination.page - 1) * pagination.limit + pageIndex} moveRow={moveRow} onDrop={handleDrop}>
                                             <td className="py-3 pl-2 text-gray-400 cursor-grab active:cursor-grabbing">
                                                 <GripVertical className="h-4 w-4" />
                                             </td>
-                                            <td className="py-3 pr-4 text-gray-500">{index}</td>
+                                            <td className="py-3 pr-4 text-gray-500">{(pagination.page - 1) * pagination.limit + pageIndex}</td>
                                             <td className="py-3 px-4 font-medium text-gray-800 dark:text-white/90">{cat.nombre}</td>
                                             <td className="py-3 px-4 text-gray-500 dark:text-gray-400">{cat.descripcion || '—'}</td>
                                             <td className="py-3 px-4">
@@ -304,6 +308,7 @@ export default function CategoriasPage() {
                                     ))}
                                 </tbody>
                             </table>
+                            <PaginationControls {...pagination} loading={loading} />
                         </div>
                     )}
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useRolesStore } from '@/stores/rolesStore';
 import type { Rol } from '@/types/rol';
 
@@ -13,7 +13,7 @@ export const useRoles = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Rol[]>('roles-usuarios');
+            const data = await fetchAllWithAuth<Rol>('roles-usuarios');
             setRoles(data);
         } catch (err) {
             setError(err);

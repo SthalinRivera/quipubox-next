@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useFrutasStore } from '@/stores/frutasStore';
 import type { Fruta } from '@/types/fruta';
 
@@ -13,7 +13,7 @@ export const useFrutas = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Fruta[]>('frutas');
+            const data = await fetchAllWithAuth<Fruta>('frutas');
             setFrutas(data);
         } catch (err) {
             setError(err);

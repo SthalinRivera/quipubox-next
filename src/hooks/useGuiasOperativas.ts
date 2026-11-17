@@ -19,7 +19,7 @@ export const useGuiasOperativas = () => {
     const [guias, setGuias] = useState<GuiaOperativa[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20 });
+    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10 });
     const [resumen, setResumen] = useState<Record<string, number>>({});
     const requestId = useRef(0);
     const currentQuery = useRef<GuiasQuery>({});
@@ -34,7 +34,7 @@ export const useGuiasOperativas = () => {
         try {
             const query = new URLSearchParams({
                 page: String(params.page ?? 1),
-                limit: String(params.limit ?? 20),
+                limit: String(params.limit ?? 10),
             });
             if (params.estado) query.set('estado', params.estado);
             if (params.fecha_emision) query.set('fecha_emision', params.fecha_emision);
@@ -65,7 +65,7 @@ export const useGuiasOperativas = () => {
             setError(err instanceof Error ? err.message : 'No se pudieron cargar las guías.');
             setGuias([]);
             setResumen({});
-            setPagination({ total: 0, page: 1, limit: params.limit ?? 20 });
+            setPagination({ total: 0, page: 1, limit: params.limit ?? 10 });
         } finally {
             if (request === requestId.current) setLoading(false);
         }

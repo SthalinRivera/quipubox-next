@@ -1,4 +1,7 @@
 'use client';
+import { useCollectionPagination } from '@/hooks/useCollectionPagination';
+import PaginationControls from '@/components/tables/PaginationControls';
+
 
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
@@ -60,6 +63,7 @@ export default function IncidenciasTable() {
         return counts;
     }, [incidencias]);
 
+    const pagination = useCollectionPagination(incidencias, `${filtroEstado}|${filtroFecha}`);
     const hasFilters = filtroEstado || filtroFecha;
 
     const clearFilters = () => {
@@ -198,7 +202,7 @@ export default function IncidenciasTable() {
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            incidencias.map((inc) => {
+                                            pagination.data.map((inc) => {
                                                 const evidencias = inc.evidencias || [];
                                                 const tieneEvidencias = evidencias.length > 0;
 
@@ -292,6 +296,7 @@ export default function IncidenciasTable() {
                                         )}
                                     </TableBody>
                                 </Table>
+                                    <PaginationControls {...pagination} loading={loading} />
                             </div>
                         </div>
                     </div>

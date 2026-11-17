@@ -1,9 +1,12 @@
 'use client';
+import { useCollectionPagination } from '@/hooks/useCollectionPagination';
+import PaginationControls from '@/components/tables/PaginationControls';
+
 
 import { useEffect, useState } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { useToast } from '@/hooks/useToast';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { TableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
 import { Activity, Filter, ChevronDown, ChevronUp, Clock, Hash, User, FileText, ArrowRight, Minus } from 'lucide-react';
 
@@ -33,7 +36,7 @@ export default function LogsActividadPage() {
             const params = new URLSearchParams();
             if (filtroTabla) params.append('tabla', filtroTabla);
             const url = `logs-actividad?${params.toString()}`;
-            const data = await fetchWithAuth<LogActividad[]>(url);
+            const data = await fetchAllWithAuth<LogActividad>(url);
             setLogs(data || []);
         } catch (err: any) {
             toast.error(err.message || 'Error al cargar logs');
@@ -72,6 +75,8 @@ export default function LogsActividadPage() {
         if (!filtroAccion) return true;
         return log.accion.toLowerCase().includes(filtroAccion.toLowerCase());
     });
+
+    const pagination = useCollectionPagination(filtered, `${filtroTabla}|${filtroAccion}`);
 
     const formatJson = (obj: any) => {
         if (!obj) return '—';
@@ -203,7 +208,7 @@ export default function LogsActividadPage() {
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((log) => (
+                                pagination.data.map((log) => (
                                     <tr
                                         key={log.id_log}
                                         className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors duration-150 group"
@@ -271,6 +276,7 @@ export default function LogsActividadPage() {
                             )}
                         </tbody>
                     </table>
+                    <PaginationControls {...pagination} loading={loading} />
                 </div>
 
                 {/* Expanded Detail */}

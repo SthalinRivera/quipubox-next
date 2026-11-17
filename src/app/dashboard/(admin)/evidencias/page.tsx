@@ -1,9 +1,12 @@
 'use client';
+import { useCollectionPagination } from '@/hooks/useCollectionPagination';
+import PaginationControls from '@/components/tables/PaginationControls';
+
 
 import { useEffect, useState, useMemo } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { useToast } from '@/hooks/useToast';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { Image, FileText, Trash2, Eye, Upload, Search, X, AlertTriangle, Package, BookOpen, FolderOpen, Clock } from 'lucide-react';
 import { TableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
 
@@ -28,7 +31,7 @@ export default function EvidenciasPage() {
     const fetchEvidencias = async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Evidencia[]>('evidencias');
+            const data = await fetchAllWithAuth<Evidencia>('evidencias');
             setEvidencias(data || []);
         } catch (err: any) {
             toast.error(err.message || 'Error al cargar evidencias');
@@ -95,6 +98,8 @@ export default function EvidenciasPage() {
             ev.usuarios?.apellidos?.toLowerCase().includes(term)
         );
     });
+
+    const pagination = useCollectionPagination(filtered, filtro);
 
     const getIcon = (tipo: string | null) => {
         if (tipo === 'image') return <Image className="w-3.5 h-3.5" />;
@@ -274,7 +279,7 @@ export default function EvidenciasPage() {
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((ev) => (
+                                pagination.data.map((ev) => (
                                     <tr
                                         key={ev.id_evidencia}
                                         className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors duration-150 group"
@@ -370,6 +375,7 @@ export default function EvidenciasPage() {
                             )}
                         </tbody>
                     </table>
+                    <PaginationControls {...pagination} loading={loading} />
                 </div>
 
                 {/* Footer */}

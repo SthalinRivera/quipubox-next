@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useEmpresasStore } from '@/stores/empresasStore';
 import type { Empresa } from '@/types/empresa';
 
@@ -13,16 +13,8 @@ export const useEmpresas = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await fetchWithAuth<any>('empresas');
-            let empresasArray: Empresa[] = [];
-            if (Array.isArray(response)) {
-                empresasArray = response;
-            } else if (response?.empresas && Array.isArray(response.empresas)) {
-                empresasArray = response.empresas;
-            } else if (response?.data && Array.isArray(response.data)) {
-                empresasArray = response.data;
-            }
-            setEmpresas(empresasArray);
+            const response = await fetchAllWithAuth<any>('empresas');
+            setEmpresas(response);
         } catch (err) {
             setError(err);
             setEmpresas([]);

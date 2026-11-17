@@ -2,6 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePaginatedResource } from '@/hooks/usePaginatedResource';
+import PaginationControls from '@/components/tables/PaginationControls';
 import { usePuestos } from '@/hooks/usePuestos';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { useToast } from '@/hooks/useToast';
@@ -25,7 +27,7 @@ import { Play, Power } from 'lucide-react';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function PuestosTable() {
-  const { puestos, loading, fetchAll, toggleEstado } = usePuestos();
+  const { toggleEstado } = usePuestos();
   const { lugares, fetchAll: fetchMercados } = useLugarOperativo();
   const toast = useToast();
 
@@ -36,18 +38,12 @@ export default function PuestosTable() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ puesto: Puesto; nuevoEstado: boolean } | null>(null);
 
-  useEffect(() => {
-    fetchAll();
-    fetchMercados();
-  }, []);
-
-  const filteredPuestos = (puestos || []).filter((p) => {
-    if (search && !p.codigo_puesto.toLowerCase().includes(search.toLowerCase())) return false;
-    if (mercadoId && p.id_lugar !== Number(mercadoId)) return false;
-    if (tipoLugar && (p.lugares_operativos as any)?.tipo_lugar !== tipoLugar) return false;
-    return true;
+  const pagination = usePaginatedResource<Puesto>('puestos', {
+    buscar: search || undefined, id_lugar: mercadoId || undefined, tipo_lugar: tipoLugar || undefined,
   });
-
+  const { data: puestos, loading } = pagination;
+  useEffect(() => { void fetchMercados(); }, [fetchMercados]);
+  const filteredPuestos = puestos;
   const handleCreate = () => {
     setSelectedPuesto(null);
     setIsModalOpen(true);
@@ -214,6 +210,7 @@ export default function PuestosTable() {
         </div>
       </div>
 
+      <PaginationControls {...pagination} />
       <PuestoModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}

@@ -1,4 +1,7 @@
 'use client';
+import { useCollectionPagination } from '@/hooks/useCollectionPagination';
+import PaginationControls from '@/components/tables/PaginationControls';
+
 
 import { useEffect } from 'react';
 import { useClientesPuestos } from '@/hooks/useClientesPuestos';
@@ -17,6 +20,8 @@ export default function ClientesPuestosTable() {
     useEffect(() => {
         fetchAll();
     }, [fetchAll]);
+
+    const pagination = useCollectionPagination(asignaciones);
 
     if (loading) {
         return (
@@ -66,7 +71,7 @@ export default function ClientesPuestosTable() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            asignaciones.map((asig) => (
+                            pagination.data.map((asig) => (
                                 <TableRow key={asig.id_cliente_puesto}>
                                     <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                                         {asig.id_cliente_puesto}
@@ -99,6 +104,7 @@ export default function ClientesPuestosTable() {
                         )}
                     </TableBody>
                 </Table>
+                <PaginationControls {...pagination} loading={loading} />
             </div>
         </div>
     );

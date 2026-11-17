@@ -2,6 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { useUsuarios } from '@/hooks/useUsuarios';
 import { useRoles } from '@/hooks/useRoles';
 import { useToast } from '@/hooks/useToast';
@@ -22,7 +24,7 @@ import type { Usuario } from '@/types/usuario';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function UsuariosTable() {
-    const { usuarios, loading, error, fetchAll, toggleEstado } = useUsuarios();
+    const { toggleEstado } = useUsuarios();
     const { roles, loading: rolesLoading, fetchAll: fetchRoles } = useRoles();
     const toast = useToast();
 
@@ -31,10 +33,12 @@ export default function UsuariosTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ user: Usuario; tipo: 'softDelete' | 'acceso' } | null>(null);
 
+    const pagination = usePaginatedResource<Usuario>('usuarios', {});
+    const { data: usuarios, loading, error, reload: fetchAll } = pagination;
     useEffect(() => {
-        void fetchAll().catch(() => {});
+
         void fetchRoles();
-    }, [fetchAll, fetchRoles]);
+    }, [fetchRoles]);
 
     const handleEdit = (user: Usuario) => {
         setSelectedUser(user);
@@ -85,7 +89,7 @@ export default function UsuariosTable() {
         <div className="space-y-4">
             {error && (
                 <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                    <p>No se pudieron cargar los usuarios: {error instanceof Error ? error.message : 'Error al consultar el servidor.'}</p>
+                    <p>No se pudieron cargar los usuarios: {error}</p>
                     <Button variant="outline" disabled={loading} onClick={() => { void fetchAll().catch(() => {}); }}>
                         Reintentar
                     </Button>
@@ -170,6 +174,8 @@ export default function UsuariosTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <UsuarioModal
                 isOpen={modalOpen}

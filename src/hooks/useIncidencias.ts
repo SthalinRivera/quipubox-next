@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useIncidenciasStore } from '@/stores/incidenciasStore';
 import type { Incidencia } from '@/types/incidencia';
 
@@ -30,7 +30,7 @@ export const useIncidencias = () => {
             if (params?.fecha_hasta) query.append('fecha_hasta', params.fecha_hasta);
             if (params?.tipo_incidencia) query.append('tipo_incidencia', params.tipo_incidencia);
             if (query.toString()) url += `?${query}`;
-            const data = await fetchWithAuth<Incidencia[]>(url);
+            const data = await fetchAllWithAuth<Incidencia>(url);
             setIncidencias(data);
         } catch (err) {
             setError(err);

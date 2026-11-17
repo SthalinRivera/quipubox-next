@@ -27,7 +27,7 @@ import { useUbicaciones } from '@/hooks/useUbicaciones';
 import { useLugarOperativo } from '@/hooks/useLugarOperativo';
 import { usePuestos } from '@/hooks/usePuestos';
 import { useToast } from '@/hooks/useToast';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
@@ -98,8 +98,8 @@ export default function ClienteDetailPage() {
         try {
             const [clienteData, sedesData, puestosData] = await Promise.all([
                 fetchWithAuth<Cliente>(`clientes/${clienteId}`),
-                fetchWithAuth<ClienteSede[]>(`clientes/${clienteId}/ubicaciones`),
-                fetchWithAuth<ClientePuesto[]>(`clientes/${clienteId}/puestos`),
+                fetchAllWithAuth<ClienteSede>(`clientes/${clienteId}/ubicaciones`),
+                fetchAllWithAuth<ClientePuesto>(`clientes/${clienteId}/puestos`),
             ]);
             setCliente(clienteData);
             setSedesAsignadas(sedesData);
@@ -198,7 +198,7 @@ export default function ClienteDetailPage() {
         const fetchPuestos = async () => {
             setCargandoPuestosMercado(true);
             try {
-                const data = await fetchWithAuth<any[]>(`puestos/mercado/${selectedMercadoId}`);
+                const data = await fetchAllWithAuth<any>(`puestos/mercado/${selectedMercadoId}`);
                 setPuestosDelMercado(data);
             } catch (err) {
                 console.error(err);

@@ -1,4 +1,7 @@
 'use client';
+import { useCollectionPagination } from '@/hooks/useCollectionPagination';
+import PaginationControls from '@/components/tables/PaginationControls';
+
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Button from '@/components/ui/button/Button';
@@ -240,6 +243,8 @@ export default function ModulosPage() {
         return Array.from(map.values()).filter(e => e.items.length > 0);
     }, [localModulos, categorias, filterCategoria]);
 
+    const pagination = useCollectionPagination(modulosPorCategoria.flatMap(group => group.items), String(filterCategoria));
+    const visibleIds = new Set(pagination.data.map(mod => mod.id_modulo));
     const totalFiltrados = modulosPorCategoria.reduce((sum, e) => sum + e.items.length, 0);
 
     return (
@@ -291,7 +296,7 @@ export default function ModulosPage() {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {modulosPorCategoria.map(({ categoria, items }) => {
+                    {modulosPorCategoria.filter(group => group.items.some(mod => visibleIds.has(mod.id_modulo))).map(({ categoria, items }) => {
                         const isExpanded = expandedCats[categoria.id_categoria] ?? true;
                         const activos = items.filter(m => m.estado).length;
                         const inactivos = items.length - activos;
@@ -330,7 +335,7 @@ export default function ModulosPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {items.map((mod, index) => (
+                                                {items.map((mod, index) => visibleIds.has(mod.id_modulo) ? (
                                                     <DragModuleRow
                                                         key={mod.id_modulo}
                                                         categoryId={Number(categoria.id_categoria)}
@@ -370,7 +375,7 @@ export default function ModulosPage() {
                                                             </div>
                                                         </td>
                                                     </DragModuleRow>
-                                                ))}
+                                                ) : null)}
                                             </tbody>
                                         </table>
                                     </div>
@@ -382,6 +387,7 @@ export default function ModulosPage() {
             )}
 
             {/* Modal */}
+            <PaginationControls {...pagination} loading={loading} />
             <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} className="max-w-[500px] p-5">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <h4 className="text-lg font-medium text-gray-800 dark:text-white/90">

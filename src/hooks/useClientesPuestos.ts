@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchAllWithAuth } from '@/lib/api-client';
 import type { ClientePuesto } from '@/types/clientePuesto';
 
 export const useClientesPuestos = () => {
@@ -9,7 +9,7 @@ export const useClientesPuestos = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<ClientePuesto[]>('clientes/asignaciones-puestos');
+            const data = await fetchAllWithAuth<ClientePuesto>('clientes/asignaciones-puestos');
             setAsignaciones(data);
         } catch (error) {
             console.error(error);

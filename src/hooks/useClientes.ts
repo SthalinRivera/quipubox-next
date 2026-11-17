@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useClientesStore } from '@/stores/clientesStore';
 import type { Cliente, ClientePuesto } from '@/types/cliente';
 
@@ -15,7 +15,7 @@ export const useClientes = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Cliente[]>('clientes');
+            const data = await fetchAllWithAuth<Cliente>('clientes');
             setClientes(data);
         } catch (err) { setError(err); }
         finally { setLoading(false); }
@@ -41,7 +41,7 @@ export const useClientes = () => {
 
     // ---------- Sedes ----------
     const fetchUbicacionesByCliente = useCallback(async (clienteId: number) => {
-        const data = await fetchWithAuth<any[]>(`clientes/${clienteId}/ubicaciones`);
+        const data = await fetchAllWithAuth<any>(`clientes/${clienteId}/ubicaciones`);
         return data;
     }, []);
 
@@ -58,7 +58,7 @@ export const useClientes = () => {
 
     // ---------- Puestos ----------
     const fetchPuestosByCliente = useCallback(async (clienteId: number) => {
-        const data = await fetchWithAuth<ClientePuesto[]>(`clientes/${clienteId}/puestos`);
+        const data = await fetchAllWithAuth<ClientePuesto>(`clientes/${clienteId}/puestos`);
         return data;
     }, []);
 

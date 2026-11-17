@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useToast } from "@/hooks/useToast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -19,16 +21,15 @@ import type { Empresa } from "@/types/empresa";
 import { TableSkeleton } from "../ui/skeleton/TableSkeleton";
 
 export default function EmpresasTable() {
-    const { empresas, loading, fetchAll, toggleEstado } = useEmpresas();
+    const { toggleEstado } = useEmpresas();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEmpresa, setSelectedEmpresa] = useState<Empresa | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ empresa: Empresa; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<Empresa>('empresas', {});
+    const { data: empresas, loading, error, reload: fetchAll } = pagination;
 
     const handleEdit = (empresa: Empresa) => {
         setSelectedEmpresa(empresa);
@@ -163,6 +164,8 @@ export default function EmpresasTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <EmpresaModal
                 isOpen={modalOpen}

@@ -16,7 +16,7 @@ export const useOperacionesCarga = () => {
             if (params?.estado) query.append('estado', params.estado);
             if (params?.fecha) query.append('fecha', params.fecha);
             query.set('page', String(params?.page || 1));
-            query.set('limit', '20');
+            query.set('limit', '10');
             const url = `operaciones-carga/resumen-repartos${query.toString() ? `?${query}` : ''}`;
             const response = await fetchWithAuth<{ data: OperacionCarga[]; total: number }>(url);
             setOperaciones(response.data); setTotal(response.total); setError('');

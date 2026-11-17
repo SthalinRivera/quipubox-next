@@ -1,7 +1,7 @@
 // hooks/useUsuarios.ts
 'use client';
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useUsuariosStore } from '@/stores/usuariosStore';
 import type { Usuario } from '@/types/usuario';
 
@@ -14,7 +14,7 @@ export const useUsuarios = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchWithAuth<Usuario[]>('usuarios');
+            const data = await fetchAllWithAuth<Usuario>('usuarios');
             setUsuarios(data);
         } catch (err) {
             setError(err);

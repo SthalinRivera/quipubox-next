@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type { Categoria } from '@/types/configuracion';
 
 export const useCategorias = () => {
@@ -11,7 +11,7 @@ export const useCategorias = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Categoria[]>('categorias');
+            const data = await fetchAllWithAuth<Categoria>('categorias');
             setCategorias(data);
         } finally {
             setLoading(false);

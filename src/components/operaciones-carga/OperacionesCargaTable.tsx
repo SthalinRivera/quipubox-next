@@ -24,7 +24,7 @@ import Button from "@/components/ui/button/Button";
 import { Pencil, Plus } from "lucide-react";
 import { OperacionCargaModal } from "./OperacionCargaModal";
 import type { OperacionCarga } from "@/types/operacionCarga";
-import { fetchWithAuth } from "@/lib/api-client";
+import { fetchAllWithAuth } from "@/lib/api-client";
 import DatePicker from "@/components/ui/date-picker/DatePicker";
 import { useRouter } from "next/navigation";
 
@@ -58,7 +58,7 @@ export default function OperacionesCargaTable() {
     const cargarConteos = useCallback(async () => {
         setLoadingConteos(true);
         try {
-            const todasLasOperaciones = await fetchWithAuth<OperacionCarga[]>("operaciones-carga");
+            const todasLasOperaciones = await fetchAllWithAuth<OperacionCarga>("operaciones-carga");
             const conteos: Record<string, number> = {};
             ESTADOS_OPERACION.forEach((estado) => {
                 conteos[estado] = 0;
@@ -264,8 +264,8 @@ export default function OperacionesCargaTable() {
 
             <div className="flex items-center justify-end gap-3 text-sm text-gray-500">
                 <Button variant="outline" disabled={loading || aplicados.page <= 1} onClick={() => setAplicados({ ...aplicados, page: aplicados.page - 1 })}>Anterior</Button>
-                <span>{aplicados.page} / {Math.max(1, Math.ceil(total / 20))}</span>
-                <Button variant="outline" disabled={loading || aplicados.page * 20 >= total} onClick={() => setAplicados({ ...aplicados, page: aplicados.page + 1 })}>Siguiente</Button>
+                <span>{aplicados.page} / {Math.max(1, Math.ceil(total / 10))}</span>
+                <Button variant="outline" disabled={loading || aplicados.page * 10 >= total} onClick={() => setAplicados({ ...aplicados, page: aplicados.page + 1 })}>Siguiente</Button>
             </div>
             <OperacionCargaModal
                 isOpen={modalOpen}

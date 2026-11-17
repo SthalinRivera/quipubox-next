@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import {
     Entrega,
     EntregaPendienteTransito,
@@ -27,7 +27,7 @@ interface EntregasPage {
 export const useEntregas = () => {
     const [entregas, setEntregas] = useState<Entrega[]>([]);
     const [resumen, setResumen] = useState<Record<string, number>>({});
-    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20 });
+    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10 });
     const [pendientesTransito, setPendientesTransito] = useState<EntregaPendienteTransito[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingResumen, setLoadingResumen] = useState(true);
@@ -46,7 +46,7 @@ export const useEntregas = () => {
         try {
             const query = new URLSearchParams({
                 page: String(params.page ?? 1),
-                limit: String(params.limit ?? 20),
+                limit: String(params.limit ?? 10),
             });
             if (params?.id_operacion) query.append('id_operacion', params.id_operacion.toString());
             if (params?.id_calidad) query.append('id_calidad', params.id_calidad.toString());
@@ -69,7 +69,7 @@ export const useEntregas = () => {
             if (request !== requestId.current) return;
             console.error('Error en fetchEntregas:', error);
             setEntregas([]);
-            setPagination({ total: 0, page: 1, limit: params.limit ?? 20 });
+            setPagination({ total: 0, page: 1, limit: params.limit ?? 10 });
         } finally {
             if (request === requestId.current) setLoading(false);
         }
@@ -125,7 +125,7 @@ export const useEntregas = () => {
             if (params?.id_calidad) query.append('id_calidad', params.id_calidad.toString());
             if (params?.fecha_carga) query.append('fecha_carga', params.fecha_carga);
             const suffix = query.toString() ? `?${query}` : '';
-            const data = await fetchWithAuth<EntregaPendienteTransito[]>(
+            const data = await fetchAllWithAuth<EntregaPendienteTransito>(
                 `entregas/pendientes-transito${suffix}`,
             );
             setPendientesTransito(Array.isArray(data) ? data : []);

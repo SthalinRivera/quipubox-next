@@ -1,6 +1,6 @@
 // hooks/useItemsReparto.ts
 import { useState, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useToast } from '@/hooks/useToast';
 
 export interface ItemReparto {
@@ -30,7 +30,7 @@ export const useItemsReparto = () => {
     const fetchItems = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<ItemReparto[]>('items-reparto');
+            const data = await fetchAllWithAuth<ItemReparto>('items-reparto');
             setItems(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error en fetchItems:', error);
@@ -44,7 +44,7 @@ export const useItemsReparto = () => {
     const fetchPendientes = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any[]>('operaciones-carga/detalles-pendientes');
+            const data = await fetchAllWithAuth<any>('operaciones-carga/detalles-pendientes');
             setPendientes(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error en fetchPendientes:', error);
@@ -57,7 +57,7 @@ export const useItemsReparto = () => {
     // --- Detalles de reparto por operación ---
     const getDetallesReparto = useCallback(async (operacionId: number) => {
         try {
-            const data = await fetchWithAuth<any[]>(`operaciones-carga/${operacionId}/detalles-reparto-pendientes`);
+            const data = await fetchAllWithAuth<any>(`operaciones-carga/${operacionId}/detalles-reparto-pendientes`);
             setDetallesReparto(Array.isArray(data) ? data : []);
             return data || [];
         } catch (error) {
@@ -70,7 +70,7 @@ export const useItemsReparto = () => {
     // --- Calidades de un detalle ---
     const getCalidadesByDetalle = useCallback(async (detalleId: number) => {
         try {
-            const data = await fetchWithAuth<any[]>(`detalle-carga/${detalleId}/calidades`);
+            const data = await fetchAllWithAuth<any>(`detalle-carga/${detalleId}/calidades`);
             return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Error en getCalidadesByDetalle:', error);

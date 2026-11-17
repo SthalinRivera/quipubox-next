@@ -80,6 +80,8 @@ export const fetchWithAuth = async <T>(
     }
 
     const data = await response.json();
+    if (fetchOptions.method !== 'GET' && typeof window !== 'undefined')
+        window.dispatchEvent(new CustomEvent('api:changed', { detail: { path: cleanPath } }));
     const normalizeIds = (value: any, key = ''): any => {
         if (typeof value === 'string' && /^id(?:_|$)/.test(key) && !/ubigeo|provincia|departamento/.test(key) && /^\d+$/.test(value)) {
             const number = Number(value);
@@ -95,3 +97,25 @@ export const fetchWithAuth = async <T>(
     }
     return normalizeIds(data) as T;
 };
+
+export interface PaginatedResult<T> { data: T[]; total: number; page: number; limit: number; }
+
+/** Para selectores, relaciones y exportaciones que requieren la colección completa. */
+export async function fetchAllWithAuth<T>(url: string, options?: FetchWithAuthOptions): Promise<T[]> {
+    const [pathname, search = ''] = url.split('?');
+    const query = new URLSearchParams(search);
+    query.set('page', '1');
+    query.set('limit', '100');
+    const first = await fetchWithAuth<PaginatedResult<T> | T[]>(`${pathname}?${query}`, options);
+    if (Array.isArray(first)) return first;
+    if (!first || !Array.isArray(first.data) || !Number.isFinite(first.total) || first.limit < 1)
+        throw new Error('Respuesta de listado inválida.');
+    const data = [...first.data];
+    for (let page = 2; page <= Math.ceil(first.total / first.limit); page++) {
+        if (options?.signal?.aborted) throw new Error('Solicitud cancelada.');
+        query.set('page', String(page));
+        const next = await fetchWithAuth<PaginatedResult<T>>(`${pathname}?${query}`, options);
+        data.push(...next.data);
+    }
+    return data;
+}

@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import {
     Table,
     TableBody,
@@ -24,8 +26,7 @@ interface JabasPorPagarTableProps {
 }
 
 export default function JabasPorPagarTable({ isReadOnly = false, canAnularCompletar = false }: JabasPorPagarTableProps) {
-    const { jabas, loading, fetchAll, registrarDevolucion, cambiarEstado } =
-        useJabasPorPagar();
+    const { registrarDevolucion, cambiarEstado } = useJabasPorPagar();
     const toast = useToast();
 
     // Estados para modales
@@ -40,9 +41,8 @@ export default function JabasPorPagarTable({ isReadOnly = false, canAnularComple
     } | null>(null);
 
     // Carga inicial
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<JabaPorPagar>('jabas/por-pagar', {});
+    const { data: jabas, loading, error, reload: fetchAll } = pagination;
 
     // Abrir modal de devolución
     const handleDevolver = (jaba: JabaPorPagar) => {
@@ -254,6 +254,8 @@ export default function JabasPorPagarTable({ isReadOnly = false, canAnularComple
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             {/* Modal para registrar devolución */}
             <DevolucionJabaModal

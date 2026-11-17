@@ -1,7 +1,9 @@
 // components/variedades/VariedadesTable.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
@@ -22,7 +24,7 @@ import type { Variedad } from '@/types/variedad';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function VariedadesTable() {
-    const { variedades, loading, fetchAll, toggleEstado } = useVariedades();
+    const { toggleEstado } = useVariedades();
     const toast = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,9 +32,8 @@ export default function VariedadesTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ variedad: Variedad; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<Variedad>('variedades', {});
+    const { data: variedades, loading, error, reload: fetchAll } = pagination;
 
     const handleCreate = () => {
         setSelectedVariedad(null);
@@ -139,6 +140,8 @@ export default function VariedadesTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <VariedadModal
                 open={isModalOpen}

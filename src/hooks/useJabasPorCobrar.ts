@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useJabasPorCobrarStore } from '@/stores/jabasPorCobrarStore';
 import type { JabaPorCobrar } from '@/types/jaba';
 
@@ -12,8 +12,8 @@ export const useJabasPorCobrar = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchWithAuth<any>('jabas/por-cobrar');
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>('jabas/por-cobrar');
+            const list = data;
             setJabas(list);
         } catch (err: any) {
             setError(err);

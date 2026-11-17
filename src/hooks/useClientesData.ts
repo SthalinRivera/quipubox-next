@@ -8,7 +8,7 @@ interface PaginatedResponse {
     total: number;
     page: number;
     limit: number;
-    totalPages: number;
+
 }
 
 const fetchClientes = async (
@@ -73,7 +73,7 @@ export const useClientesData = () => {
     return {
         clientes: query.data?.data ?? [],
         total: query.data?.total ?? 0,
-        totalPages: query.data?.totalPages ?? 0,
+        totalPages: Math.ceil((query.data?.total ?? 0) / (query.data?.limit ?? 10)),
         isLoading: query.isLoading,
         isError: query.isError,
         error: query.error,

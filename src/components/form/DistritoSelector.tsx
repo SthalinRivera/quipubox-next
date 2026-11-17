@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Select from '@/components/form/Select';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/authStore';
 
 type Region = { nombre: string; id_departamento?: string; id_provincia?: string; id_ubigeo?: string };
@@ -15,7 +15,7 @@ function useRegions(url: string) {
     useEffect(() => {
         let active = true;
         setItems([]); setError(''); setLoading(Boolean(url));
-        if (url) fetchWithAuth<Region[]>(url)
+        if (url) fetchAllWithAuth<Region>(url)
             .then(data => { if (active) setItems(data); })
             .catch(error => { if (active) setError(error instanceof Error ? error.message : 'No se pudieron cargar las ubicaciones.'); })
             .finally(() => { if (active) setLoading(false); });

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { usePaginatedResource } from '@/hooks/usePaginatedResource';
+import PaginationControls from '@/components/tables/PaginationControls';
 import {
     Table,
     TableBody,
@@ -10,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
-import { useJabasPorCobrar } from '@/hooks/useJabasPorCobrar';
+
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 import type { JabaPorCobrar } from '@/types/jaba';
 import { RefreshCw } from 'lucide-react';
@@ -21,11 +22,8 @@ interface Props {
 }
 
 export default function JabasPorCobrarTable({ onRegisterRecuperacion, isReadOnly = false }: Props) {
-    const { jabas, loading, error, fetchAll } = useJabasPorCobrar();
-
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<JabaPorCobrar>('jabas/por-cobrar');
+    const { data: jabas, loading, error, reload: fetchAll } = pagination;
 
     if (loading) {
         return <TableSkeleton columns={isReadOnly ? 6 : 7} rows={5} />;
@@ -34,7 +32,7 @@ export default function JabasPorCobrarTable({ onRegisterRecuperacion, isReadOnly
     if (error) {
         return (
             <div className="p-4 text-center text-red-500 dark:text-red-400">
-                Error al cargar los datos: {error.message || 'Error desconocido'}
+                Error al cargar los datos: {error}
             </div>
         );
     }
@@ -140,6 +138,7 @@ export default function JabasPorCobrarTable({ onRegisterRecuperacion, isReadOnly
                     </Table>
                 </div>
             </div>
-        </div>
+        <PaginationControls {...pagination} />
+</div>
     );
 }

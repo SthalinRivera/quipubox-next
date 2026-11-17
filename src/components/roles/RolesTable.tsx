@@ -1,7 +1,9 @@
 // components/roles/RolesTable.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useRoles } from '@/hooks/useRoles';
 import { useToast } from '@/hooks/useToast';
@@ -20,7 +22,7 @@ import type { Rol } from '@/types/rol';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function RolesTable() {
-    const { roles, loading, fetchAll, toggleEstado } = useRoles();
+    const { toggleEstado } = useRoles();
     const toast = useToast();
 
     const [modalOpen, setModalOpen] = useState(false);
@@ -28,9 +30,8 @@ export default function RolesTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ rol: Rol; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<Rol>('roles-usuarios', {});
+    const { data: roles, loading, error, reload: fetchAll } = pagination;
 
     const openCreateModal = () => {
         setEditingRol(null);
@@ -142,6 +143,8 @@ export default function RolesTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <RolModal
                 open={modalOpen}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useJabasPorPagarStore } from '@/stores/jabasPorPagarStore';
 import type { JabaPorPagar } from '@/types/jaba';
 
@@ -13,8 +13,8 @@ export const useJabasPorPagar = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<any>('jabas/por-pagar');
-            const list = Array.isArray(data) ? data : data?.data || data?.items || [];
+            const data = await fetchAllWithAuth<any>('jabas/por-pagar');
+            const list = data;
             setJabas(list);
         } catch (err) {
             setError(err);

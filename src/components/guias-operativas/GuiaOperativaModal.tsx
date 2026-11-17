@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { fetchWithAuth } from "@/lib/api-client";
+import { fetchAllWithAuth } from "@/lib/api-client";
 import type { GuiaOperativa, CreateGuiaOperativaDto } from "@/types/guiaOperativa";
 
 interface GuiaOperativaModalProps {
@@ -47,8 +47,8 @@ export function GuiaOperativaModal({
         const loadData = async () => {
             try {
                 const [usuariosRes, itemsRes] = await Promise.all([
-                    fetchWithAuth<any[]>("usuarios"),
-                    fetchWithAuth<any[]>("items-reparto"),
+                    fetchAllWithAuth<any>("usuarios"),
+                    fetchAllWithAuth<any>("items-reparto"),
                 ]);
                 setRepartidores(usuariosRes || []);
                 setItemsReparto(itemsRes || []);

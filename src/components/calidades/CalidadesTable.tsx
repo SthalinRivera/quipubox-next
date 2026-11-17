@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
@@ -20,7 +22,7 @@ import { Power, Play } from 'lucide-react';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function CalidadesTable() {
-    const { calidades, loading, fetchAll, toggleEstado } = useCalidades();
+    const { toggleEstado } = useCalidades();
     const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,13 +30,10 @@ export default function CalidadesTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ calidad: Calidad; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<Calidad>('calidades', { buscar: searchTerm || undefined });
+    const { data: calidades, loading, error, reload: fetchAll } = pagination;
 
-    const filteredCalidades = calidades.filter(c =>
-        c.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCalidades = calidades;
 
     const handleCreate = () => {
         setSelectedCalidad(null);
@@ -154,6 +153,8 @@ export default function CalidadesTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             {/* Modal */}
             <CalidadModal

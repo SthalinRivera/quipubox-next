@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type { Modulo } from '@/types/configuracion';
 
 export const useModulos = () => {
@@ -11,7 +11,7 @@ export const useModulos = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Modulo[]>('modulos');
+            const data = await fetchAllWithAuth<Modulo>('modulos');
             setModulos(data);
         } finally {
             setLoading(false);

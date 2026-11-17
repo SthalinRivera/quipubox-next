@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import DistritoSelector from '@/components/form/DistritoSelector';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/authStore';
 
 type Lugar = { id_lugar: number; nombre: string; estado: boolean; direccion_referencia?: string };
@@ -23,7 +23,7 @@ export default function EmpresaLugaresPanel({ onSaved, onCreate }: { onSaved: ()
         if (!value) return;
         setBusy(true);
         try {
-            const data = await fetchWithAuth<Lugar[]>(`lugares-operativos/catalogo/${value}`);
+            const data = await fetchAllWithAuth<Lugar>(`lugares-operativos/catalogo/${value}`);
             setLugares(data); setCatalogoLoaded(true);
             if (!data.length) setMensaje('Este distrito no tiene establecimientos activos en el catálogo.');
         } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo consultar el catálogo.'); }

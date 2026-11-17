@@ -1,7 +1,9 @@
 // components/camiones/CamionesTable.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
@@ -21,7 +23,7 @@ import type { Camion } from '@/types/camion';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function CamionesTable() {
-    const { camiones, loading, fetchAll, toggleEstado } = useCamiones();
+    const { toggleEstado } = useCamiones();
     const toast = useToast();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -30,13 +32,10 @@ export default function CamionesTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ camion: Camion; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<Camion>('camiones', { buscar: searchTerm || undefined });
+    const { data: camiones, loading, error, reload: fetchAll } = pagination;
 
-    const filteredCamiones = camiones.filter(c =>
-        c.placa.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCamiones = camiones;
 
     const handleCreate = () => {
         setSelectedCamion(null);
@@ -154,6 +153,8 @@ export default function CamionesTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <CamionModal
                 open={isModalOpen}

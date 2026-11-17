@@ -1,6 +1,6 @@
 // hooks/useJabas.ts
 import { useState, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type { JabaPorPagar, JabaPorCobrar, DevolucionEmisor, RecuperacionJaba } from '@/types/jaba';
 import { useToast } from './useToast';
 
@@ -15,7 +15,7 @@ export function useJabas() {
         setLoading(true);
         try {
             const query = filters ? `?${new URLSearchParams(filters).toString()}` : '';
-            const data = await fetchWithAuth<JabaPorCobrar[]>(`jabas/por-cobrar${query}`);
+            const data = await fetchAllWithAuth<JabaPorCobrar>(`jabas/por-cobrar${query}`);
             setPorCobrar(Array.isArray(data) ? data : []);
         } catch (error: any) {
             toast.error(error?.message || 'Error al cargar jabas por cobrar');
@@ -30,7 +30,7 @@ export function useJabas() {
         setLoading(true);
         try {
             const query = filters ? `?${new URLSearchParams(filters).toString()}` : '';
-            const data = await fetchWithAuth<JabaPorPagar[]>(`jabas/por-pagar${query}`);
+            const data = await fetchAllWithAuth<JabaPorPagar>(`jabas/por-pagar${query}`);
             setPorPagar(Array.isArray(data) ? data : []);
         } catch (error: any) {
             toast.error(error?.message || 'Error al cargar jabas por pagar');

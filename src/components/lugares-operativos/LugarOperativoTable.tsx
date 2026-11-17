@@ -4,7 +4,9 @@
 import EmpresaLugaresPanel from './EmpresaLugaresPanel';
 import { Modal } from '@/components/ui/modal';
 import { useAuthStore } from '@/stores/authStore';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
@@ -24,7 +26,7 @@ import type { LugarOperativo } from '@/types/lugarOperativo';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function LugarOperativoTable() {
-    const { lugares, loading, fetchAll, toggleEstado } = useLugarOperativo();
+    const { toggleEstado } = useLugarOperativo();
     const toast = useToast();
     const roles = useAuthStore(state => state.roles);
     const admin = roles.some(role => ['admin', 'administrador', 'superadmin', 'super_admin'].includes(role.toLowerCase()));
@@ -37,13 +39,10 @@ export default function LugarOperativoTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ item: LugarOperativo; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<LugarOperativo>('lugares-operativos', { buscar: searchTerm || undefined });
+    const { data: lugares, loading, error, reload: fetchAll } = pagination;
 
-    const filteredItems = (lugares || []).filter(item =>
-        item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredItems = lugares;
 
     const handleCreate = (ubigeo = '') => {
         setAssignmentOpen(false);
@@ -176,6 +175,8 @@ export default function LugarOperativoTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             {assignmentOpen && <Modal isOpen={assignmentOpen} onClose={() => setAssignmentOpen(false)} className="max-w-[640px] p-5 lg:p-8">
                 <EmpresaLugaresPanel onSaved={fetchAll} onCreate={handleCreate} />

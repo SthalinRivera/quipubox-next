@@ -1,7 +1,9 @@
 // components/tipos-jaba/TiposJabaTable.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePaginatedResource } from "@/hooks/usePaginatedResource";
+import PaginationControls from "@/components/tables/PaginationControls";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
@@ -21,7 +23,7 @@ import type { TipoJaba } from '@/types/tipoJaba';
 import { TableSkeleton } from '../ui/skeleton/TableSkeleton';
 
 export default function TiposJabaTable() {
-    const { tiposJaba, loading, fetchAll, toggleEstado } = useTiposJaba();
+    const { toggleEstado } = useTiposJaba();
     const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,13 +31,10 @@ export default function TiposJabaTable() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ tipo: TipoJaba; nuevoEstado: boolean } | null>(null);
 
-    useEffect(() => {
-        fetchAll();
-    }, [fetchAll]);
+    const pagination = usePaginatedResource<TipoJaba>('tipos-jaba', { buscar: searchTerm || undefined });
+    const { data: tiposJaba, loading, error, reload: fetchAll } = pagination;
 
-    const filteredTipos = tiposJaba.filter(t =>
-        t.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredTipos = tiposJaba;
 
     const handleCreate = () => {
         setSelectedTipo(null);
@@ -152,6 +151,8 @@ export default function TiposJabaTable() {
                     </div>
                 </div>
             </div>
+            <PaginationControls {...pagination} />
+
 
             <TipoJabaModal
                 open={isModalOpen}

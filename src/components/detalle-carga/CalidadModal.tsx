@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { fetchWithAuth } from "@/lib/api-client";
+import { fetchAllWithAuth } from "@/lib/api-client";
 import type { DetalleCalidad, CreateDetalleCalidadDto } from "@/types/detalleCarga";
 
 interface CalidadModalProps {
@@ -37,7 +37,7 @@ export function CalidadModal({
 
     useEffect(() => {
         if (!isOpen) return;
-        fetchWithAuth<{ id_calidad: number; nombre: string }[]>(`opciones-flujo/calidades?detalle=${detalleId}${editingCalidad ? `&calidad=${editingCalidad.id_detalle_carga_calidad}` : ''}`)
+        fetchAllWithAuth<{ id_calidad: number; nombre: string }>(`opciones-flujo/calidades?detalle=${detalleId}${editingCalidad ? `&calidad=${editingCalidad.id_detalle_carga_calidad}` : ''}`)
             .then((data) => setCalidades(data || []))
             .catch(console.error);
     }, [isOpen, detalleId, editingCalidad]);

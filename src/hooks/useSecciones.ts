@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { fetchWithAuth } from '@/lib/api-client';
+import { fetchWithAuth, fetchAllWithAuth } from '@/lib/api-client';
 import type { Seccion } from '@/types/seccion';
 
 export const useSecciones = () => {
@@ -11,7 +11,7 @@ export const useSecciones = () => {
     const fetchAll = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Seccion[]>('puestos/secciones'); // ajusta URL según tu backend
+            const data = await fetchAllWithAuth<Seccion>('puestos/secciones'); // ajusta URL según tu backend
             setSecciones(data);
             return data;
         } catch (error) {
@@ -25,7 +25,7 @@ export const useSecciones = () => {
     const fetchByPuesto = useCallback(async (puestoId: number) => {
         setLoading(true);
         try {
-            const data = await fetchWithAuth<Seccion[]>(`puestos/${puestoId}/secciones`);
+            const data = await fetchAllWithAuth<Seccion>(`puestos/${puestoId}/secciones`);
             setSecciones(data);
             return data;
         } catch (error) {
