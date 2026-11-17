@@ -15,8 +15,8 @@ import Label from '@/components/form/Label';
 import IconPicker from '@/components/ui/icon-picker';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import type { ComponentType } from 'react';
 import type { Categoria } from '@/types/configuracion';
+import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, FolderTree, Truck, ClipboardList, BarChart3, Settings,
   Calendar, User, Grid3X3, List, Table, Box, PieChart, Plug, Pencil as PencilIcon, Power,
@@ -54,7 +54,7 @@ import {
   CalendarPlus, CalendarMinus, IceCreamBowl, TruckIcon, PackageCheck,
 } from 'lucide-react';
 
-const iconMap: Record<string, ComponentType<any>> = {
+const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, FolderTree, Truck, ClipboardList, BarChart3, Settings,
   Calendar, User, Grid3X3, List, Table, Box, PieChart, Plug, Pencil: PencilIcon, Power,
   Play, Eye, FileText, MapPin, Package, Users, Home, ShoppingCart,
@@ -105,7 +105,8 @@ const schema = z.object({
     estado: z.boolean().default(true),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormData = z.output<typeof schema>;
 
 const ItemTypes = { ROW: 'row' };
 
@@ -117,7 +118,7 @@ interface DragRowProps {
 }
 
 function DragRow({ index, moveRow, onDrop, children }: DragRowProps) {
-    const ref = useRef<HTMLTableRowElement>(null);
+    const rowRef = useRef<HTMLTableRowElement>(null);
     const [{ isDragging }, drag] = useDrag({
         type: ItemTypes.ROW,
         item: () => ({ index }),
@@ -133,11 +134,14 @@ function DragRow({ index, moveRow, onDrop, children }: DragRowProps) {
         },
         drop: () => onDrop(),
     });
-    drag(drop(ref));
+    const connectDragDrop = useCallback((node: HTMLTableRowElement | null) => {
+        rowRef.current = node;
+        if (node) drag(drop(node));
+    }, [drag, drop]);
 
     return (
         <tr
-            ref={ref}
+            ref={connectDragDrop}
             style={{ opacity: isDragging ? 0.5 : 1 }}
             className="border-b border-gray-50 dark:border-white/[0.02] hover:bg-gray-50 dark:hover:bg-white/[0.02]"
         >
@@ -150,16 +154,15 @@ export default function CategoriasPage() {
     const { categorias, loading, fetchAll, create, update, toggleEstado, reorder, remove } = useCategorias();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
-    const [editing, setEditing] = useState<any>(null);
-    const [localCats, setLocalCats] = useState<Categoria[]>([]);
-    const [hasChanges, setHasChanges] = useState(false);
+    const [editing, setEditing] = useState<Categoria | null>(null);
+    const [localCats, setLocalCats] = useState<Categoria[] | null>(null);
+    const localCatsRef = useRef<Categoria[]>([]);
+    const displayedCats = localCats ?? categorias;
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
-    useEffect(() => { setLocalCats(categorias); setHasChanges(false); }, [categorias]);
-
-    const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-        resolver: zodResolver(schema) as any,
+    const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormInput, unknown, FormData>({
+        resolver: zodResolver(schema),
         defaultValues: { nombre: '', descripcion: '', icono_web: '', icono_mobil: '', orden: 0, estado: true },
     });
 
@@ -191,8 +194,8 @@ export default function CategoriasPage() {
             }
             setModalOpen(false);
             setEditing(null);
-        } catch (err: any) {
-            toast.error(err.message || 'Error al guardar');
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Error al guardar');
         }
     };
 
@@ -201,43 +204,43 @@ export default function CategoriasPage() {
         try {
             await remove(id);
             toast.success('Categoría eliminada');
-        } catch (err: any) {
-            toast.error(err.message || 'Error al eliminar');
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Error al eliminar');
         }
     };
 
     const moveRow = useCallback((dragIndex: number, hoverIndex: number) => {
-        setLocalCats((prev) => {
-            const updated = [...prev];
-            const [removed] = updated.splice(dragIndex, 1);
-            updated.splice(hoverIndex, 0, removed);
-            return updated;
-        });
-        setHasChanges(true);
-    }, []);
+        const updated = [...(localCats ?? categorias)];
+        const [removed] = updated.splice(dragIndex, 1);
+        updated.splice(hoverIndex, 0, removed);
+        localCatsRef.current = updated;
+        setLocalCats(updated);
+    }, [categorias, localCats]);
 
     const handleDrop = useCallback(async () => {
-        const items = localCats.map((cat, i) => ({
+        if (localCatsRef.current.length === 0) return;
+        const items = localCatsRef.current.map((cat, i) => ({
             id_categoria: Number(cat.id_categoria),
             orden: i,
         }));
         try {
             await reorder(items);
+            localCatsRef.current = [];
+            setLocalCats(null);
             toast.success('Orden actualizado');
-            setHasChanges(false);
-        } catch (err: any) {
-            toast.error(err.message || 'Error al reordenar');
-            setLocalCats(categorias);
-            setHasChanges(false);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Error al reordenar');
+            localCatsRef.current = categorias;
+            setLocalCats(null);
         }
-    }, [localCats, reorder, toast, categorias]);
+    }, [reorder, toast, categorias]);
 
     return (
         <DndProvider backend={HTML5Backend}>
             <div className="rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/[0.05]">
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        Categorías ({localCats.length})
+                        Categorías ({displayedCats.length})
                     </h3>
                     <Button size="sm" onClick={() => { setEditing(null); setModalOpen(true); }}>
                         <Plus className="w-4 h-4 mr-2" /> Nueva categoría
@@ -248,7 +251,7 @@ export default function CategoriasPage() {
                         <div className="flex justify-center py-12">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         </div>
-                    ) : localCats.length === 0 ? (
+                    ) : displayedCats.length === 0 ? (
                         <p className="text-center text-gray-400 py-12">No hay categorías creadas</p>
                     ) : (
                         <div className="overflow-x-auto">
@@ -265,7 +268,7 @@ export default function CategoriasPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {localCats.map((cat, index) => (
+                                    {displayedCats.map((cat, index) => (
                                         <DragRow key={cat.id_categoria} index={index} moveRow={moveRow} onDrop={handleDrop}>
                                             <td className="py-3 pl-2 text-gray-400 cursor-grab active:cursor-grabbing">
                                                 <GripVertical className="h-4 w-4" />
@@ -338,7 +341,7 @@ export default function CategoriasPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Orden</Label>
-                                <Controller name="orden" control={control} render={({ field }) => <Input {...field} type="number" />} />
+                                <Controller name="orden" control={control} render={({ field }) => <Input {...field} value={Number(field.value ?? 0)} type="number" />} />
                             </div>
                             <div className="flex items-center gap-2 pt-6">
                                 <Controller

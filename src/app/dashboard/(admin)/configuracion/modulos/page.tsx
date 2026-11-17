@@ -1,18 +1,83 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Button from '@/components/ui/button/Button';
 import Badge from '@/components/ui/badge/Badge';
 import { useModulos } from '@/hooks/useModulos';
 import { useCategorias } from '@/hooks/useCategorias';
 import { useToast } from '@/hooks/useToast';
-import { Plus, Pencil, Trash2, Filter, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import type { Categoria, Modulo } from '@/types/configuracion';
+
+const MODULE_ROW = 'module-row';
+
+interface DragModuleRowProps {
+    categoryId: number;
+    index: number;
+    disabled: boolean;
+    moveRow: (categoryId: number, fromIndex: number, toIndex: number) => void;
+    onDrop: (categoryId: number) => void;
+    children: React.ReactNode;
+}
+
+interface DragModuleItem {
+    categoryId: number;
+    index: number;
+}
+
+function DragModuleRow({ categoryId, index, disabled, moveRow, onDrop, children }: DragModuleRowProps) {
+    const rowRef = useRef<HTMLTableRowElement>(null);
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: MODULE_ROW,
+        canDrag: !disabled,
+        item: { categoryId, index },
+        collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    }), [categoryId, disabled, index]);
+    const [, drop] = useDrop(() => ({
+        accept: MODULE_ROW,
+        hover: (item: DragModuleItem, monitor) => {
+            const row = rowRef.current;
+            if (!row || item.categoryId !== categoryId || item.index === index) return;
+
+            const bounds = row.getBoundingClientRect();
+            const middleY = (bounds.bottom - bounds.top) / 2;
+            const pointer = monitor.getClientOffset();
+            if (!pointer) return;
+            const pointerY = pointer.y - bounds.top;
+
+            if (item.index < index && pointerY < middleY) return;
+            if (item.index > index && pointerY > middleY) return;
+
+            moveRow(categoryId, item.index, index);
+            item.index = index;
+        },
+        drop: (_item: DragModuleItem, monitor) => {
+            if (!monitor.didDrop()) onDrop(categoryId);
+        },
+    }), [categoryId, index, moveRow, onDrop]);
+    const connectDragDrop = useCallback((node: HTMLTableRowElement | null) => {
+        rowRef.current = node;
+        if (node) drag(drop(node));
+    }, [drag, drop]);
+
+    return (
+        <tr
+            ref={connectDragDrop}
+            style={{ opacity: isDragging ? 0.45 : 1 }}
+            className="border-b border-gray-50 transition-colors hover:bg-gray-50/80 dark:border-white/[0.03] dark:hover:bg-white/[0.025]"
+        >
+            {children}
+        </tr>
+    );
+}
 
 const schema = z.object({
     nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -22,23 +87,33 @@ const schema = z.object({
     estado: z.boolean().default(true),
 });
 
-type FormData = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormData = z.output<typeof schema>;
 
 export default function ModulosPage() {
-    const { modulos, loading, fetchAll, create, update, toggleEstado, remove } = useModulos();
+    const { modulos, loading, mutating, fetchAll, create, update, toggleEstado, reorder, remove } = useModulos();
     const { categorias, loading: loadingCats, fetchAll: fetchCategorias } = useCategorias();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
-    const [editing, setEditing] = useState<any>(null);
+    const [editing, setEditing] = useState<Modulo | null>(null);
     const [filterCategoria, setFilterCategoria] = useState<number>(0);
     const [expandedCats, setExpandedCats] = useState<Record<number, boolean>>({});
+    const [localModulos, setLocalModulos] = useState<Modulo[]>([]);
+    const localModulosRef = useRef<Modulo[]>([]);
+    const serverModulosRef = useRef<Modulo[]>([]);
 
-    const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-        resolver: zodResolver(schema) as any,
+    const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormInput, unknown, FormData>({
+        resolver: zodResolver(schema),
         defaultValues: { nombre: '', ruta: '', id_categoria: 0, orden: 0, estado: true },
     });
 
     useEffect(() => { fetchAll(); fetchCategorias(); }, [fetchAll, fetchCategorias]);
+
+    useEffect(() => {
+        localModulosRef.current = modulos;
+        serverModulosRef.current = modulos;
+        setLocalModulos(modulos);
+    }, [modulos]);
 
     // Expandir todas las categorías al cargar
     useEffect(() => {
@@ -76,8 +151,8 @@ export default function ModulosPage() {
             }
             setModalOpen(false);
             setEditing(null);
-        } catch (err: any) {
-            toast.error(err.message || 'Error al guardar');
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Error al guardar');
         }
     };
 
@@ -86,8 +161,8 @@ export default function ModulosPage() {
         try {
             await remove(id);
             toast.success('Módulo eliminado');
-        } catch (err: any) {
-            toast.error(err.message || 'Error al eliminar');
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Error al eliminar');
         }
     };
 
@@ -95,13 +170,47 @@ export default function ModulosPage() {
         setExpandedCats(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const moveModuleRow = useCallback((categoryId: number, fromIndex: number, toIndex: number) => {
+        const categoryItems = localModulosRef.current
+            .filter((modulo) => Number(modulo.id_categoria) === categoryId)
+            .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= categoryItems.length || toIndex >= categoryItems.length) return;
+
+        const [moved] = categoryItems.splice(fromIndex, 1);
+        categoryItems.splice(toIndex, 0, moved);
+        const orderedItems = categoryItems.map((modulo, orden) => ({ ...modulo, orden }));
+        let nextIndex = 0;
+        const updated = localModulosRef.current.map((modulo) =>
+            Number(modulo.id_categoria) === categoryId ? orderedItems[nextIndex++] : modulo,
+        );
+
+        localModulosRef.current = updated;
+        setLocalModulos(updated);
+    }, []);
+
+    const persistModuleOrder = useCallback(async (categoryId: number) => {
+        const items = localModulosRef.current
+            .filter((modulo) => Number(modulo.id_categoria) === categoryId)
+            .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+            .map((modulo, orden) => ({ id_modulo: Number(modulo.id_modulo), orden }));
+
+        try {
+            await reorder(items);
+            toast.success('Orden de módulos actualizado');
+        } catch (error) {
+            localModulosRef.current = serverModulosRef.current;
+            setLocalModulos(serverModulosRef.current);
+            toast.error(error instanceof Error ? error.message : 'No se pudo guardar el orden');
+        }
+    }, [reorder, toast]);
+
     // Agrupar módulos por categoría
     const modulosPorCategoria = useMemo(() => {
         const filtered = filterCategoria > 0
-            ? modulos.filter(m => Number(m.id_categoria) === filterCategoria)
-            : modulos;
+            ? localModulos.filter(m => Number(m.id_categoria) === filterCategoria)
+            : localModulos;
 
-        const map = new Map<number, { categoria: any; items: any[] }>();
+        const map = new Map<number, { categoria: Categoria; items: Modulo[] }>();
 
         for (const cat of categorias) {
             if (filterCategoria > 0 && cat.id_categoria !== filterCategoria) continue;
@@ -112,7 +221,12 @@ export default function ModulosPage() {
             const catId = Number(mod.id_categoria);
             if (!map.has(catId)) {
                 map.set(catId, {
-                    categoria: mod.categorias || { nombre: 'Sin categoría', id_categoria: catId, icono_web: null },
+                    categoria: mod.categorias || {
+                        nombre: 'Sin categoría',
+                        id_categoria: catId,
+                        icono_web: null,
+                        estado: true,
+                    },
                     items: []
                 });
             }
@@ -120,15 +234,16 @@ export default function ModulosPage() {
         }
 
         for (const entry of map.values()) {
-            entry.items.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+            entry.items.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
         }
 
         return Array.from(map.values()).filter(e => e.items.length > 0);
-    }, [modulos, categorias, filterCategoria]);
+    }, [localModulos, categorias, filterCategoria]);
 
     const totalFiltrados = modulosPorCategoria.reduce((sum, e) => sum + e.items.length, 0);
 
     return (
+        <DndProvider backend={HTML5Backend}>
         <div className="space-y-4">
             {/* Header + Filtros */}
             <div className="rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -160,6 +275,9 @@ export default function ModulosPage() {
                         </Button>
                     </div>
                 </div>
+                <p className="px-6 py-2 text-xs text-gray-500 dark:text-gray-400">
+                    Arrastra los módulos dentro de su categoría para cambiar el orden.
+                </p>
             </div>
 
             {/* Lista agrupada */}
@@ -212,9 +330,21 @@ export default function ModulosPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {items.map((mod) => (
-                                                    <tr key={mod.id_modulo} className="border-b border-gray-50 dark:border-white/[0.02] hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                                                        <td className="py-3 px-6 text-gray-400 font-mono text-xs">{mod.orden || 0}</td>
+                                                {items.map((mod, index) => (
+                                                    <DragModuleRow
+                                                        key={mod.id_modulo}
+                                                        categoryId={Number(categoria.id_categoria)}
+                                                        index={index}
+                                                        disabled={mutating}
+                                                        moveRow={moveModuleRow}
+                                                        onDrop={persistModuleOrder}
+                                                    >
+                                                        <td className="w-16 py-3 pl-5 text-gray-400">
+                                                            <span className="flex items-center gap-2">
+                                                                <GripVertical className="h-4 w-4 cursor-grab active:cursor-grabbing" />
+                                                                <span className="font-mono text-xs">{index + 1}</span>
+                                                            </span>
+                                                        </td>
                                                         <td className="py-3 px-4 font-medium text-gray-800 dark:text-white/90">{mod.nombre}</td>
                                                         <td className="py-3 px-4">
                                                             <code className="text-xs bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded font-mono text-gray-600 dark:text-gray-400">
@@ -239,7 +369,7 @@ export default function ModulosPage() {
                                                                 </Button>
                                                             </div>
                                                         </td>
-                                                    </tr>
+                                                    </DragModuleRow>
                                                 ))}
                                             </tbody>
                                         </table>
@@ -274,7 +404,7 @@ export default function ModulosPage() {
                     <div>
                         <Label>Categoría <span className="text-error-500">*</span></Label>
                         <Controller name="id_categoria" control={control} render={({ field }) => (
-                            <select {...field} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-white/90">
+                            <select {...field} value={Number(field.value ?? 0)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-white/90">
                                 <option value={0}>Seleccionar categoría</option>
                                 {categorias.map((cat) => (
                                     <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nombre}</option>
@@ -287,7 +417,7 @@ export default function ModulosPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Orden</Label>
-                            <Controller name="orden" control={control} render={({ field }) => <Input {...field} type="number" />} />
+                            <Controller name="orden" control={control} render={({ field }) => <Input {...field} value={Number(field.value ?? 0)} type="number" />} />
                         </div>
                         <div className="flex items-center gap-2 pt-6">
                             <Controller
@@ -313,5 +443,6 @@ export default function ModulosPage() {
                 </form>
             </Modal>
         </div>
+        </DndProvider>
     );
 }

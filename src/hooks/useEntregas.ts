@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { fetchWithAuth } from '@/lib/api-client';
 import {
     Entrega,
@@ -6,64 +6,109 @@ import {
     CreateEntregaDto,
 } from '@/types/entrega';
 
+interface EntregasQuery {
+    id_operacion?: number;
+    id_calidad?: number;
+    id_guia?: number;
+    id_item_reparto?: number;
+    fecha_entrega?: string;
+    estado_entrega?: string;
+    page?: number;
+    limit?: number;
+}
+
+interface EntregasPage {
+    data: Entrega[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
 export const useEntregas = () => {
     const [entregas, setEntregas] = useState<Entrega[]>([]);
-    const [entregasResumen, setEntregasResumen] = useState<Entrega[]>([]);
+    const [resumen, setResumen] = useState<Record<string, number>>({});
+    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20 });
     const [pendientesTransito, setPendientesTransito] = useState<EntregaPendienteTransito[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingResumen, setLoadingResumen] = useState(true);
     const [loadingPendientes, setLoadingPendientes] = useState(false);
     const [errorPendientes, setErrorPendientes] = useState('');
     const [errorResumen, setErrorResumen] = useState('');
+    const requestId = useRef(0);
+    const resumenRequestId = useRef(0);
+    const currentQuery = useRef<EntregasQuery>({});
 
-    const fetchEntregas = useCallback(async (params?: {
-        id_operacion?: number;
-        id_calidad?: number;
-        id_guia?: number;
-        id_item_reparto?: number;
-        fecha_entrega?: string;
-        estado_entrega?: string;
-    }) => {
+    const fetchEntregas = useCallback(async (params: EntregasQuery = currentQuery.current) => {
+        params = { ...currentQuery.current, ...params };
+        currentQuery.current = params;
+        const request = ++requestId.current;
         setLoading(true);
         try {
-            let url = 'entregas';
-            const query = new URLSearchParams();
+            const query = new URLSearchParams({
+                page: String(params.page ?? 1),
+                limit: String(params.limit ?? 20),
+            });
             if (params?.id_operacion) query.append('id_operacion', params.id_operacion.toString());
             if (params?.id_calidad) query.append('id_calidad', params.id_calidad.toString());
             if (params?.id_guia) query.append('id_guia', params.id_guia.toString());
             if (params?.id_item_reparto) query.append('id_item_reparto', params.id_item_reparto.toString());
             if (params?.fecha_entrega) query.append('fecha_entrega', params.fecha_entrega);
             if (params?.estado_entrega) query.append('estado_entrega', params.estado_entrega);
-            if (query.toString()) url += `?${query}`;
-            const data = await fetchWithAuth<Entrega[]>(url);
-            setEntregas(Array.isArray(data) ? data : []);
+            const response = await fetchWithAuth<EntregasPage>(`entregas?${query}`);
+            const lastPage = Math.max(1, Math.ceil(response.total / response.limit));
+            let result = response;
+            if (response.page > lastPage) {
+                query.set('page', String(lastPage));
+                result = await fetchWithAuth<EntregasPage>(`entregas?${query}`);
+            }
+            if (request !== requestId.current) return;
+            currentQuery.current = { ...params, page: result.page, limit: result.limit };
+            setEntregas(result.data);
+            setPagination({ total: result.total, page: result.page, limit: result.limit });
         } catch (error) {
-            console.error(error);
+            if (request !== requestId.current) return;
+            console.error('Error en fetchEntregas:', error);
             setEntregas([]);
+            setPagination({ total: 0, page: 1, limit: params.limit ?? 20 });
         } finally {
-            setLoading(false);
+            if (request === requestId.current) setLoading(false);
         }
     }, []);
 
     const fetchResumenEntregas = useCallback(async (params?: { fecha_entrega?: string }) => {
+        const request = ++resumenRequestId.current;
         setLoadingResumen(true);
         setErrorResumen('');
         try {
-            const query = new URLSearchParams();
+            const query = new URLSearchParams({ page: '1', limit: '100' });
             if (params?.fecha_entrega) query.append('fecha_entrega', params.fecha_entrega);
-            const suffix = query.toString() ? `?${query}` : '';
-            const data = await fetchWithAuth<Entrega[]>(`entregas${suffix}`);
-            setEntregasResumen(Array.isArray(data) ? data : []);
+            const firstPage = await fetchWithAuth<EntregasPage>(`entregas?${query}`);
+            const counts: Record<string, number> = {};
+            const addCounts = (data: Entrega[]) => {
+                for (const entrega of data) {
+                    counts[entrega.estado_entrega] = (counts[entrega.estado_entrega] || 0) + 1;
+                }
+            };
+            addCounts(firstPage.data);
+            const totalPages = Math.ceil(firstPage.total / firstPage.limit);
+            for (let page = 2; page <= totalPages; page++) {
+                if (request !== resumenRequestId.current) return;
+                query.set('page', String(page));
+                const nextPage = await fetchWithAuth<EntregasPage>(`entregas?${query}`);
+                addCounts(nextPage.data);
+            }
+            if (request === resumenRequestId.current) setResumen(counts);
         } catch (error) {
+            if (request !== resumenRequestId.current) return;
             console.error('Error en fetchResumenEntregas:', error);
-            setEntregasResumen([]);
+            setResumen({});
             setErrorResumen(
                 error instanceof Error
                     ? error.message
                     : 'No se pudo cargar el resumen de entregas.',
             );
         } finally {
-            setLoadingResumen(false);
+            if (request === resumenRequestId.current) setLoadingResumen(false);
         }
     }, []);
 
@@ -133,7 +178,8 @@ export const useEntregas = () => {
 
     return {
         entregas,
-        entregasResumen,
+        ...pagination,
+        resumen,
         pendientesTransito,
         loading,
         loadingResumen,

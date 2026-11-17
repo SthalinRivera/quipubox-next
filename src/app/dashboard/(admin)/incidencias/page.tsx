@@ -15,6 +15,15 @@ export default function IncidenciasPage() {
         <div>
             <PageBreadcrumb pageTitle="Incidencias" />
             <div className="space-y-6">
+                <div className="flex justify-end">
+                    <Button
+                        size="sm"
+                        startIcon={<PlusIcon className="h-4 w-4" />}
+                        onClick={() => setModalOpen(true)}
+                    >
+                        Nueva incidencia
+                    </Button>
+                </div>
                 <ComponentCard title="Listado de Incidencias">
                     <IncidenciasTable />
                 </ComponentCard>

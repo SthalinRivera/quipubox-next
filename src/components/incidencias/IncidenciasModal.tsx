@@ -12,6 +12,7 @@ import Label from '@/components/form/Label';
 import { useIncidencias } from '@/hooks/useIncidencias';
 import { useToast } from '@/hooks/useToast';
 import type { Incidencia } from '@/types/incidencia';
+import IncidenciaPhotos from './IncidenciaPhotos';
 
 // Esquema de validación
 const incidenciaSchema = z.object({
@@ -48,8 +49,8 @@ export default function IncidenciaModal({
         handleSubmit,
         reset,
         formState: { errors, isValid },
-    } = useForm<IncidenciaFormData>({
-        resolver: zodResolver(incidenciaSchema) as any,
+    } = useForm<z.input<typeof incidenciaSchema>, unknown, IncidenciaFormData>({
+        resolver: zodResolver(incidenciaSchema),
         defaultValues: {
             fecha_incidencia: new Date().toISOString().split('T')[0],
             hora_incidencia: '',
@@ -104,49 +105,43 @@ export default function IncidenciaModal({
                 formData.append('evidencias', file);
             });
 
-            let result;
+
             if (incidencia) {
                 console.log("se agreggo un incidendia ", incidencia);
 
                 // Edición: si hay archivos, usamos updateWithFiles; si no, update normal
                 if (files.length > 0) {
-                    result = await updateWithFiles(incidencia.id_incidencia, formData);
+                    await updateWithFiles(incidencia.id_incidencia, formData);
                 } else {
                     // Solo actualizar datos (sin archivos)
-                    result = await update(incidencia.id_incidencia, data);
+                    await update(incidencia.id_incidencia, data);
                 }
                 toast.success('Incidencia actualizada');
             } else {
-                result = await create(formData);
+                await create(formData);
                 toast.success('Incidencia creada');
             }
             onSuccess();
-        } catch (err: any) {
-            toast.error(err.message || 'Error al guardar la incidencia');
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : 'Error al guardar la incidencia');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setFiles(Array.from(e.target.files));
-        }
-    };
-
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl p-5 lg:p-10 z-99999">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
+        <Modal isOpen={isOpen} onClose={onClose} ariaLabel={incidencia ? "Editar incidencia" : "Nueva incidencia"} className="mx-3 max-h-[90dvh] max-w-xl overflow-y-auto p-5 sm:p-6 z-99999">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+                <h4 className="pr-12 text-lg font-semibold text-gray-800 dark:text-white/90">
                     {incidencia ? 'Editar Incidencia' : 'Nueva Incidencia'}
                 </h4>
-                <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+                <p className="pr-10 text-xs text-gray-500 dark:text-gray-400">
                     {incidencia
                         ? 'Modifica los datos de la incidencia'
                         : 'Completa la información para registrar una incidencia'}
                 </p>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                     {/* Fecha */}
                     <div>
                         <Label className="text-gray-700 dark:text-gray-300">
@@ -215,7 +210,7 @@ export default function IncidenciaModal({
                         render={({ field }) => (
                             <textarea
                                 {...field}
-                                rows={3}
+                                rows={2}
                                 className="mt-1 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                                 placeholder="Describe la incidencia"
                             />
@@ -248,17 +243,7 @@ export default function IncidenciaModal({
 
                 {/* Subida de archivos */}
                 <div>
-                    <Label className="text-gray-700 dark:text-gray-300">Evidencias (imágenes)</Label>
-                    <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-500/20 dark:file:text-brand-400"
-                    />
-                    {files.length > 0 && (
-                        <p className="mt-1 text-sm text-gray-600">{files.length} archivo(s) seleccionado(s)</p>
-                    )}
+                    {isOpen && <IncidenciaPhotos files={files} onChange={setFiles} disabled={submitting} />}
                     {incidencia && incidencia.evidencias && incidencia.evidencias.length > 0 && (
                         <p className="mt-1 text-sm text-gray-500">
                             📷 {incidencia.evidencias.length} evidencias existentes (no se modificarán)
@@ -266,7 +251,7 @@ export default function IncidenciaModal({
                     )}
                 </div>
 
-                <div className="flex justify-end gap-3 mt-6">
+                <div className="sticky bottom-0 flex justify-end gap-2 border-t border-gray-100 bg-white pt-3 dark:border-gray-800 dark:bg-gray-900">
                     <Button type="button" variant="outline" size="sm" onClick={onClose}>
                         Cancelar
                     </Button>

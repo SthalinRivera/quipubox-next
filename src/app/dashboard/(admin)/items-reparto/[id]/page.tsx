@@ -8,15 +8,15 @@ import {
   CheckCircle,
   ArrowLeft,
   Truck,
-  FileText,
-  MapPin,
-  Trash2,
+  Package, Layers, Hourglass,
+
 } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api-client';
 
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import EntregasCargaTable from '@/components/items-reparto/EntregasCargaTable';
 import ItemRepartoSimpleForm from '@/components/items-reparto/ItemRepartoSimpleForm';
 import ResolucionRepartoModal from '@/components/entregas/ResolucionRepartoModal';
 import EntregaProcesoModal from '@/components/entregas/EntregaProcesoModal';
@@ -156,7 +156,8 @@ export default function OperacionDetallePage() {
       producto: item.producto,
     })),
   );
-  const faltanGuias = destinos.some(item => saldoDestino(item) > 0 && !guiaVigente(item));
+  const guiasPendientes = destinos.filter(item => saldoDestino(item) > 0 && !guiaVigente(item)).length;
+  const faltanGuias = guiasPendientes > 0;
   const totalJabas = op.resumen.jabasCargadas;
   const recibidas = entregas.filter(e => e.estado_entrega !== 'pendiente').reduce((sum,e) => sum + e.cantidad_entregada, 0);
   const habilitada = op.estado !== 'pendiente' && clasificacionCompleta(op);
@@ -175,8 +176,8 @@ export default function OperacionDetallePage() {
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-brand-600">
             Operaciones
           </p>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            Entregas · Carga #{id}
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+            Entregas de la carga #{id}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
             Camión {op.camiones?.placa} ·{' '}
@@ -187,14 +188,29 @@ export default function OperacionDetallePage() {
           {estadoOperacion[op.estado] || op.estado}
         </span>
       </header>
-      <dl className="grid grid-cols-2 divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white sm:grid-cols-4 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
-        {[['Productos', op.detalle_carga.length], ['Jabas', totalJabas], ['Destinos', destinos.length], ['Recibidas', recibidas]].map(([label, value]) => (
-          <div key={label} className="border-r border-b border-gray-100 px-4 py-3 last:border-r-0 sm:border-b-0 dark:border-gray-800">
-            <dt className="text-xs text-gray-500 dark:text-gray-400">{label}</dt>
-            <dd className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</dd>
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: 'Productos', value: op.detalle_carga.length, Icon: Package },
+          { label: 'Jabas totales', value: totalJabas, Icon: Layers },
+          { label: 'Recibidas', value: recibidas, Icon: CheckCircle },
+          { label: 'Pendientes', value: op.resumen.saldoEntrega + op.resumen.jabasSinAsignar, Icon: Hourglass },
+        ].map(({ label, value, Icon }) => (
+          <div key={label} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-5 dark:border-gray-800 dark:bg-gray-900">
+            <Icon size={26} className="shrink-0 text-gray-400" aria-hidden="true" />
+            <div className="border-l border-gray-200 pl-4 dark:border-gray-700">
+              <dd className="text-2xl font-semibold tabular-nums text-gray-900 dark:text-white">{value}</dd>
+              <dt className="text-sm text-gray-500">{label}</dt>
+            </div>
           </div>
         ))}
       </dl>
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">Avance de recepción</span>
+        <div role="progressbar" aria-label="Avance de recepción total" aria-valuemin={0} aria-valuemax={100} aria-valuenow={totalJabas ? Math.min(100, Math.round(recibidas / totalJabas * 100)) : 0} className="h-2.5 min-w-24 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+          <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${totalJabas ? Math.min(100, recibidas / totalJabas * 100) : 0}%` }} />
+        </div>
+        <span className="text-sm tabular-nums text-gray-500">{recibidas} de {totalJabas} jabas · {totalJabas ? Math.round(recibidas / totalJabas * 100) : 0}%</span>
+      </div>
       {error && (
         <div
           role="alert"
@@ -219,195 +235,31 @@ export default function OperacionDetallePage() {
       <section id="destinos" className={card}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-            <Truck size={20} /> Entregas de la carga
+            <Truck size={22} /> Detalle de entregas
           </h2>
+          {op.estado === 'en_transito' && destinos.some(item => item.clientes && item.puestos && item.cantidad_asignada > 0) && (
+            <Button disabled={busy} variant="outline" onClick={() => avanzar('repartiendo')}>
+              Iniciar entregas
+            </Button>
+          )}
           {['en_transito', 'repartiendo'].includes(op.estado) && faltanGuias && (
-            <Button disabled={busy || !op.resumen.preparada} onClick={emitirGuias}>
-              Emitir guías pendientes
+            <Button disabled={busy} onClick={emitirGuias}>
+              Emitir {guiasPendientes} guías pendientes
             </Button>
           )}
         </div>
-        <div className="mt-4 space-y-3">
-          {op.detalle_carga.map((d) => {
-            const clasificado =
-              d.detalle_carga_calidades?.reduce(
-                (sum, c) => sum + c.cantidad,
-                0,
-              ) || 0;
-            const asignado = d.items_reparto.reduce(
-              (sum, i) => sum + i.cantidad_asignada,
-              0,
-            );
-            const listo = !d.es_reparto || clasificado === d.cantidad_jabas;
-            const destinosDelProducto = destinos.filter(
-              (item) => item.id_detalle_carga === d.id_detalle_carga,
-            );
-            return (
-              <div
-                key={d.id_detalle_carga}
-                className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {d.frutas?.nombre} · {d.cantidad_jabas} jabas
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {d.es_reparto
-                        ? `Clasificadas: ${clasificado} de ${d.cantidad_jabas} jabas`
-                        : 'No requiere clasificación por calidad'}{' '}
-                      · Asignadas a receptores: {asignado} de {d.cantidad_jabas}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editable && d.es_reparto && asignado < d.cantidad_jabas && (
-                      <Button
-                        size="sm"
-                        disabled={!listo}
-                        onClick={() => setAsignar(d.id_detalle_carga)}
-                      >
-                        Asignar receptor
-                      </Button>
-                    )}
-                    {editable && !d.es_reparto && asignado !== d.cantidad_jabas && <Button onClick={() => setEditar(d)}>Completar receptor</Button>}
-                    {editable && !listo && <span className="w-full text-xs text-amber-700 dark:text-amber-400">Completa la clasificación antes de asignar receptores.</span>}
-                    {listo && asignado === d.cantidad_jabas && (
-                      <span className="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400">
-                        <CheckCircle size={16} /> Completo
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {destinosDelProducto.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-gray-200 pt-3 dark:border-gray-700">
-                    {destinosDelProducto.map((item) => {
-                      const recibidasItem = item.entregas
-                        .filter((entrega) => entrega.estado_entrega !== 'pendiente')
-                        .reduce((sum, entrega) => sum + entrega.cantidad_entregada, 0);
-                      const resueltasItem = (item.resoluciones_reparto || [])
-                        .reduce((sum, resolucion) => sum + resolucion.cantidad, 0);
-                      const pendienteItem = saldoDestino(item);
-                      const entregasActivas = item.entregas.filter((entrega) => entrega.estado_entrega !== 'pendiente');
-                      return (
-                      <div key={item.id_item_reparto} className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900">
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                            <MapPin size={15} aria-hidden="true" />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                              {item.clientes?.nombres || 'Receptor sin asignar'} · Puesto {item.puestos?.codigo_puesto || 'sin asignar'}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {item.cantidad_asignada} jabas asignadas
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-2 space-y-1.5 pl-10">
-                          {item.guias_operativas.map((g) => {
-                            const calidadesGuia = g.cobertura?.calidades?.length
-                              ? g.cobertura.calidades
-                              : item.calidadesAsignadas;
-                            return (
-                              <div key={g.id_guia} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md bg-gray-50 px-2.5 py-2 dark:bg-gray-800/70">
-                                <Link className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-300" href={`/dashboard/guias-operativas/${g.id_guia}`}>
-                                  <FileText size={15} aria-hidden="true" />
-                                  Guía {g.numero_guia}
-                                </Link>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium capitalize text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                                  {g.estado}
-                                </span>
-                                {calidadesGuia.length > 0 ? (
-                                  <ul className="flex flex-wrap gap-1">
-                                    {calidadesGuia.map((calidad, index) => (
-                                      <li key={`${calidad.nombre}-${index}`} className="rounded-md bg-white px-2 py-1 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                                        {calidad.nombre} · {calidad.cantidad} jabas
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">Sin desglose por calidad</span>
-                                )}
-                                {!g.cobertura && <span className="text-xs text-amber-700 dark:text-amber-400">Histórica{saldoDestino(item) === 0 ? ' · destino completo' : ' · sin cobertura vigente'}</span>}
-                                {['en_transito','repartiendo'].includes(op.estado) && !['anulada','reemplazada'].includes(g.estado) && <button type="button" disabled={busy} title="Anular guía" aria-label={`Anular guía ${g.numero_guia}`} className="ml-auto rounded-md p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50" onClick={() => { if (window.confirm('¿Anular esta guía? Solo es posible si aún no tiene entregas.')) void ejecutar(`guias-operativas/${g.id_guia}`, 'DELETE'); }}><Trash2 size={15}/></button>}
-                              </div>
-                            );
-                          })}
-                          {item.guias_operativas.length === 0 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {['en_transito', 'repartiendo'].includes(op.estado)
-                                ? 'Guía pendiente de emisión.'
-                                : 'La guía se emitirá al confirmar la salida.'}
-                            </p>
-                          )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Recibidas: {recibidasItem}
-                            {resueltasItem > 0 && ` · Resueltas: ${resueltasItem}`}
-                            {` · Pendientes: ${pendienteItem}`}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {editable && item.esReparto && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={busy}
-                                onClick={() => quitarDestino(item.id_item_reparto)}
-                              >
-                                Quitar destino
-                              </Button>
-                            )}
-                            {['en_transito', 'repartiendo'].includes(op.estado) && pendienteItem > 0 && (
-                              <>
-                                {op.estado === 'repartiendo' && <Button size="sm" variant="outline" disabled={busy} onClick={() => setResolver(item)}>
-                                  Resolver faltante
-                                </Button>}
-                                <Button
-                                  size="sm"
-                                  disabled={!guiaVigente(item) || busy || (op.estado === 'en_transito' && (faltanGuias || !op.resumen.preparada))}
-                                  onClick={() => setEntregar(item)}
-                                >
-                                  Registrar recepción
-                                </Button>
-                              </>
-                            )}
-                            {pendienteItem === 0 && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
-                                <CheckCircle size={14} /> Completo
-                              </span>
-                            )}
-                            {op.estado === 'en_transito' && pendienteItem > 0 && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                Al emitir la guía o guardar la recepción, la carga pasará a Entregando
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {entregasActivas.length > 0 && (
-                          <details className="mt-2 pl-10 text-xs text-gray-500 dark:text-gray-400">
-                            <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-200">
-                              Ver {entregasActivas.length} recepción{entregasActivas.length === 1 ? '' : 'es'}
-                            </summary>
-                            <ul className="mt-2 space-y-1">
-                              {entregasActivas.map((entrega) => (
-                                <li key={entrega.id_entrega}>
-                                  {entrega.fecha_entrega.slice(0, 10).split('-').reverse().join('/')} · {entrega.cantidad_entregada} recibidas · {entrega.cantidad_rechazada || 0} rechazadas
-                                  {entrega.nombre_recibe ? ` · Recibió: ${entrega.nombre_recibe}` : ''}
-                                </li>
-                              ))}
-                            </ul>
-                          </details>
-                        )}
-                      </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <p className="mt-2 text-sm text-gray-500">Gestiona cada puesto por separado: emite su guía y registra lo recibido.</p>
+        <EntregasCargaTable
+          op={op} busy={busy} editable={editable}
+          onAsignar={setAsignar} onEditar={setEditar}
+          onEmitir={itemId => { void ejecutar(`operaciones-carga/${id}/destinos/${itemId}/emitir-guia`, 'POST'); }}
+          onRecibir={setEntregar} onResolver={setResolver}
+          onQuitar={quitarDestino}
+          onAnular={guiaId => {
+            if (window.confirm('¿Anular esta guía? Solo es posible si aún no tiene entregas.'))
+              void ejecutar(`guias-operativas/${guiaId}`, 'DELETE');
+          }}
+        />
         {preparando && (
           <div className="mt-5 border-t border-gray-100 pt-5 dark:border-gray-800">
             {op.flujo.pendientes.length > 0 && (

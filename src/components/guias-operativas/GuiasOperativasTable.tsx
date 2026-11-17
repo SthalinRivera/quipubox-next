@@ -4,7 +4,7 @@ import { OperationTableRows } from '@/components/ui/skeleton/OperationSkeleton';
 import { Skeleton } from '@/components/ui/skeleton/Skeleton';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useGuiasOperativas } from "@/hooks/useGuiasOperativas";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -49,7 +49,7 @@ const ESTADO_ICON: Record<string, LucideIcon> = {
 
 export default function GuiasOperativasTable() {
     const router = useRouter();
-    const { guias, loading, fetchGuias, deleteGuia, firmarGuia } =
+    const { guias, total, page, limit, resumen, error, loading, fetchGuias, deleteGuia, firmarGuia } =
         useGuiasOperativas();
     const toast = useToast();
     const [modalOpen, setModalOpen] = useState(false);
@@ -58,24 +58,15 @@ export default function GuiasOperativasTable() {
     const [filtroFecha, setFiltroFecha] = useState("");
 
     useEffect(() => {
-        fetchGuias({ fecha_emision: filtroFecha || undefined });
-    }, [filtroFecha, fetchGuias]);
+        void fetchGuias({ estado: filtroEstado || undefined, fecha_emision: filtroFecha || undefined, page: 1 });
+    }, [filtroEstado, filtroFecha, fetchGuias]);
 
-    const resumen = useMemo(() => {
-        const counts: Record<string, number> = Object.fromEntries(
-            ESTADOS.map(({ value }) => [value, 0]),
-        );
-        guias.forEach((guia) => {
-            if (counts[guia.estado] !== undefined) counts[guia.estado]++;
-        });
-        return counts;
-    }, [guias]);
-
-    const guiasVisibles = useMemo(
-        () => filtroEstado ? guias.filter((guia) => guia.estado === filtroEstado) : guias,
-        [filtroEstado, guias],
-    );
-
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const cambiarPagina = (next: number) => {
+        if (loading || next < 1 || next > totalPages) return;
+        void fetchGuias({ estado: filtroEstado || undefined, fecha_emision: filtroFecha || undefined, page: next, limit });
+    };
+    const recargar = () => fetchGuias(undefined, true);
     const limpiarFiltros = () => {
         setFiltroEstado("");
         setFiltroFecha("");
@@ -94,7 +85,7 @@ export default function GuiasOperativasTable() {
         if (window.confirm(`¿Anular la guía "${numero}"?`)) {
             try {
                 await deleteGuia(id);
-                await fetchGuias({ fecha_emision: filtroFecha || undefined });
+                await recargar();
                 toast.success("Guía anulada");
             } catch (err: unknown) {
                 toast.error(err instanceof Error ? err.message : "Error al anular");
@@ -105,7 +96,7 @@ export default function GuiasOperativasTable() {
     const handleFirmar = async (id: number) => {
         try {
             await firmarGuia(id);
-            await fetchGuias({ fecha_emision: filtroFecha || undefined });
+            await recargar();
             toast.success("Guía firmada");
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Error al firmar");
@@ -139,7 +130,7 @@ export default function GuiasOperativasTable() {
                                 <div className="text-lg font-bold text-gray-800 dark:text-white/90">
                                     {loading
                                         ? <Skeleton className="my-1 h-5 w-8" aria-label="Cargando cantidad" />
-                                        : resumen[value]}
+                                        : (resumen[value] ?? 0)}
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                             </div>
@@ -193,7 +184,7 @@ export default function GuiasOperativasTable() {
                     )}
                 </div>
                 <p role="status" className="text-gray-500">
-                    {loading ? "Buscando…" : `${guiasVisibles.length} ${guiasVisibles.length === 1 ? "guía" : "guías"}`}
+                    {loading ? "Buscando…" : `${total} ${total === 1 ? "guía" : "guías"}`}
                 </p>
             </div>
 
@@ -226,14 +217,14 @@ export default function GuiasOperativasTable() {
                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                                 {loading ? (
                                     <OperationTableRows columns={6} />
-                                ) : guiasVisibles.length === 0 ? (
+                                ) : guias.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                             {filtroEstado || filtroFecha ? "Sin resultados." : "No hay guías operativas."}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    guiasVisibles.map((guia) => (
+                                    guias.map((guia) => (
                                         <TableRow key={guia.id_guia}>
                                             <TableCell className="px-5 py-4 text-gray-800 dark:text-white/90">
                                                 {guia.id_guia}
@@ -298,11 +289,29 @@ export default function GuiasOperativasTable() {
                 </div>
             </div>
 
+            {error && <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+                <span>{error}</span><Button size="sm" variant="outline" onClick={recargar}>Reintentar</Button>
+            </div>}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
+                <p>{total ? `Mostrando ${(page - 1) * limit + 1}–${Math.min(page * limit, total)} de ${total} guías` : '0 guías'}</p>
+                <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2">Por página
+                        <select aria-label="Guías por página" value={limit} disabled={loading}
+                            className="rounded-lg border border-gray-200 bg-white px-2 py-2 dark:border-gray-700 dark:bg-gray-900"
+                            onChange={event => { void fetchGuias({ estado: filtroEstado || undefined, fecha_emision: filtroFecha || undefined, page: 1, limit: Number(event.target.value) }); }}>
+                            {[10, 20, 50, 100].map(value => <option key={value} value={value}>{value}</option>)}
+                        </select>
+                    </label>
+                    <Button size="sm" variant="outline" disabled={loading || page <= 1} onClick={() => cambiarPagina(page - 1)}>Anterior</Button>
+                    <span aria-live="polite">Página {page} de {totalPages}</span>
+                    <Button size="sm" variant="outline" disabled={loading || page >= totalPages} onClick={() => cambiarPagina(page + 1)}>Siguiente</Button>
+                </div>
+            </div>
             <GuiaOperativaModal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 editingGuia={selectedGuia}
-                onSaved={() => fetchGuias({ fecha_emision: filtroFecha || undefined })}
+                onSaved={recargar}
             />
         </div>
     );

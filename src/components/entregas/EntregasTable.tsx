@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton/Skeleton';
 import { OperationTableRows } from '@/components/ui/skeleton/OperationSkeleton';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useEntregas } from "@/hooks/useEntregas";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -52,7 +52,10 @@ export default function EntregasTable() {
     const router = useRouter();
     const {
         entregas,
-        entregasResumen,
+        total,
+        page,
+        limit,
+        resumen,
         pendientesTransito,
         loading,
         loadingResumen,
@@ -75,6 +78,7 @@ export default function EntregasTable() {
         fetchEntregas({
             fecha_entrega: filtroFecha || undefined,
             estado_entrega: filtroEstado || undefined,
+            page: 1,
         });
     }, [filtroFecha, filtroEstado, fetchEntregas]);
 
@@ -86,28 +90,21 @@ export default function EntregasTable() {
     }, [filtroFecha, fetchResumenEntregas, fetchPendientesTransito]);
 
     // Resumen por estado
-    const resumen = useMemo(() => {
-        const counts: Record<string, number> = {
-            pendiente: 0,
-            entregado_parcial: 0,
-            entregado_total: 0,
-            rechazado: 0,
-            observado: 0,
-        };
-        entregasResumen.forEach(e => {
-            if (counts[e.estado_entrega] !== undefined) {
-                counts[e.estado_entrega]++;
-            }
-        });
-        counts.pendiente += pendientesTransito.length;
-        return counts;
-    }, [entregasResumen, pendientesTransito]);
-
     const mostrarPendientesTransito = filtroEstado === 'pendiente';
     const loadingTabla = loading || loadingPendientes;
     const filasVisibles = entregas.length + (mostrarPendientesTransito ? pendientesTransito.length : 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
     const filasVacias = entregas.length === 0 &&
         (!mostrarPendientesTransito || pendientesTransito.length === 0);
+    const cambiarPagina = (next: number) => {
+        if (loading || next < 1 || next > totalPages) return;
+        void fetchEntregas({
+            fecha_entrega: filtroFecha || undefined,
+            estado_entrega: filtroEstado || undefined,
+            page: next,
+            limit,
+        });
+    };
 
     const clearFilters = () => {
         setFiltroEstado("pendiente");
@@ -160,7 +157,7 @@ export default function EntregasTable() {
                                 <Icon className={`h-5 w-5 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`} />
                             </div>
                             <div className="text-left">
-                                <div className="text-lg font-bold text-gray-800 dark:text-white/90">{loadingResumen || loadingPendientes ? <Skeleton className="my-1 h-5 w-8" aria-label="Cargando cantidad" /> : resumen[value]}</div>
+                                <div className="text-lg font-bold text-gray-800 dark:text-white/90">{loadingResumen || loadingPendientes ? <Skeleton className="my-1 h-5 w-8" aria-label="Cargando cantidad" /> : (resumen[value] || 0) + (value === 'pendiente' ? pendientesTransito.length : 0)}</div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                             </div>
                         </button>
@@ -347,6 +344,25 @@ export default function EntregasTable() {
                         </Table>
                     </div>
                 </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
+                <p>
+                    {total
+                        ? `Mostrando ${(page - 1) * limit + 1}–${Math.min(page * limit, total)} de ${total} entregas`
+                        : '0 entregas'}
+                </p>
+                {totalPages > 1 && (
+                    <div className="flex items-center gap-3">
+                        <Button size="sm" variant="outline" disabled={loading || page <= 1} onClick={() => cambiarPagina(page - 1)}>
+                            Anterior
+                        </Button>
+                        <span aria-live="polite">Página {page} de {totalPages}</span>
+                        <Button size="sm" variant="outline" disabled={loading || page >= totalPages} onClick={() => cambiarPagina(page + 1)}>
+                            Siguiente
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <EntregaModal

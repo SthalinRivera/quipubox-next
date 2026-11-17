@@ -55,6 +55,20 @@ export const useModulos = () => {
         return actualizado;
     }, []);
 
+    const reorder = useCallback(async (items: { id_modulo: number; orden: number }[]) => {
+        setMutating(true);
+        try {
+            const data = await fetchWithAuth<Modulo[]>('modulos/reorder', {
+                method: 'PATCH',
+                body: { items },
+            });
+            setModulos(data);
+            return data;
+        } finally {
+            setMutating(false);
+        }
+    }, []);
+
     const remove = useCallback(async (id: number) => {
         setMutating(true);
         try {
@@ -65,5 +79,5 @@ export const useModulos = () => {
         }
     }, []);
 
-    return { modulos, loading, mutating, fetchAll, create, update, toggleEstado, remove };
+    return { modulos, loading, mutating, fetchAll, create, update, toggleEstado, reorder, remove };
 };
